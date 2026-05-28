@@ -334,43 +334,39 @@ def get_market():
 
     except:
 
-        fallback = pd.DataFrame({
+except:
 
-            "symbol":[
-                "BTCUSDT",
-                "ETHUSDT",
-                "SOLUSDT",
-                "XRPUSDT",
-                "DOGEUSDT"
-            ],
+    rows = []
 
-            "price":[
-                68000,
-                3500,
-                170,
-                0.62,
-                0.16
-            ],
+    for i in range(100):
 
-            "change":[
-                2.5,
-                3.2,
-                7.5,
-                -1.2,
-                12.1
-            ],
+        rows.append({
 
-            "volume":[
-                50000000000,
-                20000000000,
-                8000000000,
-                3000000000,
-                4000000000
-            ]
+            "symbol":f"COIN{i}USDT",
+
+            "price":round(
+                np.random.uniform(1,70000),
+                4
+            ),
+
+            "change":round(
+                np.random.uniform(-20,20),
+                2
+            ),
+
+            "volume":round(
+                np.random.uniform(
+                    1000000,
+                    5000000000
+                ),
+                2
+            )
 
         })
 
-        return fallback
+    df = pd.DataFrame(rows)
+
+    return df
 
 # =========================================================
 # KLINES
