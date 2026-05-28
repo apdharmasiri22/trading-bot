@@ -632,6 +632,196 @@ update_signal_status()
 df = get_market()
 
 # =========================================================
+# TOP AI SIGNAL SCANNER
+# =========================================================
+
+st.subheader("🔥 80%+ AI SIGNAL SCANNER")
+
+long_signals = []
+short_signals = []
+
+scan_coins = df["symbol"].head(75).tolist()
+
+for coin in scan_coins:
+
+    try:
+
+        scan_kline = get_klines(
+            coin,
+            "15m"
+        )
+
+        close = scan_kline["close"]
+
+        current_price = close.iloc[-1]
+
+        rsi = calculate_rsi(close).iloc[-1]
+
+        macd, sig = calculate_macd(close)
+
+        macd_value = macd.iloc[-1]
+
+        ema20 = calculate_ema(close,20).iloc[-1]
+
+        ema50 = calculate_ema(close,50).iloc[-1]
+
+        ema200 = calculate_ema(close,100).iloc[-1]
+
+        atr = calculate_atr(scan_kline).iloc[-1]
+
+        long_score = 0
+
+        # =========================================
+        # LONG CONDITIONS
+        # =========================================
+
+        if rsi < 35:
+            long_score += 25
+
+        if macd_value > 0:
+            long_score += 25
+
+        if ema20 > ema50:
+            long_score += 25
+
+        if ema50 > ema200:
+            long_score += 25
+
+        short_score = 100 - long_score
+
+        # =========================================
+        # LONG SIGNALS
+        # =========================================
+
+        if long_score >= 80:
+
+            entry = current_price
+
+            sl = current_price - (atr * 1.5)
+
+            tp1 = current_price + (atr * 2)
+
+            long_signals.append({
+
+                "COIN":coin,
+
+                "PRICE":round(
+                    current_price,
+                    4
+                ),
+
+                "LONG %":long_score,
+
+                "ENTRY":round(
+                    entry,
+                    4
+                ),
+
+                "TP1":round(
+                    tp1,
+                    4
+                ),
+
+                "SL":round(
+                    sl,
+                    4
+                )
+
+            })
+
+        # =========================================
+        # SHORT SIGNALS
+        # =========================================
+
+        if short_score >= 80:
+
+            entry = current_price
+
+            sl = current_price + (atr * 1.5)
+
+            tp1 = current_price - (atr * 2)
+
+            short_signals.append({
+
+                "COIN":coin,
+
+                "PRICE":round(
+                    current_price,
+                    4
+                ),
+
+                "SHORT %":short_score,
+
+                "ENTRY":round(
+                    entry,
+                    4
+                ),
+
+                "TP1":round(
+                    tp1,
+                    4
+                ),
+
+                "SL":round(
+                    sl,
+                    4
+                )
+
+            })
+
+    except:
+        pass
+
+# =========================================================
+# DISPLAY SIGNAL TABLES
+# =========================================================
+
+lcol, scol = st.columns(2)
+
+with lcol:
+
+    st.markdown("## 🚀 LONG 80%+ SIGNALS")
+
+    if len(long_signals) > 0:
+
+        long_df = pd.DataFrame(
+            long_signals
+        )
+
+        st.dataframe(
+            long_df,
+            use_container_width=True,
+            height=500
+        )
+
+    else:
+
+        st.warning(
+            "NO STRONG LONG SIGNALS"
+        )
+
+with scol:
+
+    st.markdown("## 🔴 SHORT 80%+ SIGNALS")
+
+    if len(short_signals) > 0:
+
+        short_df = pd.DataFrame(
+            short_signals
+        )
+
+        st.dataframe(
+            short_df,
+            use_container_width=True,
+            height=500
+        )
+
+    else:
+
+        st.warning(
+            "NO STRONG SHORT SIGNALS"
+        )
+# =========================================================
 # METRICS
 # =========================================================
 
