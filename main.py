@@ -1,5 +1,5 @@
 # =========================================================
-# QUANTUM X TERMINAL - INSTITUTIONAL AI SYSTEM
+# QUANTUM X TERMINAL - FULL AI SYSTEM
 # =========================================================
 
 import streamlit as st
@@ -288,10 +288,22 @@ def get_market():
 
             df = pd.DataFrame(rows)
 
+            # REMOVE DEAD COINS
+
+            df = df[
+                (df["volume"] > 1000000)
+            ]
+
+            # SORT
+
             df = df.sort_values(
                 by="volume",
                 ascending=False
-            ).head(200)
+            )
+
+            # TAKE MANY COINS
+
+            df = df.head(300)
 
             return df
 
@@ -439,7 +451,7 @@ with left:
     gainers = df.sort_values(
         by="change",
         ascending=False
-    ).head(20)
+    ).head(100)
 
     st.dataframe(
         gainers,
@@ -455,47 +467,25 @@ with center:
 
     st.subheader("🧠 QUANTUM X PRO AI ANALYZER")
 
-    trade_type = st.selectbox(
-        "🎯 TRADING MODE",
-        [
-            "SCALPING",
-            "DAY TRADING",
-            "SWING"
-        ]
-    )
-
-    if trade_type == "SCALPING":
-
-        tf_list = [
-            "1m",
-            "5m",
-            "15m"
-        ]
-
-    elif trade_type == "DAY TRADING":
-
-        tf_list = [
-            "15m",
-            "1h",
-            "4h"
-        ]
-
-    else:
-
-        tf_list = [
-            "4h",
-            "1d",
-            "1w"
-        ]
-
     symbol = st.selectbox(
         "🪙 SELECT COIN",
         df["symbol"].tolist()
     )
 
+    timeframe = st.selectbox(
+        "⏱️ TIMEFRAME",
+        [
+            "5m",
+            "15m",
+            "1h",
+            "4h",
+            "1d"
+        ]
+    )
+
     kline = get_klines(
         symbol,
-        tf_list[1]
+        timeframe
     )
 
     close = kline["close"]
@@ -624,7 +614,7 @@ with right:
 
     losers = df.sort_values(
         by="change"
-    ).head(20)
+    ).head(100)
 
     st.dataframe(
         losers,
