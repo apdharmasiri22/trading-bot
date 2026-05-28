@@ -7,9 +7,6 @@ import streamlit.components.v1 as components
 import datetime
 import time
 
-# 🔑 CRYPTOCOMPARE LIVE GLOBAL FEED API KEY
-CRYPTOCOMPARE_API_KEY = "02cde33bf0c2982646ebb3aee6b63db7811ac11fae16a81a230d6c79f2cc6437"
-
 # වෙබ් පිටුවේ සැකසුම් (Page Configuration)
 st.set_page_config(
     page_title="ALPHA TRADING TERMINAL v4.5",
@@ -40,7 +37,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # =====================================================================
-# 🛠️ DATA MODULES (CRYPTOCOMPARE COMPATIBLE)
+# 🛠️ DATA MODULES (BINANCE PUBLIC API - NO KEY NEEDED)
 # =====================================================================
 COIN_SYMBOLS = {
     "BTCUSDT": "₿ BTCUSDT", "ETHUSDT": "♦️ ETHUSDT", "SOLUSDT": "☀️ SOLUSDT", "BNBUSDT": "🔶 BNBUSDT",
@@ -74,41 +71,19 @@ SCAN_COINS = list(COIN_SYMBOLS.keys())
 def get_all_binance_symbols_with_symbols():
     return COIN_SYMBOLS
 
+@st.cache_data(ttl=60)
 def get_crypto_data(symbol, interval, limit=100):
-    coin = symbol.replace("USDT", "")
-    
-    # Default value එකක් දාමු, එතකොට NameError එන්නේ නැහැ
-    agg = 1 
-    
-    if interval in ["1m", "5m", "15m"]:
-        url = "https://min-api.cryptocompare.com/data/v2/histominute"
-        agg = 1 if interval == "1m" else 5 if interval == "5m" else 15
-    elif interval in ["1h", "4h"]:
-        url = "https://min-api.cryptocompare.com/data/v2/histohour"
-        agg = 1 if interval == "1h" else 4
-    else:
-        url = "https://min-api.cryptocompare.com/data/v2/histoday"
-        agg = 1
-
-    headers = {"Authorization": f"Apikey {CRYPTOCOMPARE_API_KEY}"}
-    params = {"fsym": coin, "tsym": "USDT", "limit": limit, "aggregate": agg}
-    
+    url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}"
     try:
-        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response = requests.get(url, timeout=10)
         if response.status_code == 200:
-            res_json = response.json()
-            raw_list = res_json.get("Data", {}).get("Data", [])
-            if not raw_list: 
-                return None
-            
-            df = pd.DataFrame(raw_list)
-            df = df.rename(columns={"time": "Time", "open": "Open", "high": "High", "low": "Low", "close": "Close", "volumeto": "Volume"})
-            
-            for col in ["Open", "High", "Low", "Close", "Volume"]:
+            data = response.json()
+            df = pd.DataFrame(data, columns=['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'CloseTime', 'QuoteAssetVol', 'NumTrades', 'TakerBuyBase', 'TakerBuyQuote', 'Ignore'])
+            df = df[['Time', 'Open', 'High', 'Low', 'Close', 'Volume']]
+            for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
-                
             return df
-    except Exception as e:
+    except:
         return None
     return None
 
@@ -269,7 +244,7 @@ with st.sidebar:
 # 👑 MAIN INTERFACE
 # =====================================================================
 st.markdown("<h1 style='text-align: center; color: #ffb703;'>👑 ALPHA AUTOMATED QUANT TERMINAL v4.5</h1>", unsafe_allow_html=True)
-st.markdown(f"<p style='text-align: center; color: #8b949e;'>Engine Mode: <b>{strategy}</b> | Live CryptoCompare Global Feed Stream</p>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align: center; color: #8b949e;'>Engine Mode: <b>{strategy}</b> | Live Binance Public Feed Stream</p>", unsafe_allow_html=True)
 st.markdown("<hr style='border: 1px solid rgba(255,255,255,0.1);'/>", unsafe_allow_html=True)
 
 if is_news_block_active():
@@ -278,14 +253,16 @@ if is_news_block_active():
 # 📡 LIVE SCANNER RADAR RUNNING IN BACKGROUND
 st.markdown("### 📡 MARKET RADAR MULTI-CONFLUENCE SIGNALS")
 active_signals = []
-with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor: 
-    results = executor.map(lambda c: analyze_coin_for_scanner(c, htf, ltf), SCAN_COINS)
-    for r in list(results):
-        if r is not None: 
-            active_signals.append(r)
-            if tg_on and tg_token and tg_id:
-                msg = f"⚠️ *ALPHA TERMINAL MASTER v4.5*\n\n🪙 Coin: {r['Coin']}\n🚨 Action: {r['Signal']}\n💪 Strength: {r['Strength']}\n🏛️ Structure: {r['Structure']}\n\n💵 Entry: {r['Entry']}\n🛑 SL: {r['SL']}\n🎯 TP: {r['TP']}"
-                send_telegram_alert(tg_token, tg_id, msg)
+
+# Binance Public API සීමාවන් නිසා 1 by 1 ස්කෑන් කිරීම වඩා සුදුසුයි
+for coin in SCAN_COINS:
+    r = analyze_coin_for_scanner(coin, htf, ltf)
+    if r is not None: 
+        active_signals.append(r)
+        if tg_on and tg_token and tg_id:
+            msg = f"⚠️ *ALPHA TERMINAL MASTER v4.5*\n\n🪙 Coin: {r['Coin']}\n🚨 Action: {r['Signal']}\n💪 Strength: {r['Strength']}\n🏛️ Structure: {r['Structure']}\n\n💵 Entry: {r['Entry']}\n🛑 SL: {r['SL']}\n🎯 TP: {r['TP']}"
+            send_telegram_alert(tg_token, tg_id, msg)
+    time.sleep(0.1)
 
 if active_signals:
     st.dataframe(pd.DataFrame(active_signals), use_container_width=True, hide_index=True)
@@ -380,7 +357,7 @@ with col_metrics:
             data_isValid = False
     
     if not data_isValid:
-        st.error("🔄 Connecting to Live Feed Stream... Ensure API Key is correct.")
+        st.error("🔄 Connecting to Binance Live Stream...")
         bull_per, bear_per, htf_trend, cvd_flow = 0, 0, "NONE", 0
 
 # Execution & Risk Size Output
