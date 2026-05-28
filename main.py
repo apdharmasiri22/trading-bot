@@ -952,3 +952,487 @@ try:
 
 except:
     pass
+    # =========================================================
+# ACCURACY DASHBOARD
+# =========================================================
+
+st.subheader("📊 ACCURACY DASHBOARD")
+
+signals_df = pd.read_sql(
+    "SELECT * FROM signals",
+    conn
+)
+
+if not signals_df.empty:
+
+    total_signals = len(signals_df)
+
+    tp1_hits = len(
+        signals_df[
+            signals_df["status"] == "TP1 HIT"
+        ]
+    )
+
+    tp2_hits = len(
+        signals_df[
+            signals_df["status"] == "TP2 HIT"
+        ]
+    )
+
+    tp3_hits = len(
+        signals_df[
+            signals_df["status"] == "TP3 HIT"
+        ]
+    )
+
+    sl_hits = len(
+        signals_df[
+            signals_df["status"] == "SL HIT"
+        ]
+    )
+
+    running = len(
+        signals_df[
+            signals_df["status"] == "RUNNING"
+        ]
+    )
+
+    total_wins = (
+        tp1_hits +
+        tp2_hits +
+        tp3_hits
+    )
+
+    if total_signals > 0:
+
+        win_rate = round(
+            (
+                total_wins /
+                total_signals
+            ) * 100,
+            2
+        )
+
+    else:
+
+        win_rate = 0
+
+    a,b,c,d,e,f = st.columns(6)
+
+    with a:
+        st.metric(
+            "TOTAL",
+            total_signals
+        )
+
+    with b:
+        st.metric(
+            "RUNNING",
+            running
+        )
+
+    with c:
+        st.metric(
+            "TP1",
+            tp1_hits
+        )
+
+    with d:
+        st.metric(
+            "TP2",
+            tp2_hits
+        )
+
+    with e:
+        st.metric(
+            "TP3",
+            tp3_hits
+        )
+
+    with f:
+        st.metric(
+            "WIN RATE",
+            f"{win_rate}%"
+        )
+
+    chart_df = pd.DataFrame({
+
+        "STATUS":[
+            "TP1",
+            "TP2",
+            "TP3",
+            "SL"
+        ],
+
+        "COUNT":[
+            tp1_hits,
+            tp2_hits,
+            tp3_hits,
+            sl_hits
+        ]
+
+    })
+
+    fig_acc = px.bar(
+
+        chart_df,
+
+        x="STATUS",
+
+        y="COUNT",
+
+        template="plotly_dark",
+
+        title="AI SIGNAL ACCURACY"
+
+    )
+
+    st.plotly_chart(
+        fig_acc,
+        use_container_width=True
+    )
+
+# =========================================================
+# COIN FILTER
+# =========================================================
+
+st.subheader("🔍 AI COIN FILTER")
+
+search_coin = st.text_input(
+    "Search Coin",
+    ""
+)
+
+filtered_df = df[
+    df["symbol"].str.contains(
+        search_coin.upper(),
+        na=False
+    )
+]
+
+selected_coin = st.selectbox(
+    "SELECT COIN",
+    filtered_df["symbol"].tolist()
+)
+
+# =========================================================
+# SELECTED COIN ANALYSIS
+# =========================================================
+
+st.subheader("🧠 SELECTED COIN AI ANALYSIS")
+
+kline = get_klines(
+    selected_coin,
+    timeframe
+)
+
+close = kline["close"]
+
+current_price = close.iloc[-1]
+
+rsi = calculate_rsi(close).iloc[-1]
+
+macd, signal_line = calculate_macd(close)
+
+macd_value = macd.iloc[-1]
+
+ema20 = calculate_ema(close,20).iloc[-1]
+
+ema50 = calculate_ema(close,50).iloc[-1]
+
+ema200 = calculate_ema(close,200).iloc[-1]
+
+atr = calculate_atr(kline).iloc[-1]
+
+long_score = 0
+
+if rsi < 35:
+    long_score += 25
+
+if macd_value > 0:
+    long_score += 25
+
+if ema20 > ema50:
+    long_score += 25
+
+if ema50 > ema200:
+    long_score += 25
+
+short_score = 100 - long_score
+
+if long_score >= 80:
+
+    signal = "🚀 STRONG LONG"
+
+    css = "buy"
+
+elif short_score >= 80:
+
+    signal = "🔴 STRONG SHORT"
+
+    css = "sell"
+
+else:
+
+    signal = "⚪ NEUTRAL"
+
+    css = "neutral"
+
+entry = current_price
+
+tp1_long = current_price + (atr * 2)
+tp2_long = current_price + (atr * 4)
+tp3_long = current_price + (atr * 6)
+sl_long = current_price - (atr * 1.5)
+
+tp1_short = current_price - (atr * 2)
+tp2_short = current_price - (atr * 4)
+tp3_short = current_price - (atr * 6)
+sl_short = current_price + (atr * 1.5)
+
+st.markdown(f"""
+
+<div class="metric">
+
+<h2>{selected_coin}</h2>
+
+<div class="{css}">
+{signal}
+</div>
+
+<br>
+
+<h2>
+LONG POSSIBILITY :
+{long_score}%
+</h2>
+
+<h2>
+SHORT POSSIBILITY :
+{short_score}%
+</h2>
+
+<hr>
+
+<h3>MARKET PRICE : {current_price:.4f}</h3>
+
+<h3>ENTRY : {entry:.4f}</h3>
+
+<hr>
+
+<h3>LONG TP1 : {tp1_long:.4f}</h3>
+<h3>LONG TP2 : {tp2_long:.4f}</h3>
+<h3>LONG TP3 : {tp3_long:.4f}</h3>
+<h3>LONG SL : {sl_long:.4f}</h3>
+
+<hr>
+
+<h3>SHORT TP1 : {tp1_short:.4f}</h3>
+<h3>SHORT TP2 : {tp2_short:.4f}</h3>
+<h3>SHORT TP3 : {tp3_short:.4f}</h3>
+<h3>SHORT SL : {sl_short:.4f}</h3>
+
+<hr>
+
+<div>RSI : {rsi:.2f}</div>
+<div>MACD : {macd_value:.2f}</div>
+<div>EMA20 : {ema20:.2f}</div>
+<div>EMA50 : {ema50:.2f}</div>
+<div>EMA200 : {ema200:.2f}</div>
+<div>ATR : {atr:.2f}</div>
+
+</div>
+
+""", unsafe_allow_html=True)
+
+# =========================================================
+# TRADINGVIEW
+# =========================================================
+
+st.subheader("📈 TRADINGVIEW LIVE CHART")
+
+tradingview_html = f"""
+
+<div class="tradingview-widget-container">
+
+<div id="tradingview_chart"></div>
+
+<script type="text/javascript"
+src="https://s3.tradingview.com/tv.js"></script>
+
+<script type="text/javascript">
+
+new TradingView.widget({{
+
+    "width": "100%",
+    "height": 700,
+    "symbol": "BINANCE:{selected_coin}",
+    "interval": "{timeframe}",
+    "timezone": "Etc/UTC",
+    "theme": "dark",
+    "style": "1",
+    "locale": "en",
+    "toolbar_bg": "#0f172a",
+    "enable_publishing": false,
+    "container_id": "tradingview_chart"
+
+}});
+
+</script>
+
+</div>
+
+"""
+
+st.components.v1.html(
+    tradingview_html,
+    height=720
+)
+
+# =========================================================
+# TOP GAINERS / LOSERS
+# =========================================================
+
+g1,g2 = st.columns(2)
+
+with g1:
+
+    st.subheader("🚀 TOP GAINERS")
+
+    gainers = df.sort_values(
+        by="change",
+        ascending=False
+    ).head(15)
+
+    st.dataframe(
+        gainers,
+        use_container_width=True,
+        height=500
+    )
+
+with g2:
+
+    st.subheader("🔴 TOP LOSERS")
+
+    losers = df.sort_values(
+        by="change"
+    ).head(15)
+
+    st.dataframe(
+        losers,
+        use_container_width=True,
+        height=500
+    )
+
+# =========================================================
+# HEATMAP
+# =========================================================
+
+st.subheader("🌡️ MARKET HEATMAP")
+
+heat = df.head(50)
+
+fig_heat = px.treemap(
+
+    heat,
+
+    path=["symbol"],
+
+    values="volume",
+
+    color="change",
+
+    color_continuous_scale="RdYlGn"
+
+)
+
+fig_heat.update_layout(
+    template="plotly_dark",
+    height=700
+)
+
+st.plotly_chart(
+    fig_heat,
+    use_container_width=True
+)
+
+# =========================================================
+# CANDLE CHART
+# =========================================================
+
+st.subheader("📊 ADVANCED CANDLE CHART")
+
+fig = go.Figure(data=[
+
+    go.Candlestick(
+
+        x=kline.index,
+
+        open=kline["open"],
+
+        high=kline["high"],
+
+        low=kline["low"],
+
+        close=kline["close"]
+
+    )
+
+])
+
+fig.update_layout(
+
+    template="plotly_dark",
+
+    height=700
+
+)
+
+st.plotly_chart(
+    fig,
+    use_container_width=True
+)
+
+# =========================================================
+# SIGNAL HISTORY
+# =========================================================
+
+st.subheader("📜 SIGNAL HISTORY")
+
+st.dataframe(
+
+    signals_df.sort_values(
+        by="id",
+        ascending=False
+    ),
+
+    use_container_width=True,
+
+    height=400
+
+)
+
+# =========================================================
+# SL HIT METRIC
+# =========================================================
+
+sl_hits = len(
+
+    signals_df[
+        signals_df["status"] == "SL HIT"
+    ]
+
+)
+
+st.metric(
+    "TOTAL SL HITS",
+    sl_hits
+)
+
+# =========================================================
+# FOOTER
+# =========================================================
+
+st.success(
+    "SYSTEM ONLINE • AI ACTIVE • SMART MONEY ACTIVE • WHALE DETECTION ENABLED"
+)
