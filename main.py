@@ -81,11 +81,8 @@ st.markdown("""
 
 
 # =====================================================================
-
-# 🛠️ DATA MODULES (CRYPTOCOMPARE COMPATIBLE)
-
+# 🛠️ DATA MODULES - FIXED SYNTAX
 # =====================================================================
-
 COIN_SYMBOLS = {
     "BTCUSDT": "₿ BTCUSDT", "ETHUSDT": "♦️ ETHUSDT", "SOLUSDT": "☀️ SOLUSDT", "BNBUSDT": "🔶 BNBUSDT",
     "XRPUSDT": "💧 XRPUSDT", "ADAUSDT": "₳ ADAUSDT", "DOGEUSDT": "🐕 DOGEUSDT", "SHIBUSDT": "🦊 SHIBUSDT",
@@ -110,8 +107,10 @@ COIN_SYMBOLS = {
     "RVNUSDT": "🦅 RVNUSDT", "SNXUSDT": "🪙 SNXUSDT", "SUSHIUSDT": "🍣 SUSHIUSDT", "YFIUSDT": "🪙 YFIUSDT",
     "ZILUSDT": "🪙 ZILUSDT", "JTOUSDT": "🪙 JTOUSDT", "ORDIUSDT": "🪙 ORDIUSDT", "SATSUSDT": "🪙 SATSUSDT",
     "MEMEUSDT": "🪙 MEMEUSDT", "BLURUSDT": "🪙 BLURUSDT", "ILVUSDT": "🪙 ILVUSDT", "SUPERUSDT": "🪙 SUPERUSDT",
-    "RAREUSDT": "🪙 RAREUSDT", "AUDIOUSDT": "🎵 AUDIOUSDT", "HBARUSDT": "🪙 HBARUSDT", "QTUMUSDT": "🪙 QTUMUSDT",
-    "ZENUSDT": "🪙 ZENUSDT", "BCHUSDT": "₿ BCHUSDT", "ETCUSDT": "🪙 ETCUSDT", "ATOMUSDT": "
+    "RAREUSDT": "🪙 RAREUSDT", "AUDIOUSDT": "🎵 AUDIOUSDT", "HBARUSDT": "🪙 HBARUSDT", "ZENUSDT": "🪙 ZENUSDT",
+    "BCHUSDT": "₿ BCHUSDT", "ETCUSDT": "🪙 ETCUSDT"
+}
+SCAN_COINS = list(COIN_SYMBOLS.keys())
 
 SCAN_COINS = list(COIN_SYMBOLS.keys())
 
