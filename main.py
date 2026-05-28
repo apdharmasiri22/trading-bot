@@ -40,15 +40,34 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # =====================================================================
-# 🛠️ DATA MODULES (CRYPTOCOMPARE COMPATIBLE)
+# 🛠️ DATA MODULES (AUTOMATED BINANCE LIVE COINS FEED)
 # =====================================================================
-COIN_SYMBOLS = {
-    "BTCUSDT": "₿ BTCUSDT", "ETHUSDT": "♦️ ETHUSDT", "SOLUSDT": "☀️ SOLUSDT", "BNBUSDT": "🔶 BNBUSDT",
-    "XRPUSDT": "💧 XRPUSDT", "ADAUSDT": "₳ ADAUSDT", "DOGEUSDT": "🐕 DOGEUSDT", "SHIBUSDT": "🦊 SHIBUSDT",
-    "PEPEUSDT": "🐸 PEPEUSDT", "DOTUSDT": "● DOTUSDT", "LTCUSDT": "Ł LTCUSDT", "AVAXUSDT": "🔺 AVAXUSDT",
-    "LINKUSDT": "🔗 LINKUSDT", "TRXUSDT": "🔴 TRXUSDT", "ATOMUSDT": "⚛️ ATOMUSDT", "UNIUSDT": "🦄 UNIUSDT",
-    "NEARUSDT": "Ⓝ NEARUSDT", "SUIUSDT": "💧 SUIUSDT", "FETUSDT": "🤖 FETUSDT", "APTUSDT": "🌀 APTUSDT"
-}
+@st.cache_data(ttl=300)  # විනාඩි 5කට සැරයක් අලුත් කොයින් තියෙනවද කියලා ඔටෝම චෙක් කරනවා
+def fetch_binance_live_usdt_pairs():
+    try:
+        response = requests.get("https://api.binance.com/api/v3/exchangeInfo", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            pairs = {}
+            for symbol_info in data.get("symbols", []):
+                # TRADING තත්ත්වයේ තියෙන, USDT මාකට් එකේ විතරක් දුවන කොයින් වෙන් කරගැනීම
+                if symbol_info["quoteAsset"] == "USDT" and symbol_info["status"] == "TRADING":
+                    sym = symbol_info["symbol"]
+                    # Leverage ටෝකන් (UP/DOWN) සහ පැටලෙන දේවල් අයින් කිරීම
+                    if "UPUSDT" not in sym and "DOWNUSDT" not in sym and "BULLUSDT" not in sym and "BEARUSDT" not in sym:
+                        pairs[sym] = f"🪙 {sym}"
+            if pairs:
+                return pairs
+    except:
+        pass
+    # මොකක් හරි හේතුවකින් Binance API ඩවුන් උනොත් ඇප් එක ක්‍රෑෂ් නොවී දුවන්න Default ලිස්ට් එක
+    return {
+        "BTCUSDT": "₿ BTCUSDT", "ETHUSDT": "♦️ ETHUSDT", "SOLUSDT": "☀️ SOLUSDT", "BNBUSDT": "🔶 BNBUSDT",
+        "XRPUSDT": "💧 XRPUSDT", "ADAUSDT": "₳ ADAUSDT", "DOGEUSDT": "🐕 DOGEUSDT", "SHIBUSDT": "🦊 SHIBUSDT"
+    }
+
+# ලයිව් කොයින් ලිස්ට් එක ඩයිනමික් ලෙස ලෝඩ් කිරීම
+COIN_SYMBOLS = fetch_binance_live_usdt_pairs()
 SCAN_COINS = list(COIN_SYMBOLS.keys())
 
 def get_all_binance_symbols_with_symbols():
