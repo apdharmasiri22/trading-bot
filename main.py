@@ -240,6 +240,12 @@ def get_market():
         "User-Agent":"Mozilla/5.0"
     }
 
+    rows = []
+
+    # =====================================================
+    # BINANCE DATA
+    # =====================================================
+
     try:
 
         url = "https://api.binance.com/api/v3/ticker/24hr"
@@ -247,12 +253,10 @@ def get_market():
         response = requests.get(
             url,
             headers=headers,
-            timeout=15
+            timeout=20
         )
 
         data = response.json()
-
-        rows = []
 
         if isinstance(data, list):
 
@@ -261,19 +265,34 @@ def get_market():
                 try:
 
                     symbol = str(
+                        coin.get("symbol", "")
+                    )
+
+                    # ONLY NORMAL USDT PAIRS
+
+                    if not symbol.endswith("USDT"):
+                        continue
+
+                    # REMOVE LEVERAGED TOKENS
+
+                    if any(x in symbol for x in [
+                        "UPUSDT",
+                        "DOWNUSDT",
+                        "BULLUSDT",
+                        "BEARUSDT"
+                    ]):
+                        continue
+
+                    volume = float(
                         coin.get(
-                            "symbol",
-                            ""
+                            "quoteVolume",
+                            0
                         )
                     )
 
-                    if (
-                        not symbol.endswith("USDT")
-                        or "UPUSDT" in symbol
-                        or "DOWNUSDT" in symbol
-                        or "BULLUSDT" in symbol
-                        or "BEARUSDT" in symbol
-                    ):
+                    # HIGH VOLUME ONLY
+
+                    if volume < 10000000:
                         continue
 
                     rows.append({
@@ -294,36 +313,27 @@ def get_market():
                             )
                         ),
 
-                        "volume":float(
-                            coin.get(
-                                "quoteVolume",
-                                0
-                            )
-                        )
+                        "volume":volume
 
                     })
 
                 except:
                     pass
 
-        if len(rows) > 0:
+        # =================================================
+        # SUCCESS
+        # =================================================
+
+        if len(rows) > 10:
 
             df = pd.DataFrame(rows)
-
-            # HIGH VOLUME COINS ONLY
-
-            df = df[
-                df["volume"] > 10000000
-            ]
-
-            # SORT BY BIGGEST VOLUME
 
             df = df.sort_values(
                 by="volume",
                 ascending=False
             )
 
-            # TOP MARKET COINS
+            # TAKE TOP ACTIVE COINS
 
             df = df.head(75)
 
@@ -332,16 +342,111 @@ def get_market():
     except:
         pass
 
-    # FALLBACK
+    # =====================================================
+    # COINGECKO FALLBACK
+    # =====================================================
 
-    fallback = pd.DataFrame({
+    try:
+
+        cg_url = "https://api.coingecko.com/api/v3/coins/markets"
+
+        params = {
+
+            "vs_currency":"usd",
+
+            "order":"volume_desc",
+
+            "per_page":100,
+
+            "page":1,
+
+            "sparkline":"false"
+
+        }
+
+        response = requests.get(
+            cg_url,
+            params=params,
+            timeout=20
+        )
+
+        data = response.json()
+
+        for coin in data:
+
+            try:
+
+                volume = float(
+                    coin.get(
+                        "total_volume",
+                        0
+                    )
+                )
+
+                if volume < 10000000:
+                    continue
+
+                rows.append({
+
+                    "symbol":str(
+                        coin.get(
+                            "symbol",
+                            ""
+                        )
+                    ).upper() + "USDT",
+
+                    "price":float(
+                        coin.get(
+                            "current_price",
+                            0
+                        )
+                    ),
+
+                    "change":float(
+                        coin.get(
+                            "price_change_percentage_24h",
+                            0
+                        ) or 0
+                    ),
+
+                    "volume":volume
+
+                })
+
+            except:
+                pass
+
+        if len(rows) > 10:
+
+            df = pd.DataFrame(rows)
+
+            df = df.sort_values(
+                by="volume",
+                ascending=False
+            )
+
+            df = df.head(75)
+
+            return df
+
+    except:
+        pass
+
+    # =====================================================
+    # FINAL FALLBACK
+    # =====================================================
+
+    return pd.DataFrame({
 
         "symbol":[
             "BTCUSDT",
             "ETHUSDT",
             "SOLUSDT",
             "XRPUSDT",
-            "DOGEUSDT"
+            "DOGEUSDT",
+            "BNBUSDT",
+            "ADAUSDT",
+            "AVAXUSDT"
         ],
 
         "price":[
@@ -349,7 +454,10 @@ def get_market():
             3500,
             170,
             0.62,
-            0.16
+            0.16,
+            600,
+            0.45,
+            35
         ],
 
         "change":[
@@ -357,7 +465,10 @@ def get_market():
             3.2,
             7.5,
             -1.2,
-            12.1
+            12.1,
+            4.2,
+            2.1,
+            5.6
         ],
 
         "volume":[
@@ -365,12 +476,13 @@ def get_market():
             20000000000,
             8000000000,
             3000000000,
-            4000000000
+            4000000000,
+            7000000000,
+            1500000000,
+            2200000000
         ]
 
     })
-
-    return fallback
 
 # =========================================================
 # KLINE DATA
