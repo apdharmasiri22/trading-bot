@@ -9,7 +9,7 @@ import time
 
 # වෙබ් පිටුවේ සැකසුම් (Page Configuration)
 st.set_page_config(
-    page_title="ALPHA TRADING TERMINAL v4.0",
+    page_title="ALPHA TRADING TERMINAL v4.1",
     page_icon="👑",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -52,10 +52,10 @@ def get_all_binance_symbols_with_symbols():
     return COIN_SYMBOLS
 
 def get_crypto_data(symbol, interval, limit=100):
-    # Mapping intervals to Bybit format
-    bybit_intervals = {"5m": "5", "15m": "15", "1h": "60", "4h": "240", "1d": "D", "1m": "1"}
+    bybit_intervals = {"1m": "1", "5m": "5", "15m": "15", "1h": "60", "4h": "240", "1d": "D"}
     bybit_inv = bybit_intervals.get(interval, "15")
     
+    # Bybit V5 Linear/Inverse Market Endpoint
     url = "https://api.bybit.com/v5/market/kline"
     params = {"category": "linear", "symbol": symbol, "interval": bybit_inv, "limit": limit}
     
@@ -63,15 +63,19 @@ def get_crypto_data(symbol, interval, limit=100):
         response = requests.get(url, params=params, timeout=5)
         if response.status_code == 200:
             data = response.json()
-            raw_data = data.get("result", {}).get("list", [])
-            if not raw_data: return None
+            raw_list = data.get("result", {}).get("list", [])
+            if not raw_list or len(raw_list) < 5:
+                return None
             
-            # Bybit returns data in reverse chronological order -> Order: [StartTime, Open, High, Low, Close, Volume, Turnover]
-            df = pd.DataFrame(raw_data, columns=["Time", "Open", "High", "Low", "Close", "Volume", "Turnover"])
-            df = df.iloc[::-1].reset_index(drop=True) # Flip to match old to new timeline
+            # Format: [startTime, openPrice, highPrice, lowPrice, closePrice, volume, turnover]
+            df = pd.DataFrame(raw_list, columns=["Time", "Open", "High", "Low", "Close", "Volume", "Turnover"])
             
+            # Convert strings to floats safely
             for col in ["Open", "High", "Low", "Close", "Volume"]:
-                df[col] = df[col].astype(float)
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+                
+            # Chronological Order Flip (Oldest -> Newest)
+            df = df.iloc[::-1].reset_index(drop=True)
             return df
     except:
         return None
@@ -225,150 +229,4 @@ with st.sidebar:
     
     st.markdown("---")
     
-    st.markdown("#### 🔔 TELEGRAM NOTIFIER")
-    tg_on = st.checkbox("Enable Live Alerts")
-    tg_token = st.text_input("Bot Token:", type="password")
-    tg_id = st.text_input("Chat ID:")
-
-# =====================================================================
-# 👑 MAIN INTERFACE
-# =====================================================================
-st.markdown("<h1 style='text-align: center; color: #ffb703;'>👑 ALPHA AUTOMATED QUANT TERMINAL v4.0</h1>", unsafe_allow_html=True)
-st.markdown(f"<p style='text-align: center; color: #8b949e;'>Engine Mode: <b>{strategy}</b> | Live Bybit-Powered High-Accuracy SMC Engine</p>", unsafe_allow_html=True)
-st.markdown("<hr style='border: 1px solid rgba(255,255,255,0.1);'/>", unsafe_allow_html=True)
-
-if is_news_block_active():
-    st.warning("⚠️ HIGH IMPACT ECONOMIC NEWS WINDOW OPEN: Signals are locked.")
-
-# 📡 LIVE SCANNER RADAR RUNNING IN BACKGROUND
-st.markdown("### 📡 MARKET RADAR MULTI-CONFLUENCE SIGNALS")
-active_signals = []
-with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor: 
-    results = executor.map(lambda c: analyze_coin_for_scanner(c, htf, ltf), SCAN_COINS)
-    for r in list(results):
-        if r is not None: 
-            active_signals.append(r)
-            if tg_on and tg_token and tg_id:
-                msg = f"⚠️ *ALPHA TERMINAL MASTER v4.0*\n\n🪙 Coin: {r['Coin']}\n🚨 Action: {r['Signal']}\n💪 Strength: {r['Strength']}\n🏛️ Structure: {r['Structure']}\n\n💵 Entry: {r['Entry']}\n🛑 SL: {r['SL']}\n🎯 TP: {r['TP']}"
-                send_telegram_alert(tg_token, tg_id, msg)
-
-if active_signals:
-    st.dataframe(pd.DataFrame(active_signals), use_container_width=True, hide_index=True)
-else:
-    st.warning("🔍 Scanner Standby: No asset currently breaks the 60% Multi-Timeframe Confluence Threshold.")
-
-st.markdown("<hr style='border: 1px solid rgba(255,255,255,0.1);'/>", unsafe_allow_html=True)
-
-# 📊 TRADINGVIEW LIVE CHARTS EMBEDDING & DEEP VISUALIZER
-st.markdown(f"### 🎯 LIVE ANALYSIS & CHART VIEW: <span style='color: #58a6ff;'>{selected_coin_display}</span>", unsafe_allow_html=True)
-
-col_chart, col_metrics = st.columns([2, 1])
-
-with col_chart:
-    tv_interval = "5" if ltf == "5m" else "15" if ltf == "15m" else "60"
-    tv_html = f"""
-    <div id="tradingview_chart" style="height:450px;"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-    <script type="text/javascript">
-    new TradingView.widget({{
-      "width": "100%",
-      "height": 450,
-      "symbol": "BYBIT:{selected_coin}",
-      "interval": "{tv_interval}",
-      "timezone": "Etc/UTC",
-      "theme": "dark",
-      "style": "1",
-      "locale": "en",
-      "toolbar_bg": "#f1f3f6",
-      "enable_publishing": false,
-      "hide_side_toolbar": false,
-      "allow_symbol_change": true,
-      "container_id": "tradingview_chart"
-    }});
-    </script>
-    """
-    components.html(tv_html, height=460)
-
-# Deep Visualizer Calculations
-df_htf = get_crypto_data(selected_coin, htf, 100)
-df_ltf = get_crypto_data(selected_coin, ltf, 100)
-df_1m = get_crypto_data(selected_coin, "1m", 5)
-
-with col_metrics:
-    if df_htf is not None and df_ltf is not None and df_1m is not None and len(df_htf) > 0 and len(df_ltf) > 0 and len(df_1m) > 0:
-        bullish_points, bearish_points, total_checks = 0, 0, 0
-        
-        current_market_price = df_1m["Close"].iloc[-1]
-        st.metric("📊 LIVE MARKET PRICE", f"${current_market_price:,.2f}")
-        
-        df_htf["EMA_50"] = calculate_ema(df_htf["Close"], 50)
-        htf_trend = "BULLISH 📈" if df_htf["Close"].iloc[-1] > df_htf["EMA_50"].iloc[-1] else "BEARISH 📉"
-        if htf_trend == "BULLISH 📈": bullish_points += 15
-        else: bearish_points += 15
-        total_checks += 15
-        
-        df_ltf["RSI"] = calculate_rsi(df_ltf["Close"], 14)
-        c_rsi = df_ltf["RSI"].iloc[-1]
-        if c_rsi < 35: bullish_points += 15
-        elif c_rsi > 65: bearish_points += 15
-        total_checks += 15
-        
-        df_ltf["MACD"], df_ltf["Signal"] = calculate_macd(df_ltf["Close"])
-        if df_ltf["MACD"].iloc[-1] > df_ltf["Signal"].iloc[-1]: bullish_points += 10
-        else: bearish_points += 10
-        total_checks += 10
-        
-        smc_bull, smc_bear, bos_sig = detect_smc_features(df_ltf)
-        if htf_trend == "BULLISH 📈" and bos_sig == "BULLISH_BOS": bullish_points += 20
-        if htf_trend == "BEARISH 📉" and bos_sig == "BEARISH_BOS": bearish_points += 20
-        
-        bullish_points += smc_bull
-        bearish_points += smc_bear
-        total_checks += 75
-        
-        cvd_flow = calculate_cvd_delta(df_ltf)
-        if cvd_flow > 0: bullish_points += 15
-        elif cvd_flow < 0: bearish_points += 15
-        total_checks += 15
-        
-        bull_per = (bullish_points / total_checks) * 100
-        bear_per = (bearish_points / total_checks) * 100
-        
-        st.metric(label="🟩 ACCURATE BUY PROBABILITY", value=f"{bull_per:.1f}%")
-        st.metric(label="🟥 ACCURATE SELL PROBABILITY", value=f"{bear_per:.1f}%")
-        st.info(f"HTF Trend Setup: **{htf_trend}**\nCVD Flow: **{'BULLISH 🟢' if cvd_flow > 0 else 'BEARISH 🔴'}**")
-    else:
-        st.error("Data Stream Syncing... Please click sidebar asset again.")
-        bull_per, bear_per, htf_trend, cvd_flow = 0, 0, "NONE", 0
-
-# Execution & Risk Size Output
-if df_htf is not None and df_ltf is not None and df_1m is not None and len(df_htf) > 0 and len(df_ltf) > 0 and len(df_1m) > 0:
-    c_price_1m = df_1m["Close"].iloc[-1]
-    df_ltf["ATR"] = calculate_atr(df_ltf)
-    c_atr = df_ltf["ATR"].iloc[-1] if not pd.isna(df_ltf["ATR"].iloc[-1]) else (c_price_1m * 0.003)
-    dec_places = 6 if c_price_1m < 0.1 else 4
-    
-    risk_cash = balance * (risk_pct / 100)
-    sl_distance_pct = (c_atr * 2) / c_price_1m
-    raw_position_size = risk_cash / sl_distance_pct if sl_distance_pct > 0 else balance
-    margin_required = raw_position_size / leverage
-    
-    trailing_sl_step = c_atr * 1.5
-    
-    st.markdown("#### ⚡ SIGNAL SYSTEM EXECUTION & RISK SHEET")
-    
-    col_sig, col_risk = st.columns(2)
-    
-    with col_sig:
-        if bull_per >= 60 and htf_trend == "BULLISH 📈" and cvd_flow > 0:
-            st.success(f"### 🚀 SYSTEM DIRECTIVE: BUY / LONG\n**Entry:** ${c_price_1m:.{dec_places}f}\n**Stop Loss:** ${c_price_1m - (c_atr*2):.{dec_places}f}\n**Take Profit:** ${c_price_1m + (c_atr*4):.{dec_places}f}\n\n*🛡️ Trailing SL Step:* Move SL up every +${trailing_sl_step:.{dec_places}f} profit.")
-        elif bear_per >= 60 and htf_trend == "BEARISH 📉" and cvd_flow < 0:
-            st.error(f"### 📉 SYSTEM DIRECTIVE: SELL / SHORT\n**Entry:** ${c_price_1m:.{dec_places}f}\n**Stop Loss:** ${c_price_1m + (c_atr*2):.{dec_places}f}\n**Take Profit:** ${c_price_1m - (c_atr*4):.{dec_places}f}\n\n*🛡️ Trailing SL Step:* Move SL down every -${trailing_sl_step:.{dec_places}f} profit.")
-        else:
-            st.info("⚪ ENGINE STATUS: High-accuracy confluence threshold not met. Standby.")
-            
-    with col_risk:
-        st.warning(f"### 🧮 CALCULATED RISK QUANTITIES\n"
-                   f"* **Risk Cash Amount:** ${risk_cash:.2f}\n"
-                   f"* **Recommended Position Size:** ${raw_position_size:.2f}\n"
-                   f"* **Margin Allocation Needed:** ${margin_required:.2f} (at {leverage}x)")
+    st.markdown("####
