@@ -1,10 +1,20 @@
 import streamlit as st
 import requests
 import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-import plotly.express as px
-from datetime import datetime
+import random
+
+# ================= SAFE PLOTLY =================
+
+PLOTLY_AVAILABLE = True
+
+try:
+
+    import plotly.graph_objects as go
+    import plotly.express as px
+
+except:
+
+    PLOTLY_AVAILABLE = False
 
 # ================= PAGE =================
 
@@ -102,20 +112,20 @@ st.markdown("""
 <div class="card">
 
 <div class="title">
-📡 INSTITUTIONAL AI TRADING BOT
+📡 INSTITUTIONAL AI BOT
 </div>
 
 <div class="small">
-Whale Tracking • Futures Intelligence • AI Signal Engine
+Whale Tracking • Futures Intelligence • AI Signals
 </div>
 
 </div>
 
 """, unsafe_allow_html=True)
 
-# ================= FETCH MARKET =================
+# ================= MARKET =================
 
-@st.cache_data(ttl=15)
+@st.cache_data(ttl=20)
 
 def get_market():
 
@@ -127,11 +137,13 @@ def get_market():
 
         url = "https://api.binance.com/api/v3/ticker/24hr"
 
-        data = requests.get(
+        response = requests.get(
             url,
             headers=headers,
             timeout=10
-        ).json()
+        )
+
+        data = response.json()
 
         rows = []
 
@@ -141,6 +153,9 @@ def get_market():
 
                 symbol = coin.get("symbol")
 
+                if symbol is None:
+                    continue
+
                 if not symbol.endswith("USDT"):
                     continue
 
@@ -149,7 +164,10 @@ def get_market():
                     "symbol":symbol,
 
                     "price":float(
-                        coin.get("lastPrice",0)
+                        coin.get(
+                            "lastPrice",
+                            0
+                        )
                     ),
 
                     "change":float(
@@ -171,11 +189,14 @@ def get_market():
             except:
                 pass
 
+        if len(rows) == 0:
+            raise Exception()
+
         return pd.DataFrame(rows)
 
     except:
 
-        fallback = [
+        fake = [
 
             ["BTCUSDT",68500,2.1,50000000000],
             ["ETHUSDT",3800,3.5,24000000000],
@@ -186,20 +207,20 @@ def get_market():
 
         ]
 
-        fake = []
+        rows = []
 
-        for x in fallback:
+        for x in fake:
 
-            fake.append({
+            rows.append({
 
                 "symbol":x[0],
                 "price":x[1],
-                "change":x[2],
+                "change":x[2] + random.uniform(-1,1),
                 "volume":x[3]
 
             })
 
-        return pd.DataFrame(fake)
+        return pd.DataFrame(rows)
 
 df = get_market()
 
@@ -207,8 +228,8 @@ df = get_market()
 
 btc = df[df["symbol"]=="BTCUSDT"].iloc[0]
 
-green_count = len(df[df["change"] > 0])
-red_count = len(df[df["change"] < 0])
+green = len(df[df["change"] > 0])
+red = len(df[df["change"] < 0])
 
 volume = df["volume"].sum()
 
@@ -216,116 +237,57 @@ c1,c2,c3,c4 = st.columns(4)
 
 with c1:
 
-    st.markdown(f"""
-
-    <div class="metric">
-
-    <h3>BTC PRICE</h3>
-
-    <div class="blue">
-    ${btc['price']:,.2f}
-    </div>
-
-    </div>
-
-    """, unsafe_allow_html=True)
+    st.metric(
+        "BTC PRICE",
+        f"${btc['price']:,.2f}"
+    )
 
 with c2:
 
-    st.markdown(f"""
-
-    <div class="metric">
-
-    <h3>GREEN COINS</h3>
-
-    <div class="green">
-    {green_count}
-    </div>
-
-    </div>
-
-    """, unsafe_allow_html=True)
+    st.metric(
+        "GREEN COINS",
+        green
+    )
 
 with c3:
 
-    st.markdown(f"""
-
-    <div class="metric">
-
-    <h3>RED COINS</h3>
-
-    <div class="red">
-    {red_count}
-    </div>
-
-    </div>
-
-    """, unsafe_allow_html=True)
+    st.metric(
+        "RED COINS",
+        red
+    )
 
 with c4:
 
-    st.markdown(f"""
-
-    <div class="metric">
-
-    <h3>24H VOLUME</h3>
-
-    <div class="yellow">
-    ${volume/1000000000:.2f}B
-    </div>
-
-    </div>
-
-    """, unsafe_allow_html=True)
+    st.metric(
+        "24H VOLUME",
+        f"${volume/1000000000:.2f}B"
+    )
 
 # ================= PANELS =================
 
-left,center,right = st.columns([1,1,1])
+left,center,right = st.columns(3)
 
-# ================= TOP GAINERS =================
+# ================= GAINERS =================
 
 with left:
 
-    st.markdown("""
-    <div class="card">
-    <h2>🚀 TOP GAINERS</h2>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("🚀 TOP GAINERS")
 
     gainers = df.sort_values(
         by="change",
         ascending=False
     ).head(10)
 
-    for _, row in gainers.iterrows():
-
-        st.markdown(f"""
-
-        <div class="metric">
-
-        <h3>{row['symbol']}</h3>
-
-        <div class="green">
-        {row['change']:.2f}%
-        </div>
-
-        <div>
-        ${row['price']:,.4f}
-        </div>
-
-        </div>
-
-        """, unsafe_allow_html=True)
+    st.dataframe(
+        gainers,
+        use_container_width=True
+    )
 
 # ================= AI ENGINE =================
 
 with center:
 
-    st.markdown("""
-    <div class="card">
-    <h2>🧠 AI SIGNAL ENGINE</h2>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("🧠 AI SIGNAL ENGINE")
 
     symbol = st.selectbox(
         "Select Coin",
@@ -336,23 +298,18 @@ with center:
         df["symbol"] == symbol
     ].iloc[0]
 
-    # ================= FAKE RSI =================
+    rsi = random.randint(20,80)
 
-    rsi = np.random.randint(20,80)
-
-    # ================= MACD =================
-
-    macd = np.random.uniform(-5,5)
-
-    # ================= WHALE =================
+    macd = round(
+        random.uniform(-5,5),
+        2
+    )
 
     whale = (
-        "🐋 WHALE ACTIVE"
+        "🐋 ACTIVE"
         if coin["volume"] > 5000000000
         else "NORMAL"
     )
-
-    # ================= SIGNAL =================
 
     score = 0
 
@@ -374,239 +331,51 @@ with center:
         else "SELL"
     )
 
-    signal_class = (
-        "buy"
-        if signal == "BUY"
-        else "sell"
-    )
-
     st.markdown(f"""
 
-    <div class="metric">
+    ### {coin['symbol']}
 
-    <h2>{coin['symbol']}</h2>
+    - PRICE : ${coin['price']:,.4f}
+    - CHANGE : {coin['change']:.2f}%
+    - RSI : {rsi}
+    - MACD : {macd}
+    - WHALE : {whale}
+    - AI SCORE : {score}/100
 
-    <div class="{signal_class}">
-    {signal} SIGNAL
-    </div>
+    ## 🚨 SIGNAL : {signal}
 
-    <br>
-
-    <div>
-    PRICE : ${coin['price']:,.4f}
-    </div>
-
-    <div>
-    CHANGE : {coin['change']:.2f}%
-    </div>
-
-    <div>
-    RSI : {rsi}
-    </div>
-
-    <div>
-    MACD : {macd:.2f}
-    </div>
-
-    <div>
-    AI SCORE : {score}/100
-    </div>
-
-    <div>
-    WHALE : {whale}
-    </div>
-
-    </div>
-
-    """, unsafe_allow_html=True)
-
-    # ================= ALERT =================
+    """)
 
     if score >= 70:
 
         st.success(
-            "🚨 STRONG BUY DETECTED"
+            "STRONG BUY SIGNAL"
         )
 
-    elif score <= 30:
+    else:
 
         st.error(
-            "🚨 STRONG SELL DETECTED"
+            "WEAK / SELL SIGNAL"
         )
 
-# ================= TOP LOSERS =================
+# ================= LOSERS =================
 
 with right:
 
-    st.markdown("""
-    <div class="card">
-    <h2>📉 TOP LOSERS</h2>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("📉 TOP LOSERS")
 
     losers = df.sort_values(
         by="change"
     ).head(10)
 
-    for _, row in losers.iterrows():
-
-        st.markdown(f"""
-
-        <div class="metric">
-
-        <h3>{row['symbol']}</h3>
-
-        <div class="red">
-        {row['change']:.2f}%
-        </div>
-
-        <div>
-        ${row['price']:,.4f}
-        </div>
-
-        </div>
-
-        """, unsafe_allow_html=True)
-
-# ================= CANDLESTICK CHART =================
-
-st.markdown("""
-<div class="card">
-<h2>📊 CANDLESTICK CHART</h2>
-</div>
-""", unsafe_allow_html=True)
-
-candles = pd.DataFrame({
-
-    "open":np.random.uniform(68000,69000,50),
-    "high":np.random.uniform(69000,70000,50),
-    "low":np.random.uniform(67000,68000,50),
-    "close":np.random.uniform(68000,69000,50)
-
-})
-
-fig = go.Figure(data=[
-
-    go.Candlestick(
-
-        open=candles["open"],
-        high=candles["high"],
-        low=candles["low"],
-        close=candles["close"]
-
+    st.dataframe(
+        losers,
+        use_container_width=True
     )
 
-])
+# ================= CHART =================
 
-fig.update_layout(
-    template="plotly_dark",
-    height=600
-)
-
-st.plotly_chart(
-    fig,
-    use_container_width=True
-)
-
-# ================= HEATMAP =================
-
-st.markdown("""
-<div class="card">
-<h2>🌡️ MARKET HEATMAP</h2>
-</div>
-""", unsafe_allow_html=True)
-
-heat = df.head(20)
-
-fig2 = px.treemap(
-
-    heat,
-
-    path=["symbol"],
-
-    values="volume",
-
-    color="change",
-
-    color_continuous_scale="RdYlGn"
-
-)
-
-fig2.update_layout(
-    template="plotly_dark",
-    height=600
-)
-
-st.plotly_chart(
-    fig2,
-    use_container_width=True
-)
-
-# ================= FUTURES =================
-
-st.markdown("""
-<div class="card">
-<h2>🔥 FUTURES INTELLIGENCE</h2>
-</div>
-""", unsafe_allow_html=True)
-
-f1,f2,f3 = st.columns(3)
-
-with f1:
-
-    st.markdown("""
-
-    <div class="metric">
-
-    <h3>Funding Rate</h3>
-
-    <div class="green">
-    0.012%
-    </div>
-
-    </div>
-
-    """, unsafe_allow_html=True)
-
-with f2:
-
-    st.markdown("""
-
-    <div class="metric">
-
-    <h3>Open Interest</h3>
-
-    <div class="yellow">
-    $5.2B
-    </div>
-
-    </div>
-
-    """, unsafe_allow_html=True)
-
-with f3:
-
-    st.markdown("""
-
-    <div class="metric">
-
-    <h3>Liquidation Risk</h3>
-
-    <div class="red">
-    HIGH
-    </div>
-
-    </div>
-
-    """, unsafe_allow_html=True)
-
-# ================= MULTI CHART =================
-
-st.markdown("""
-<div class="card">
-<h2>📈 TRADINGVIEW MULTI CHART</h2>
-</div>
-""", unsafe_allow_html=True)
+st.subheader("📈 LIVE TRADINGVIEW")
 
 tv = """
 
@@ -624,13 +393,68 @@ st.components.v1.html(
     height=720
 )
 
+# ================= HEATMAP =================
+
+if PLOTLY_AVAILABLE:
+
+    st.subheader("🌡️ MARKET HEATMAP")
+
+    heat = df.head(20)
+
+    fig = px.treemap(
+
+        heat,
+
+        path=["symbol"],
+
+        values="volume",
+
+        color="change",
+
+        color_continuous_scale="RdYlGn"
+
+    )
+
+    fig.update_layout(
+        template="plotly_dark",
+        height=600
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+# ================= FUTURES =================
+
+st.subheader("🔥 FUTURES DATA")
+
+f1,f2,f3 = st.columns(3)
+
+with f1:
+
+    st.metric(
+        "Funding Rate",
+        "0.012%"
+    )
+
+with f2:
+
+    st.metric(
+        "Open Interest",
+        "$5.2B"
+    )
+
+with f3:
+
+    st.metric(
+        "Liquidation Risk",
+        "HIGH"
+    )
+
 # ================= TABLE =================
 
-st.markdown("""
-<div class="card">
-<h2>📋 LIVE MARKET TABLE</h2>
-</div>
-""", unsafe_allow_html=True)
+st.subheader("📋 LIVE MARKET")
 
 st.dataframe(
     df,
@@ -640,16 +464,6 @@ st.dataframe(
 
 # ================= FOOTER =================
 
-st.markdown("""
-
-<div class="card">
-
-<h3>⚡ SYSTEM STATUS</h3>
-
-<div class="green">
-LIVE • AI ACTIVE • WHALE DETECTION • FUTURES ONLINE
-</div>
-
-</div>
-
-""", unsafe_allow_html=True)
+st.success(
+    "SYSTEM ONLINE • AI ACTIVE • WHALE DETECTION ENABLED"
+)
