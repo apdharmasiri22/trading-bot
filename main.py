@@ -332,41 +332,39 @@ def get_market():
 
         return df
 
-    except:
+     except:
 
-except:
+        rows = []
 
-    rows = []
+        for i in range(100):
 
-    for i in range(100):
+            rows.append({
 
-        rows.append({
+                "symbol":f"COIN{i}USDT",
 
-            "symbol":f"COIN{i}USDT",
-
-            "price":round(
-                np.random.uniform(1,70000),
-                4
-            ),
-
-            "change":round(
-                np.random.uniform(-20,20),
-                2
-            ),
-
-            "volume":round(
-                np.random.uniform(
-                    1000000,
-                    5000000000
+                "price":round(
+                    np.random.uniform(1,70000),
+                    4
                 ),
-                2
-            )
 
-        })
+                "change":round(
+                    np.random.uniform(-20,20),
+                    2
+                ),
 
-    df = pd.DataFrame(rows)
+                "volume":round(
+                    np.random.uniform(
+                        1000000,
+                        5000000000
+                    ),
+                    2
+                )
 
-    return df
+            })
+
+        df = pd.DataFrame(rows)
+
+        return df
 
 # =========================================================
 # KLINES
