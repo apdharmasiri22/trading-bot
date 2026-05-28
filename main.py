@@ -5,14 +5,18 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 
-# ================= PAGE =================
+# =====================================================
+# PAGE
+# =====================================================
 
 st.set_page_config(
     page_title="QUANTUM X AI",
     layout="wide"
 )
 
-# ================= STYLE =================
+# =====================================================
+# STYLE
+# =====================================================
 
 st.markdown("""
 
@@ -110,7 +114,9 @@ html, body, [class*="css"] {
 
 """, unsafe_allow_html=True)
 
-# ================= HEADER =================
+# =====================================================
+# HEADER
+# =====================================================
 
 st.markdown("""
 
@@ -121,14 +127,16 @@ st.markdown("""
 </div>
 
 <div>
-Institutional Smart Money Intelligence
+Institutional Smart Money Intelligence System
 </div>
 
 </div>
 
 """, unsafe_allow_html=True)
 
-# ================= RSI =================
+# =====================================================
+# RSI
+# =====================================================
 
 def calculate_rsi(data, period=14):
 
@@ -148,7 +156,9 @@ def calculate_rsi(data, period=14):
 
     return rsi
 
-# ================= EMA =================
+# =====================================================
+# EMA
+# =====================================================
 
 def calculate_ema(data, period):
 
@@ -157,7 +167,9 @@ def calculate_ema(data, period):
         adjust=False
     ).mean()
 
-# ================= MACD =================
+# =====================================================
+# MACD
+# =====================================================
 
 def calculate_macd(data):
 
@@ -171,7 +183,9 @@ def calculate_macd(data):
 
     return macd, signal
 
-# ================= MARKET =================
+# =====================================================
+# MARKET DATA
+# =====================================================
 
 @st.cache_data(ttl=30)
 
@@ -180,6 +194,10 @@ def get_market():
     headers = {
         "User-Agent":"Mozilla/5.0"
     }
+
+    # ==========================================
+    # BINANCE
+    # ==========================================
 
     try:
 
@@ -193,20 +211,104 @@ def get_market():
 
         data = response.json()
 
-        # ================= VALIDATE =================
+        if isinstance(data, list):
 
-        if not isinstance(data, list):
+            rows = []
 
-            st.error(
-                "Binance API Invalid Response"
-            )
+            for coin in data:
 
-            return pd.DataFrame(columns=[
-                "symbol",
-                "price",
-                "change",
-                "volume"
-            ])
+                try:
+
+                    symbol = str(
+                        coin.get("symbol","")
+                    )
+
+                    if not symbol.endswith("USDT"):
+                        continue
+
+                    rows.append({
+
+                        "symbol":symbol,
+
+                        "price":float(
+                            coin.get(
+                                "lastPrice",
+                                0
+                            )
+                        ),
+
+                        "change":float(
+                            coin.get(
+                                "priceChangePercent",
+                                0
+                            )
+                        ),
+
+                        "volume":float(
+                            coin.get(
+                                "quoteVolume",
+                                0
+                            )
+                        )
+
+                    })
+
+                except:
+                    pass
+
+            if len(rows) > 20:
+
+                df = pd.DataFrame(rows)
+
+                df = df.sort_values(
+                    by="volume",
+                    ascending=False
+                ).head(200)
+
+                st.success(
+                    "BINANCE LIVE DATA"
+                )
+
+                return df
+
+    except:
+        pass
+
+    # ==========================================
+    # COINGECKO
+    # ==========================================
+
+    try:
+
+        cg_url = "https://api.coingecko.com/api/v3/coins/markets"
+
+        params = {
+
+            "vs_currency":"usd",
+
+            "order":"market_cap_desc",
+
+            "per_page":250,
+
+            "page":1,
+
+            "sparkline":"false"
+
+        }
+
+        response = requests.get(
+
+            cg_url,
+
+            params=params,
+
+            headers=headers,
+
+            timeout=20
+
+        )
+
+        data = response.json()
 
         rows = []
 
@@ -215,129 +317,129 @@ def get_market():
             try:
 
                 symbol = str(
-                    coin.get("symbol","")
-                )
-
-                if not symbol.endswith("USDT"):
-                    continue
-
-                price = float(
                     coin.get(
-                        "lastPrice",
-                        0
+                        "symbol",
+                        ""
                     )
-                )
-
-                change = float(
-                    coin.get(
-                        "priceChangePercent",
-                        0
-                    )
-                )
-
-                volume = float(
-                    coin.get(
-                        "quoteVolume",
-                        0
-                    )
-                )
-
-                if volume <= 0:
-                    continue
+                ).upper()
 
                 rows.append({
 
-                    "symbol":symbol,
+                    "symbol":f"{symbol}USDT",
 
-                    "price":price,
+                    "price":float(
+                        coin.get(
+                            "current_price",
+                            0
+                        )
+                    ),
 
-                    "change":change,
+                    "change":float(
+                        coin.get(
+                            "price_change_percentage_24h",
+                            0
+                        ) or 0
+                    ),
 
-                    "volume":volume
+                    "volume":float(
+                        coin.get(
+                            "total_volume",
+                            0
+                        ) or 0
+                    )
 
                 })
 
             except:
                 pass
 
-        if len(rows) == 0:
+        if len(rows) > 20:
 
-            st.error(
-                "No Binance Market Data"
+            df = pd.DataFrame(rows)
+
+            df = df.sort_values(
+                by="volume",
+                ascending=False
+            ).head(200)
+
+            st.warning(
+                "COINGECKO LIVE DATA"
             )
 
-            return pd.DataFrame(columns=[
-                "symbol",
-                "price",
-                "change",
-                "volume"
-            ])
+            return df
 
-        df = pd.DataFrame(rows)
+    except:
+        pass
 
-        required = [
-            "symbol",
-            "price",
-            "change",
-            "volume"
+    # ==========================================
+    # FALLBACK
+    # ==========================================
+
+    st.error(
+        "ALL APIs FAILED"
+    )
+
+    fallback = pd.DataFrame({
+
+        "symbol":[
+
+            "BTCUSDT",
+            "ETHUSDT",
+            "SOLUSDT",
+            "XRPUSDT",
+            "DOGEUSDT",
+            "BNBUSDT",
+            "ADAUSDT",
+            "AVAXUSDT"
+
+        ],
+
+        "price":[
+
+            68000,
+            3500,
+            170,
+            0.62,
+            0.16,
+            610,
+            0.45,
+            38
+
+        ],
+
+        "change":[
+
+            2.5,
+            3.1,
+            7.4,
+            -1.2,
+            12.1,
+            1.5,
+            -0.4,
+            5.6
+
+        ],
+
+        "volume":[
+
+            50000000000,
+            20000000000,
+            8000000000,
+            3000000000,
+            4000000000,
+            2500000000,
+            1800000000,
+            1600000000
+
         ]
 
-        for col in required:
+    })
 
-            if col not in df.columns:
+    return fallback
 
-                df[col] = 0
-
-        # ================= TOP 200 =================
-
-        df = df.sort_values(
-            by="volume",
-            ascending=False
-        ).head(200)
-
-        return df.reset_index(drop=True)
-
-    except Exception as e:
-
-        st.error(
-            f"API ERROR : {e}"
-        )
-
-        fallback = pd.DataFrame({
-
-            "symbol":[
-                "BTCUSDT",
-                "ETHUSDT",
-                "SOLUSDT",
-                "XRPUSDT"
-            ],
-
-            "price":[
-                68000,
-                3500,
-                170,
-                0.62
-            ],
-
-            "change":[
-                2.5,
-                3.2,
-                5.4,
-                -1.2
-            ],
-
-            "volume":[
-                50000000000,
-                20000000000,
-                7000000000,
-                3000000000
-            ]
-
-        })
-
-        return fallback
-
-# ================= KLINES =================
+# =====================================================
+# KLINES
+# =====================================================
 
 @st.cache_data(ttl=30)
 
@@ -361,9 +463,7 @@ def get_klines(symbol):
 
         if not isinstance(data, list):
 
-            raise Exception(
-                "Invalid Kline Response"
-            )
+            raise Exception()
 
         frame = pd.DataFrame(data)
 
@@ -381,11 +481,13 @@ def get_klines(symbol):
         ]
 
         for col in [
+
             "open",
             "high",
             "low",
             "close",
             "volume"
+
         ]:
 
             frame[col] = frame[col].astype(float)
@@ -430,23 +532,24 @@ def get_klines(symbol):
 
         return fake
 
-# ================= LOAD =================
+# =====================================================
+# LOAD
+# =====================================================
 
 df = get_market()
 
 if df.empty:
-
     st.stop()
 
-# ================= METRICS =================
+# =====================================================
+# METRICS
+# =====================================================
 
 btc_data = df[df["symbol"]=="BTCUSDT"]
 
 if not btc_data.empty:
 
-    btc = btc_data.iloc[0]
-
-    btc_price = btc["price"]
+    btc_price = btc_data.iloc[0]["price"]
 
 else:
 
@@ -482,11 +585,15 @@ with c4:
         len(df[df["change"] < 0])
     )
 
-# ================= MAIN =================
+# =====================================================
+# MAIN
+# =====================================================
 
 left,center,right = st.columns([1,1.2,1])
 
-# ================= GAINERS =================
+# =====================================================
+# GAINERS
+# =====================================================
 
 with left:
 
@@ -503,7 +610,9 @@ with left:
         height=600
     )
 
-# ================= ANALYSIS =================
+# =====================================================
+# ANALYSIS
+# =====================================================
 
 with center:
 
@@ -518,7 +627,9 @@ with center:
 
     close = kline["close"]
 
-    # ================= INDICATORS =================
+    # ==========================================
+    # INDICATORS
+    # ==========================================
 
     rsi = calculate_rsi(close).iloc[-1]
 
@@ -526,22 +637,15 @@ with center:
 
     macd_value = macd.iloc[-1]
 
-    ema20 = calculate_ema(
-        close,
-        20
-    ).iloc[-1]
+    ema20 = calculate_ema(close,20).iloc[-1]
 
-    ema50 = calculate_ema(
-        close,
-        50
-    ).iloc[-1]
+    ema50 = calculate_ema(close,50).iloc[-1]
 
-    ema200 = calculate_ema(
-        close,
-        100
-    ).iloc[-1]
+    ema200 = calculate_ema(close,100).iloc[-1]
 
-    # ================= WHALE =================
+    # ==========================================
+    # WHALE
+    # ==========================================
 
     current_volume = kline["volume"].iloc[-1]
 
@@ -553,7 +657,9 @@ with center:
         else "NORMAL"
     )
 
-    # ================= SMC =================
+    # ==========================================
+    # SMC
+    # ==========================================
 
     last_high = kline["high"].iloc[-1]
 
@@ -582,7 +688,9 @@ with center:
         else "NO SWEEP"
     )
 
-    # ================= SCORE =================
+    # ==========================================
+    # SCORE
+    # ==========================================
 
     score = 0
 
@@ -604,7 +712,9 @@ with center:
     if "BULLISH" in bos:
         score += 10
 
-    # ================= SIGNAL =================
+    # ==========================================
+    # SIGNAL
+    # ==========================================
 
     if score >= 70:
 
@@ -670,7 +780,9 @@ with center:
 
     """, unsafe_allow_html=True)
 
-# ================= LOSERS =================
+# =====================================================
+# LOSERS
+# =====================================================
 
 with right:
 
@@ -686,7 +798,9 @@ with right:
         height=600
     )
 
-# ================= CANDLE CHART =================
+# =====================================================
+# CANDLE CHART
+# =====================================================
 
 st.subheader("📊 CANDLESTICK")
 
@@ -718,7 +832,9 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# ================= HEATMAP =================
+# =====================================================
+# HEATMAP
+# =====================================================
 
 st.subheader("🌡️ HEATMAP")
 
@@ -748,7 +864,9 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# ================= SEARCH =================
+# =====================================================
+# SEARCH
+# =====================================================
 
 st.subheader("🔍 SEARCH")
 
@@ -770,7 +888,9 @@ st.dataframe(
     height=500
 )
 
-# ================= FOOTER =================
+# =====================================================
+# FOOTER
+# =====================================================
 
 st.success(
     "SYSTEM ONLINE • AI ACTIVE • SMART MONEY ACTIVE"
