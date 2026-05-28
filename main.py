@@ -40,34 +40,40 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # =====================================================================
-# 🛠️ DATA MODULES (AUTOMATED BINANCE LIVE COINS FEED)
+# 🛠️ DATA MODULES (AUTOMATED CRYPTOCOMPARE PAID API LIVE FEED)
 # =====================================================================
 @st.cache_data(ttl=300)  # විනාඩි 5කට සැරයක් අලුත් කොයින් තියෙනවද කියලා ඔටෝම චෙක් කරනවා
-def fetch_binance_live_usdt_pairs():
+def fetch_cryptocompare_binance_pairs():
+    url = "https://min-api.cryptocompare.com/data/v4/all/exchanges"
+    headers = {"Authorization": f"Apikey {CRYPTOCOMPARE_API_KEY}"}
+    params = {"e": "Binance"}  # Binance එක්ස්චේන්ජ් එකේ තියෙන ඒවා විතරක් ඉල්ලනවා
+    
     try:
-        response = requests.get("https://api.binance.com/api/v3/exchangeInfo", timeout=5)
+        response = requests.get(url, params=params, headers=headers, timeout=10)
         if response.status_code == 200:
             data = response.json()
+            binance_pairs = data.get("Data", {}).get("exchanges", {}).get("Binance", {}).get("pairs", {})
+            
             pairs = {}
-            for symbol_info in data.get("symbols", []):
-                # TRADING තත්ත්වයේ තියෙන, USDT මාකට් එකේ විතරක් දුවන කොයින් වෙන් කරගැනීම
-                if symbol_info["quoteAsset"] == "USDT" and symbol_info["status"] == "TRADING":
-                    sym = symbol_info["symbol"]
-                    # Leverage ටෝකන් (UP/DOWN) සහ පැටලෙන දේවල් අයින් කිරීම
-                    if "UPUSDT" not in sym and "DOWNUSDT" not in sym and "BULLUSDT" not in sym and "BEARUSDT" not in sym:
+            for base_coin, quote_list in binance_pairs.items():
+                if "USDT" in quote_list:
+                    sym = f"{base_coin}USDT"
+                    # Leverage ටෝකන් (UP/DOWN/BULL/BEAR) සහ පැටලෙන දේවල් අයින් කිරීම
+                    if not any(x in base_coin for x in ["UP", "DOWN", "BULL", "BEAR"]):
                         pairs[sym] = f"🪙 {sym}"
             if pairs:
                 return pairs
     except:
         pass
-    # මොකක් හරි හේතුවකින් Binance API ඩවුන් උනොත් ඇප් එක ක්‍රෑෂ් නොවී දුවන්න Default ලිස්ට් එක
+    
+    # API එක ලෝඩ් වෙන්න ප්‍රශ්නයක් වුනොත් ඇප් එක දුවන්න දාන ලිස්ට් එක
     return {
         "BTCUSDT": "₿ BTCUSDT", "ETHUSDT": "♦️ ETHUSDT", "SOLUSDT": "☀️ SOLUSDT", "BNBUSDT": "🔶 BNBUSDT",
         "XRPUSDT": "💧 XRPUSDT", "ADAUSDT": "₳ ADAUSDT", "DOGEUSDT": "🐕 DOGEUSDT", "SHIBUSDT": "🦊 SHIBUSDT"
     }
 
 # ලයිව් කොයින් ලිස්ට් එක ඩයිනමික් ලෙස ලෝඩ් කිරීම
-COIN_SYMBOLS = fetch_binance_live_usdt_pairs()
+COIN_SYMBOLS = fetch_cryptocompare_binance_pairs()
 SCAN_COINS = list(COIN_SYMBOLS.keys())
 
 def get_all_binance_symbols_with_symbols():
@@ -274,7 +280,9 @@ if is_news_block_active():
 # 📡 LIVE SCANNER RADAR RUNNING IN BACKGROUND
 st.markdown("### 📡 MARKET RADAR MULTI-CONFLUENCE SIGNALS")
 active_signals = []
-with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor: 
+
+# වේගයෙන් ස්කෑන් කරගන්න threads ගණන 10ක් දක්වා වැඩි කර ඇත
+with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor: 
     results = executor.map(lambda c: analyze_coin_for_scanner(c, htf, ltf), SCAN_COINS)
     for r in list(results):
         if r is not None: 
