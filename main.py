@@ -1,5 +1,6 @@
 # ================================
-# 👑 ALPHA TERMINAL v4.5 STABLE
+# 👑 ALPHA TERMINAL v4.6
+# MORE SIGNALS + LIVE DATA
 # ================================
 
 import numpy as np
@@ -19,14 +20,14 @@ from urllib3.util.retry import Retry
 # =========================================================
 
 st.set_page_config(
-    page_title="ALPHA TRADING TERMINAL v4.5",
+    page_title="ALPHA TERMINAL v4.6",
     page_icon="👑",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # =========================================================
-# PREMIUM UI
+# UI
 # =========================================================
 
 st.markdown("""
@@ -310,7 +311,7 @@ def analyze_coin(symbol, htf, ltf):
     if np.isnan(adx):
         adx = 0
 
-    # VOLUME FILTER
+    # VOLUME
     avg_volume = df_ltf["Volume"].rolling(20).mean()
 
     volume_ok = (
@@ -321,27 +322,31 @@ def analyze_coin(symbol, htf, ltf):
     bullish = 0
     bearish = 0
 
+    # =====================================================
+    # NEW MORE ACTIVE SIGNAL SYSTEM
+    # =====================================================
+
     # TREND
     if trend == "BULLISH":
-        bullish += 20
+        bullish += 30
     else:
-        bearish += 20
+        bearish += 30
 
     # RSI
-    if rsi < 35:
-        bullish += 15
+    if rsi < 45:
+        bullish += 20
 
-    if rsi > 65:
-        bearish += 15
+    if rsi > 55:
+        bearish += 20
 
     # MACD
     if macd.iloc[-1] > signal.iloc[-1]:
-        bullish += 20
+        bullish += 30
     else:
-        bearish += 20
+        bearish += 30
 
     # ADX
-    if adx > 20:
+    if adx > 15:
         bullish += 10
         bearish += 10
 
@@ -356,7 +361,7 @@ def analyze_coin(symbol, htf, ltf):
         atr = current_price * 0.003
 
     # BUY
-    if bullish >= 60 and trend == "BULLISH":
+    if bullish >= 45 and trend == "BULLISH":
 
         return {
             "Coin": symbol,
@@ -365,11 +370,12 @@ def analyze_coin(symbol, htf, ltf):
             "Price": current_price,
             "SL": current_price - (atr * 2),
             "TP": current_price + (atr * 4),
-            "ADX": adx
+            "ADX": adx,
+            "RSI": rsi
         }
 
     # SELL
-    if bearish >= 60 and trend == "BEARISH":
+    if bearish >= 45 and trend == "BEARISH":
 
         return {
             "Coin": symbol,
@@ -378,7 +384,8 @@ def analyze_coin(symbol, htf, ltf):
             "Price": current_price,
             "SL": current_price + (atr * 2),
             "TP": current_price - (atr * 4),
-            "ADX": adx
+            "ADX": adx,
+            "RSI": rsi
         }
 
     return None
@@ -440,11 +447,22 @@ with st.sidebar:
 # HEADER
 # =========================================================
 
-st.title("👑 ALPHA TERMINAL v4.5")
+st.title("👑 ALPHA TERMINAL v4.6")
 
 st.caption(
-    f"Mode: {strategy} | Binance Live Feed"
+    f"Mode: {strategy} | Binance Live Feed Active"
 )
+
+# =========================================================
+# LIVE DATA CHECK
+# =========================================================
+
+btc_test = get_crypto_data("BTCUSDT", "5m", 5)
+
+if btc_test is not None:
+    st.success("🟢 Binance Live Data Connected Successfully")
+else:
+    st.error("🔴 Binance Connection Failed")
 
 # =========================================================
 # MARKET SCANNER
@@ -453,8 +471,6 @@ st.caption(
 st.subheader("📡 LIVE MARKET SCANNER")
 
 signals = []
-
-st.cache_data.clear()
 
 with concurrent.futures.ThreadPoolExecutor(
     max_workers=5
@@ -488,7 +504,7 @@ if signals:
 else:
 
     st.warning(
-        "No high probability setups detected."
+        "⚠️ No active setups currently."
     )
 
 # =========================================================
@@ -507,7 +523,7 @@ analysis = analyze_coin(
 
 if analysis:
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         st.metric(
@@ -527,13 +543,19 @@ if analysis:
             f'{analysis["ADX"]:.2f}'
         )
 
+    with col4:
+        st.metric(
+            "RSI",
+            f'{analysis["RSI"]:.2f}'
+        )
+
     st.success(
         f"""
-Entry: {analysis["Price"]:.4f}
+ENTRY: {analysis["Price"]:.4f}
 
-Stop Loss: {analysis["SL"]:.4f}
+STOP LOSS: {analysis["SL"]:.4f}
 
-Take Profit: {analysis["TP"]:.4f}
+TAKE PROFIT: {analysis["TP"]:.4f}
 """
     )
 
@@ -561,22 +583,22 @@ Take Profit: {analysis["TP"]:.4f}
 
         st.warning(
             f"""
-Risk Amount: ${risk_cash:.2f}
+RISK AMOUNT: ${risk_cash:.2f}
 
-Position Size: ${position_size:.2f}
+POSITION SIZE: ${position_size:.2f}
 
-Margin Needed: ${margin:.2f}
+MARGIN NEEDED: ${margin:.2f}
 """
         )
 
 else:
 
     st.info(
-        "No valid setup currently."
+        "⚪ No valid setup currently."
     )
 
 # =========================================================
-# TRADINGVIEW
+# TRADINGVIEW CHART
 # =========================================================
 
 st.subheader("📈 LIVE CHART")
