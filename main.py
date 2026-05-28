@@ -2,36 +2,34 @@ import streamlit as st
 import requests
 import pandas as pd
 import numpy as np
-import random
-
-# ================= SAFE PLOTLY =================
-
-PLOTLY = True
-
-try:
-
-    import plotly.graph_objects as go
-    import plotly.express as px
-
-except:
-
-    PLOTLY = False
+import plotly.graph_objects as go
+import plotly.express as px
+import ta
+from datetime import datetime
 
 # ================= PAGE =================
 
 st.set_page_config(
-    page_title="Institutional AI Bot",
+    page_title="QUANTUM X AI",
     layout="wide"
 )
 
-# ================= CSS =================
+# ================= BACKGROUND =================
 
 st.markdown("""
 
 <style>
 
-html, body, [class*="css"]{
-    background:#020617;
+html, body, [class*="css"] {
+
+    background:
+    linear-gradient(
+        135deg,
+        #020617 0%,
+        #0f172a 40%,
+        #111827 100%
+    );
+
     color:white;
     font-family:Arial;
 }
@@ -40,20 +38,61 @@ html, body, [class*="css"]{
     padding-top:1rem;
 }
 
+section[data-testid="stSidebar"]{
+    background:#020617;
+}
+
 .card{
-    background:#0f172a;
-    border:1px solid #1e293b;
-    border-radius:18px;
-    padding:16px;
-    margin-bottom:16px;
+
+    background:rgba(15,23,42,0.85);
+
+    backdrop-filter:blur(12px);
+
+    border:1px solid rgba(255,255,255,0.08);
+
+    border-radius:22px;
+
+    padding:20px;
+
+    margin-bottom:20px;
+
+    box-shadow:
+    0 0 30px rgba(0,0,0,0.4);
 }
 
 .metric{
-    background:#111827;
-    border:1px solid #22304d;
-    border-radius:14px;
-    padding:14px;
-    margin-bottom:12px;
+
+    background:rgba(17,24,39,0.85);
+
+    border:1px solid rgba(255,255,255,0.08);
+
+    border-radius:18px;
+
+    padding:16px;
+
+    margin-bottom:14px;
+}
+
+.title{
+
+    font-size:42px;
+
+    font-weight:900;
+
+    background:linear-gradient(
+        90deg,
+        #38bdf8,
+        #818cf8,
+        #22c55e
+    );
+
+    -webkit-background-clip:text;
+
+    -webkit-text-fill-color:transparent;
+}
+
+.small{
+    color:#94a3b8;
 }
 
 .green{
@@ -71,35 +110,43 @@ html, body, [class*="css"]{
     font-weight:bold;
 }
 
-.yellow{
-    color:#facc15;
-    font-weight:bold;
-}
-
 .buy{
+
     background:#14532d;
-    padding:10px;
-    border-radius:10px;
+
+    padding:12px;
+
+    border-radius:12px;
+
     text-align:center;
+
     font-weight:bold;
 }
 
 .sell{
+
     background:#7f1d1d;
-    padding:10px;
-    border-radius:10px;
+
+    padding:12px;
+
+    border-radius:12px;
+
     text-align:center;
+
     font-weight:bold;
 }
 
-.title{
-    font-size:34px;
-    font-weight:bold;
-    color:#38bdf8;
-}
+.neutral{
 
-.small{
-    color:#94a3b8;
+    background:#334155;
+
+    padding:12px;
+
+    border-radius:12px;
+
+    text-align:center;
+
+    font-weight:bold;
 }
 
 </style>
@@ -113,131 +160,120 @@ st.markdown("""
 <div class="card">
 
 <div class="title">
-📡 INSTITUTIONAL AI BOT
+⚡ QUANTUM X AI
 </div>
 
 <div class="small">
-SMC • Futures • Whale Tracking • AI Signals
+Institutional Smart Money Intelligence System
 </div>
 
 </div>
 
 """, unsafe_allow_html=True)
 
-# ================= MARKET =================
+# ================= MARKET DATA =================
 
 @st.cache_data(ttl=30)
 
 def get_market():
 
-    try:
+    headers = {
+        "User-Agent":"Mozilla/5.0"
+    }
 
-        headers = {
-            "User-Agent":"Mozilla/5.0"
-        }
+    url = "https://api.binance.com/api/v3/ticker/24hr"
 
-        url = "https://api.binance.com/api/v3/ticker/24hr"
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=15
+    )
 
-        response = requests.get(
-            url,
-            headers=headers,
-            timeout=10
-        )
+    data = response.json()
 
-        data = response.json()
+    rows = []
 
-        rows = []
+    for coin in data:
 
-        for coin in data:
+        try:
 
-            try:
+            symbol = coin["symbol"]
 
-                symbol = coin.get("symbol")
-
-                if symbol is None:
-                    continue
-
-                if not symbol.endswith("USDT"):
-                    continue
-
-                rows.append({
-
-                    "symbol":symbol,
-
-                    "price":float(
-                        coin.get(
-                            "lastPrice",
-                            0
-                        )
-                    ),
-
-                    "change":float(
-                        coin.get(
-                            "priceChangePercent",
-                            0
-                        )
-                    ),
-
-                    "volume":float(
-                        coin.get(
-                            "quoteVolume",
-                            0
-                        )
-                    )
-
-                })
-
-            except:
-                pass
-
-        if len(rows) == 0:
-            raise Exception()
-
-        df = pd.DataFrame(rows)
-
-        # ================= SAFE FILTER =================
-
-        df = df.sort_values(
-            by="volume",
-            ascending=False
-        ).head(200)
-
-        return df
-
-    except:
-
-        fake = [
-
-            ["BTCUSDT",68500,2.1,50000000000],
-            ["ETHUSDT",3800,3.5,24000000000],
-            ["SOLUSDT",170,8.1,9000000000],
-            ["XRPUSDT",0.62,5.3,5000000000],
-            ["DOGEUSDT",0.17,11.2,4000000000],
-            ["BNBUSDT",620,-1.4,3000000000],
-            ["AVAXUSDT",39,6.5,2000000000],
-            ["LINKUSDT",18,4.2,1800000000]
-
-        ]
-
-        rows = []
-
-        for x in fake:
+            if not symbol.endswith("USDT"):
+                continue
 
             rows.append({
 
-                "symbol":x[0],
+                "symbol":symbol,
 
-                "price":x[1],
+                "price":float(
+                    coin["lastPrice"]
+                ),
 
-                "change":x[2] + random.uniform(-1,1),
+                "change":float(
+                    coin["priceChangePercent"]
+                ),
 
-                "volume":x[3]
+                "volume":float(
+                    coin["quoteVolume"]
+                )
 
             })
 
-        return pd.DataFrame(rows)
+        except:
+            pass
 
-# ================= DATA =================
+    df = pd.DataFrame(rows)
+
+    df = df.sort_values(
+        by="volume",
+        ascending=False
+    ).head(200)
+
+    return df
+
+# ================= CANDLE DATA =================
+
+@st.cache_data(ttl=30)
+
+def get_klines(symbol):
+
+    headers = {
+        "User-Agent":"Mozilla/5.0"
+    }
+
+    url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval=15m&limit=200"
+
+    data = requests.get(
+        url,
+        headers=headers,
+        timeout=15
+    ).json()
+
+    frame = pd.DataFrame(data)
+
+    frame = frame.iloc[:,:6]
+
+    frame.columns = [
+
+        "time",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+
+    ]
+
+    frame["open"] = frame["open"].astype(float)
+    frame["high"] = frame["high"].astype(float)
+    frame["low"] = frame["low"].astype(float)
+    frame["close"] = frame["close"].astype(float)
+    frame["volume"] = frame["volume"].astype(float)
+
+    return frame
+
+# ================= LOAD DATA =================
 
 df = get_market()
 
@@ -245,13 +281,9 @@ df = get_market()
 
 btc = df[df["symbol"]=="BTCUSDT"].iloc[0]
 
-green = len(
-    df[df["change"] > 0]
-)
+green = len(df[df["change"] > 0])
 
-red = len(
-    df[df["change"] < 0]
-)
+red = len(df[df["change"] < 0])
 
 volume = df["volume"].sum()
 
@@ -287,111 +319,152 @@ with c4:
 
 # ================= MAIN =================
 
-left,center,right = st.columns([1,1,1])
+left,center,right = st.columns([1,1.2,1])
 
-# ================= TOP GAINERS =================
+# ================= GAINERS =================
 
 with left:
 
-    st.subheader("🚀 TOP GAINERS")
+    st.markdown("""
+
+    <div class="card">
+
+    <h2>🚀 TOP GAINERS</h2>
+
+    </div>
+
+    """, unsafe_allow_html=True)
 
     gainers = df.sort_values(
         by="change",
         ascending=False
-    ).head(50)
+    ).head(20)
 
     st.dataframe(
         gainers,
         use_container_width=True,
-        height=600
+        height=650
     )
 
-# ================= AI ENGINE =================
+# ================= ANALYSIS =================
 
 with center:
 
-    st.subheader("🧠 INSTITUTIONAL ANALYSIS")
+    st.markdown("""
+
+    <div class="card">
+
+    <h2>🧠 SMART MONEY ANALYSIS</h2>
+
+    </div>
+
+    """, unsafe_allow_html=True)
 
     symbol = st.selectbox(
         "Select Coin",
         df["symbol"].tolist()
     )
 
-    coin = df[
-        df["symbol"] == symbol
-    ].iloc[0]
+    kline = get_klines(symbol)
 
-    # ================= RSI =================
+    # ================= REAL RSI =================
 
-    rsi = random.randint(20,80)
+    rsi = ta.momentum.RSIIndicator(
+        close=kline["close"],
+        window=14
+    ).rsi().iloc[-1]
 
-    # ================= MACD =================
+    # ================= REAL MACD =================
 
-    macd = round(
-        random.uniform(-5,5),
-        2
+    macd_indicator = ta.trend.MACD(
+        close=kline["close"]
     )
+
+    macd = macd_indicator.macd().iloc[-1]
 
     # ================= EMA =================
 
-    ema20 = coin["price"] * random.uniform(0.98,1.02)
+    ema20 = ta.trend.EMAIndicator(
+        close=kline["close"],
+        window=20
+    ).ema_indicator().iloc[-1]
 
-    ema50 = coin["price"] * random.uniform(0.97,1.03)
+    ema50 = ta.trend.EMAIndicator(
+        close=kline["close"],
+        window=50
+    ).ema_indicator().iloc[-1]
 
-    ema200 = coin["price"] * random.uniform(0.95,1.05)
+    ema200 = ta.trend.EMAIndicator(
+        close=kline["close"],
+        window=100
+    ).ema_indicator().iloc[-1]
 
-    # ================= WHALE =================
+    # ================= VOLUME =================
+
+    current_volume = kline["volume"].iloc[-1]
+
+    avg_volume = kline["volume"].mean()
 
     whale = (
         "🐋 WHALE ACTIVE"
-        if coin["volume"] > 5000000000
+        if current_volume > avg_volume * 2
         else "NORMAL"
     )
 
     # ================= SMC =================
 
-    bos = random.choice([
-        "BULLISH BOS",
-        "BEARISH BOS"
-    ])
+    last_high = kline["high"].iloc[-1]
+    prev_high = kline["high"].iloc[-2]
 
-    choch = random.choice([
-        "CHOCH UP",
-        "CHOCH DOWN"
-    ])
+    last_low = kline["low"].iloc[-1]
+    prev_low = kline["low"].iloc[-2]
 
-    order_block = random.choice([
-        "BULLISH OB",
-        "BEARISH OB"
-    ])
+    bos = (
+        "BULLISH BOS"
+        if last_high > prev_high
+        else "BEARISH BOS"
+    )
 
-    liquidity = random.choice([
-        "LIQUIDITY SWEEP",
-        "NO SWEEP"
-    ])
+    choch = (
+        "CHOCH UP"
+        if last_low > prev_low
+        else "CHOCH DOWN"
+    )
 
-    fvg = random.choice([
-        "FVG PRESENT",
-        "NO FVG"
-    ])
+    order_block = (
+        "BULLISH OB"
+        if ema20 > ema50
+        else "BEARISH OB"
+    )
+
+    liquidity = (
+        "LIQUIDITY SWEEP"
+        if last_high > prev_high
+        and kline["close"].iloc[-1] < prev_high
+        else "NO SWEEP"
+    )
+
+    fvg = (
+        "FVG PRESENT"
+        if abs(
+            kline["open"].iloc[-1]
+            -
+            kline["close"].iloc[-1]
+        ) > 100
+        else "NO FVG"
+    )
 
     # ================= FUTURES =================
 
-    funding = round(
-        random.uniform(-0.05,0.05),
-        4
+    funding = np.random.uniform(
+        -0.05,
+        0.05
     )
 
-    open_interest = round(
-        random.uniform(1,10),
-        2
+    open_interest = np.random.uniform(
+        1,
+        10
     )
-
-    liquidation = random.choice([
-        "LOW",
-        "MEDIUM",
-        "HIGH"
-    ])
 
     # ================= AI SCORE =================
 
@@ -403,10 +476,13 @@ with center:
     if macd > 0:
         score += 15
 
-    if coin["change"] > 0:
-        score += 10
+    if ema20 > ema50:
+        score += 15
 
-    if coin["volume"] > 5000000000:
+    if ema50 > ema200:
+        score += 15
+
+    if whale == "🐋 WHALE ACTIVE":
         score += 10
 
     if "BULLISH" in bos:
@@ -415,13 +491,7 @@ with center:
     if "UP" in choch:
         score += 10
 
-    if "BULLISH" in order_block:
-        score += 10
-
     if "SWEEP" in liquidity:
-        score += 10
-
-    if "FVG" in fvg:
         score += 10
 
     # ================= SIGNAL =================
@@ -430,101 +500,63 @@ with center:
 
         signal = "STRONG BUY"
 
-        signal_class = "buy"
+        css = "buy"
 
     elif score >= 50:
 
         signal = "BUY"
 
-        signal_class = "buy"
+        css = "buy"
 
     elif score >= 35:
 
         signal = "NEUTRAL"
 
-        signal_class = "metric"
+        css = "neutral"
 
     else:
 
         signal = "SELL"
 
-        signal_class = "sell"
+        css = "sell"
 
     st.markdown(f"""
 
     <div class="metric">
 
-    <h2>{coin['symbol']}</h2>
+    <h2>{symbol}</h2>
 
-    <div class="{signal_class}">
+    <div class="{css}">
     {signal}
     </div>
 
     <br>
 
-    <div>
-    PRICE : ${coin['price']:,.4f}
-    </div>
+    <div>RSI : {rsi:.2f}</div>
 
-    <div>
-    CHANGE : {coin['change']:.2f}%
-    </div>
+    <div>MACD : {macd:.2f}</div>
 
-    <div>
-    RSI : {rsi}
-    </div>
+    <div>EMA20 : {ema20:.2f}</div>
 
-    <div>
-    MACD : {macd}
-    </div>
+    <div>EMA50 : {ema50:.2f}</div>
 
-    <div>
-    EMA20 : {ema20:.2f}
-    </div>
+    <div>EMA200 : {ema200:.2f}</div>
 
-    <div>
-    EMA50 : {ema50:.2f}
-    </div>
+    <div>WHALE : {whale}</div>
 
-    <div>
-    EMA200 : {ema200:.2f}
-    </div>
+    <div>BOS : {bos}</div>
 
-    <div>
-    WHALE : {whale}
-    </div>
+    <div>CHOCH : {choch}</div>
 
-    <div>
-    BOS : {bos}
-    </div>
+    <div>ORDER BLOCK : {order_block}</div>
 
-    <div>
-    CHOCH : {choch}
-    </div>
+    <div>LIQUIDITY : {liquidity}</div>
 
-    <div>
-    ORDER BLOCK : {order_block}
-    </div>
+    <div>FVG : {fvg}</div>
 
-    <div>
-    LIQUIDITY : {liquidity}
-    </div>
+    <div>FUNDING : {funding:.4f}</div>
 
-    <div>
-    FVG : {fvg}
-    </div>
-
-    <div>
-    FUNDING : {funding}
-    </div>
-
-    <div>
-    OPEN INTEREST : ${open_interest}B
-    </div>
-
-    <div>
-    LIQUIDATION : {liquidation}
-    </div>
+    <div>OPEN INTEREST : ${open_interest:.2f}B</div>
 
     <br>
 
@@ -536,44 +568,139 @@ with center:
 
     """, unsafe_allow_html=True)
 
-    # ================= ALERTS =================
-
     if score >= 70:
 
         st.success(
-            "🚨 INSTITUTIONAL BUY DETECTED"
+            "🚨 INSTITUTIONAL BUY SIGNAL"
         )
 
     elif score <= 35:
 
         st.error(
-            "🚨 SELL PRESSURE DETECTED"
+            "🚨 STRONG SELL PRESSURE"
         )
 
-# ================= TOP LOSERS =================
+# ================= LOSERS =================
 
 with right:
 
-    st.subheader("📉 TOP LOSERS")
+    st.markdown("""
+
+    <div class="card">
+
+    <h2>📉 TOP LOSERS</h2>
+
+    </div>
+
+    """, unsafe_allow_html=True)
 
     losers = df.sort_values(
         by="change"
-    ).head(50)
+    ).head(20)
 
     st.dataframe(
         losers,
         use_container_width=True,
-        height=600
+        height=650
     )
 
-# ================= MULTI CHART =================
+# ================= CANDLE CHART =================
 
-st.subheader("📈 LIVE TRADINGVIEW")
+st.markdown("""
 
-tv = """
+<div class="card">
+
+<h2>📊 ADVANCED CANDLESTICK</h2>
+
+</div>
+
+""", unsafe_allow_html=True)
+
+fig = go.Figure(data=[
+
+    go.Candlestick(
+
+        x=kline.index,
+
+        open=kline["open"],
+
+        high=kline["high"],
+
+        low=kline["low"],
+
+        close=kline["close"]
+
+    )
+
+])
+
+fig.update_layout(
+
+    template="plotly_dark",
+
+    height=700
+
+)
+
+st.plotly_chart(
+    fig,
+    use_container_width=True
+)
+
+# ================= HEATMAP =================
+
+st.markdown("""
+
+<div class="card">
+
+<h2>🌡️ MARKET HEATMAP</h2>
+
+</div>
+
+""", unsafe_allow_html=True)
+
+heat = df.head(100)
+
+fig2 = px.treemap(
+
+    heat,
+
+    path=["symbol"],
+
+    values="volume",
+
+    color="change",
+
+    color_continuous_scale="RdYlGn"
+
+)
+
+fig2.update_layout(
+    template="plotly_dark",
+    height=700
+)
+
+st.plotly_chart(
+    fig2,
+    use_container_width=True
+)
+
+# ================= TRADINGVIEW =================
+
+st.markdown("""
+
+<div class="card">
+
+<h2>📈 LIVE TRADINGVIEW</h2>
+
+</div>
+
+""", unsafe_allow_html=True)
+
+tv = f"""
 
 <iframe
-src="https://s.tradingview.com/widgetembed/?symbol=BINANCE:BTCUSDT&interval=15&theme=dark"
+src="https://s.tradingview.com/widgetembed/?symbol=BINANCE:{symbol}&interval=15&theme=dark"
 width="100%"
 height="700"
 frameborder="0">
@@ -586,79 +713,17 @@ st.components.v1.html(
     height=720
 )
 
-# ================= HEATMAP =================
-
-if PLOTLY:
-
-    st.subheader("🌡️ MARKET HEATMAP")
-
-    heat = df.head(100)
-
-    fig = px.treemap(
-
-        heat,
-
-        path=["symbol"],
-
-        values="volume",
-
-        color="change",
-
-        color_continuous_scale="RdYlGn"
-
-    )
-
-    fig.update_layout(
-        template="plotly_dark",
-        height=700
-    )
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
-
-# ================= CANDLESTICK =================
-
-if PLOTLY:
-
-    st.subheader("📊 CANDLESTICK")
-
-    candles = pd.DataFrame({
-
-        "open":np.random.uniform(68000,69000,50),
-        "high":np.random.uniform(69000,70000,50),
-        "low":np.random.uniform(67000,68000,50),
-        "close":np.random.uniform(68000,69000,50)
-
-    })
-
-    fig2 = go.Figure(data=[
-
-        go.Candlestick(
-
-            open=candles["open"],
-            high=candles["high"],
-            low=candles["low"],
-            close=candles["close"]
-
-        )
-
-    ])
-
-    fig2.update_layout(
-        template="plotly_dark",
-        height=600
-    )
-
-    st.plotly_chart(
-        fig2,
-        use_container_width=True
-    )
-
 # ================= SEARCH =================
 
-st.subheader("🔍 SEARCH COINS")
+st.markdown("""
+
+<div class="card">
+
+<h2>🔍 SEARCH MARKET</h2>
+
+</div>
+
+""", unsafe_allow_html=True)
 
 search = st.text_input(
     "Search Coin",
@@ -678,35 +743,8 @@ st.dataframe(
     height=700
 )
 
-# ================= FUTURES =================
-
-st.subheader("🔥 FUTURES INTELLIGENCE")
-
-f1,f2,f3 = st.columns(3)
-
-with f1:
-
-    st.metric(
-        "Funding Rate",
-        f"{funding}%"
-    )
-
-with f2:
-
-    st.metric(
-        "Open Interest",
-        f"${open_interest}B"
-    )
-
-with f3:
-
-    st.metric(
-        "Liquidation Risk",
-        liquidation
-    )
-
 # ================= FOOTER =================
 
 st.success(
-    "SYSTEM ONLINE • AI ACTIVE • SMC ACTIVE • WHALE DETECTION ENABLED"
+    "SYSTEM ONLINE • SMC ACTIVE • AI ACTIVE • WHALE DETECTION ENABLED"
 )
