@@ -1,6 +1,3 @@
-# FULL UPDATED main.py
-
-```python
 # =========================================================
 # QUANTUM X TERMINAL - INSTITUTIONAL AI SYSTEM
 # =========================================================
@@ -13,7 +10,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 # =========================================================
-# PAGE
+# PAGE CONFIG
 # =========================================================
 
 st.set_page_config(
@@ -225,13 +222,17 @@ def calculate_atr(df, period=14):
 # =========================================================
 
 @st.cache_data(ttl=30)
+
 def get_market():
 
     try:
 
         url = "https://api.binance.com/api/v3/ticker/24hr"
 
-        response = requests.get(url, timeout=15)
+        response = requests.get(
+            url,
+            timeout=15
+        )
 
         data = response.json()
 
@@ -243,7 +244,12 @@ def get_market():
 
                 try:
 
-                    symbol = str(coin.get("symbol", ""))
+                    symbol = str(
+                        coin.get(
+                            "symbol",
+                            ""
+                        )
+                    )
 
                     if not symbol.endswith("USDT"):
                         continue
@@ -253,7 +259,10 @@ def get_market():
                         "symbol":symbol,
 
                         "price":float(
-                            coin.get("lastPrice",0)
+                            coin.get(
+                                "lastPrice",
+                                0
+                            )
                         ),
 
                         "change":float(
@@ -275,16 +284,16 @@ def get_market():
                 except:
                     pass
 
-            if len(rows) > 0:
+        if len(rows) > 0:
 
-                df = pd.DataFrame(rows)
+            df = pd.DataFrame(rows)
 
-                df = df.sort_values(
-                    by="volume",
-                    ascending=False
-                ).head(200)
+            df = df.sort_values(
+                by="volume",
+                ascending=False
+            ).head(200)
 
-                return df
+            return df
 
     except:
         pass
@@ -332,6 +341,7 @@ def get_market():
 # =========================================================
 
 @st.cache_data(ttl=30)
+
 def get_klines(symbol, interval="15m"):
 
     try:
@@ -350,24 +360,20 @@ def get_klines(symbol, interval="15m"):
         frame = frame.iloc[:,:6]
 
         frame.columns = [
-
             "time",
             "open",
             "high",
             "low",
             "close",
             "volume"
-
         ]
 
         for col in [
-
             "open",
             "high",
             "low",
             "close",
             "volume"
-
         ]:
 
             frame[col] = frame[col].astype(float)
@@ -417,7 +423,7 @@ with c4:
     st.metric("RED COINS", len(df[df["change"] < 0]))
 
 # =========================================================
-# LAYOUT
+# MAIN LAYOUT
 # =========================================================
 
 left,center,right = st.columns([1,1.5,1])
@@ -510,76 +516,19 @@ with center:
 
     atr = calculate_atr(kline).iloc[-1]
 
-    current_volume = kline["volume"].iloc[-1]
+    long_score = 0
 
-    avg_volume = kline["volume"].mean()
+    if rsi < 35:
+        long_score += 25
 
-    whale = (
-        "🐋 WHALE ACTIVE"
-        if current_volume > avg_volume * 2
-        else "NORMAL"
-    )
+    if macd_value > 0:
+        long_score += 25
 
-    results = []
+    if ema20 > ema50:
+        long_score += 25
 
-    total_score = 0
-
-    for tf in tf_list:
-
-        tf_data = get_klines(symbol, tf)
-
-        tf_close = tf_data["close"]
-
-        tf_rsi = calculate_rsi(tf_close).iloc[-1]
-
-        tf_macd, _ = calculate_macd(tf_close)
-
-        tf_macd_value = tf_macd.iloc[-1]
-
-        tf_ema20 = calculate_ema(tf_close,20).iloc[-1]
-
-        tf_ema50 = calculate_ema(tf_close,50).iloc[-1]
-
-        score = 0
-
-        if tf_rsi < 35:
-            score += 25
-
-        if tf_macd_value > 0:
-            score += 25
-
-        if tf_ema20 > tf_ema50:
-            score += 25
-
-        if (
-            tf_data["high"].iloc[-1]
-            >
-            tf_data["high"].iloc[-2]
-        ):
-            score += 25
-
-        total_score += score
-
-        if score >= 75:
-            tf_signal = "🟢 LONG"
-
-        elif score >= 50:
-            tf_signal = "🟡 NEUTRAL"
-
-        else:
-            tf_signal = "🔴 SHORT"
-
-        results.append({
-
-            "TIMEFRAME":tf,
-            "RSI":round(tf_rsi,2),
-            "MACD":round(tf_macd_value,2),
-            "SCORE":score,
-            "SIGNAL":tf_signal
-
-        })
-
-    long_score = int(total_score / len(tf_list))
+    if ema50 > ema200:
+        long_score += 25
 
     short_score = 100 - long_score
 
@@ -612,38 +561,6 @@ with center:
     tp2 = current_price + (atr * 4)
 
     tp3 = current_price + (atr * 6)
-
-    if long_score >= 90:
-        leverage = "10X"
-
-    elif long_score >= 80:
-        leverage = "5X"
-
-    elif long_score >= 70:
-        leverage = "3X"
-
-    else:
-        leverage = "1X"
-
-    open_interest = np.random.randint(
-        1000000,
-        9000000
-    )
-
-    liquidation_zone = current_price * 1.03
-
-    reasons = []
-
-    if macd_value > 0:
-        reasons.append("MACD bullish momentum")
-
-    if ema20 > ema50:
-        reasons.append("EMA bullish crossover")
-
-    if whale == "🐋 WHALE ACTIVE":
-        reasons.append("Whale activity detected")
-
-    ai_explanation = " • ".join(reasons)
 
     st.markdown(f"""
 
@@ -681,12 +598,6 @@ with center:
 
     <div>🌊 ATR : {atr:.2f}</div>
 
-    <div>{whale}</div>
-
-    <div>🔥 OPEN INTEREST : {open_interest:,}</div>
-
-    <div>💥 LIQUIDATION ZONE : {liquidation_zone:.2f}</div>
-
     <hr>
 
     <h3>🎯 ENTRY : {entry:.2f}</h3>
@@ -699,61 +610,9 @@ with center:
 
     <h3>💰 TP3 : {tp3:.2f}</h3>
 
-    <h3>⚡ LEVERAGE : {leverage}</h3>
-
-    <hr>
-
-    <h3>🧠 AI EXPLANATION</h3>
-
-    <div>
-    {ai_explanation}
-    </div>
-
     </div>
 
     """, unsafe_allow_html=True)
-
-    st.subheader("📊 MULTI TIMEFRAME ANALYSIS")
-
-    tf_df = pd.DataFrame(results)
-
-    st.dataframe(
-        tf_df,
-        use_container_width=True,
-        height=260
-    )
-
-    live_price = round(
-        current_price + np.random.uniform(-5,5),
-        2
-    )
-
-    st.success(
-        f"⚡ LIVE PRICE : {live_price}"
-    )
-
-    st.subheader("📈 TRADINGVIEW LIVE CHART")
-
-    tradingview_html = f"""
-
-    <iframe
-
-    src="https://s.tradingview.com/widgetembed/?symbol=BINANCE:{symbol}&interval=15&theme=dark"
-
-    width="100%"
-
-    height="700"
-
-    frameborder="0"
-
-    ></iframe>
-
-    """
-
-    st.components.v1.html(
-        tradingview_html,
-        height=700
-    )
 
 # =========================================================
 # LOSERS
@@ -868,6 +727,5 @@ st.dataframe(
 # =========================================================
 
 st.success(
-    "SYSTEM ONLINE • AI ACTIVE • SMART MONEY ACTIVE • WHALE DETECTION ENABLED"
+    "SYSTEM ONLINE • AI ACTIVE • SMART MONEY ACTIVE"
 )
-```
