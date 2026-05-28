@@ -263,7 +263,6 @@ def calculate_atr(df, period=14):
 
 def get_market():
 
-```
 try:
 
     url = "https://api.binance.com/api/v3/ticker/24hr"
@@ -365,9 +364,6 @@ for i in range(100):
 df = pd.DataFrame(rows)
 
 return df
-
-```
-
 
 # =========================================================
 # KLINES
