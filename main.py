@@ -40,40 +40,44 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # =====================================================================
-# 🛠️ DATA MODULES (AUTOMATED CRYPTOCOMPARE PAID API LIVE FEED)
+# 🛠️ DATA MODULES (HIGH-VOLUME LIVE COINS FEED)
 # =====================================================================
-@st.cache_data(ttl=300)  # විනාඩි 5කට සැරයක් අලුත් කොයින් තියෙනවද කියලා ඔටෝම චෙක් කරනවා
-def fetch_cryptocompare_binance_pairs():
-    url = "https://min-api.cryptocompare.com/data/v4/all/exchanges"
+@st.cache_data(ttl=300)  # විනාඩි 5කට සැරයක් Top Coins ටික අප්ඩේට් කරනවා
+def fetch_top_volume_usdt_pairs(limit=100):
+    # CryptoCompare එකේ Volume වැඩිම Top Coins ඇදගන්නා API එන්ඩ්පොයින්ට් එක
+    url = "https://min-api.cryptocompare.com/data/top/mktcapfull"
     headers = {"Authorization": f"Apikey {CRYPTOCOMPARE_API_KEY}"}
-    params = {"e": "Binance"}  # Binance එක්ස්චේන්ජ් එකේ තියෙන ඒවා විතරක් ඉල්ලනවා
+    params = {"limit": limit, "tsym": "USDT"}
     
     try:
         response = requests.get(url, params=params, headers=headers, timeout=10)
         if response.status_code == 200:
             data = response.json()
-            binance_pairs = data.get("Data", {}).get("exchanges", {}).get("Binance", {}).get("pairs", {})
+            raw_coins = data.get("Data", [])
             
             pairs = {}
-            for base_coin, quote_list in binance_pairs.items():
-                if "USDT" in quote_list:
-                    sym = f"{base_coin}USDT"
-                    # Leverage ටෝකන් (UP/DOWN/BULL/BEAR) සහ පැටලෙන දේවල් අයින් කිරීම
-                    if not any(x in base_coin for x in ["UP", "DOWN", "BULL", "BEAR"]):
+            for coin_info in raw_coins:
+                base_info = coin_info.get("CoinInfo", {})
+                symbol = base_info.get("Name")
+                
+                if symbol:
+                    # අනවශ්‍ය ස්ටේබල් කොයින් සහ ලෙවෙරේජ් ටෝකන් ලිස්ට් එකෙන් අයින් කිරීම
+                    if symbol not in ["USDT", "USDC", "FDUSD", "TUSD", "DAI", "BUSD"]:
+                        sym = f"{symbol}USDT"
                         pairs[sym] = f"🪙 {sym}"
             if pairs:
                 return pairs
     except:
         pass
     
-    # API එක ලෝඩ් වෙන්න ප්‍රශ්නයක් වුනොත් ඇප් එක දුවන්න දාන ලිස්ට් එක
+    # මොකක් හරි හදිසි අවුලක් ආවොත් බැක්අප් එක විදිහට වැඩ කරන්න ලිස්ට් එක
     return {
         "BTCUSDT": "₿ BTCUSDT", "ETHUSDT": "♦️ ETHUSDT", "SOLUSDT": "☀️ SOLUSDT", "BNBUSDT": "🔶 BNBUSDT",
         "XRPUSDT": "💧 XRPUSDT", "ADAUSDT": "₳ ADAUSDT", "DOGEUSDT": "🐕 DOGEUSDT", "SHIBUSDT": "🦊 SHIBUSDT"
     }
 
 # ලයිව් කොයින් ලිස්ට් එක ඩයිනමික් ලෙස ලෝඩ් කිරීම
-COIN_SYMBOLS = fetch_cryptocompare_binance_pairs()
+COIN_SYMBOLS = fetch_top_volume_usdt_pairs(limit=120) # Top Coins 120ක් විතර ඇදගන්නවා
 SCAN_COINS = list(COIN_SYMBOLS.keys())
 
 def get_all_binance_symbols_with_symbols():
@@ -93,7 +97,7 @@ def get_crypto_data(symbol, interval, limit=100):
         agg = 1
 
     headers = {"Authorization": f"Apikey {CRYPTOCOMPARE_API_KEY}"}
-    params = {"fsym": coin, "tsym": "USDT", "limit": limit, "aggregate": agg}
+    params = {"fsym": coin, "tsym": "USDT", "limit": limit, "aggregate": agg, "e": "Binance"}
     
     try:
         response = requests.get(url, params=params, headers=headers, timeout=7)
@@ -250,7 +254,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    selected_coin_display = st.selectbox("🎯 DEEP ANALYSIS COIN:", options=list(all_symbols_dict.values()), index=list(all_symbols_dict.keys()).index("BTCUSDT") if "BTCUSDT" in all_symbols_dict else 0)
+    selected_coin_display = st.selectbox("🎯 DEEP ANALYSIS COIN:", options=list(all_symbols_dict.values()), index=0)
     selected_coin = [k for k, v in all_symbols_dict.items() if v == selected_coin_display][0]
     
     st.markdown("---")
@@ -271,7 +275,7 @@ with st.sidebar:
 # 👑 MAIN INTERFACE
 # =====================================================================
 st.markdown("<h1 style='text-align: center; color: #ffb703;'>👑 ALPHA AUTOMATED QUANT TERMINAL v4.5</h1>", unsafe_allow_html=True)
-st.markdown(f"<p style='text-align: center; color: #8b949e;'>Engine Mode: <b>{strategy}</b> | Live CryptoCompare Global Feed Stream</p>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align: center; color: #8b949e;'>Engine Mode: <b>{strategy}</b> | Live CryptoCompare Paid Volume Stream</p>", unsafe_allow_html=True)
 st.markdown("<hr style='border: 1px solid rgba(255,255,255,0.1);'/>", unsafe_allow_html=True)
 
 if is_news_block_active():
@@ -281,7 +285,6 @@ if is_news_block_active():
 st.markdown("### 📡 MARKET RADAR MULTI-CONFLUENCE SIGNALS")
 active_signals = []
 
-# වේගයෙන් ස්කෑන් කරගන්න threads ගණන 10ක් දක්වා වැඩි කර ඇත
 with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor: 
     results = executor.map(lambda c: analyze_coin_for_scanner(c, htf, ltf), SCAN_COINS)
     for r in list(results):
@@ -390,34 +393,4 @@ with col_metrics:
 # Execution & Risk Size Output
 if data_isValid:
     try:
-        c_price_1m = df_1m["Close"].iloc[-1]
-        df_ltf["ATR"] = calculate_atr(df_ltf)
-        c_atr = df_ltf["ATR"].iloc[-1] if not pd.isna(df_ltf["ATR"].iloc[-1]) else (c_price_1m * 0.003)
-        dec_places = 6 if c_price_1m < 0.1 else 4
-        
-        risk_cash = balance * (risk_pct / 100)
-        sl_distance_pct = (c_atr * 2) / c_price_1m
-        raw_position_size = risk_cash / sl_distance_pct if sl_distance_pct > 0 else balance
-        margin_required = raw_position_size / leverage
-        
-        trailing_sl_step = c_atr * 1.5
-        
-        st.markdown("#### ⚡ SIGNAL SYSTEM EXECUTION & RISK SHEET")
-        
-        col_sig, col_risk = st.columns(2)
-        
-        with col_sig:
-            if bull_per >= 60 and htf_trend == "BULLISH 📈" and cvd_flow > 0:
-                buy_msg = f"### 🚀 SYSTEM DIRECTIVE: BUY / LONG\n\n**Entry:** ${c_price_1m:.{dec_places}f}\n\n**Stop Loss:** ${c_price_1m - (c_atr*2):.{dec_places}f}\n\n**Take Profit:** ${c_price_1m + (c_atr*4):.{dec_places}f}\n\n*🛡️ Trailing SL Step:* Move SL up every +${trailing_sl_step:.{dec_places}f} profit."
-                st.success(buy_msg)
-            elif bear_per >= 60 and htf_trend == "BEARISH 📉" and cvd_flow < 0:
-                sell_msg = f"### 📉 SYSTEM DIRECTIVE: SELL / SHORT\n\n**Entry:** ${c_price_1m:.{dec_places}f}\n\n**Stop Loss:** ${c_price_1m + (c_atr*2):.{dec_places}f}\n\n**Take Profit:** ${c_price_1m - (c_atr*4):.{dec_places}f}\n\n*🛡️ Trailing SL Step:* Move SL down every -${trailing_sl_step:.{dec_places}f} profit."
-                st.error(sell_msg)
-            else:
-                st.info("⚪ ENGINE STATUS: High-accuracy confluence threshold not met. Standby.")
-                
-        with col_risk:
-            risk_msg = f"### 🧮 CALCULATED RISK QUANTITIES\n\n* **Risk Cash Amount:** ${risk_cash:.2f}\n\n* **Recommended Position Size:** ${raw_position_size:.2f}\n\n* **Margin Allocation Needed:** ${margin_required:.2f} (at {leverage}x)"
-            st.warning(risk_msg)
-    except:
-        pass
+        c_price
