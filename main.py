@@ -263,109 +263,109 @@ def calculate_atr(df, period=14):
 
 def get_market():
 
-    try:
+```
+try:
 
-        url = "https://api.binance.com/api/v3/ticker/24hr"
+    url = "https://api.binance.com/api/v3/ticker/24hr"
 
-        response = requests.get(
-            url,
-            timeout=15
-        )
+    response = requests.get(
+        url,
+        timeout=15
+    )
 
-        data = response.json()
-
-        rows = []
-
-        if isinstance(data, list):
-
-            for coin in data:
-
-                try:
-
-                    symbol = str(
-                        coin.get("symbol", "")
-                    )
-
-                    if not symbol.endswith("USDT"):
-                        continue
-
-                    rows.append({
-
-                        "symbol": symbol,
-
-                        "price": float(
-                            coin.get(
-                                "lastPrice",
-                                0
-                            )
-                        ),
-
-                        "change": float(
-                            coin.get(
-                                "priceChangePercent",
-                                0
-                            )
-                        ),
-
-                        "volume": float(
-                            coin.get(
-                                "quoteVolume",
-                                0
-                            )
-                        )
-
-                    })
-
-                except:
-                    pass
-
-        df = pd.DataFrame(rows)
-
-        if len(df) > 0:
-
-            df = df.sort_values(
-                by="volume",
-                ascending=False
-            ).head(100)
-
-            return df
-
-    except:
-        pass
-
-    # FALLBACK
+    data = response.json()
 
     rows = []
 
-    for i in range(100):
+    if isinstance(data, list):
 
-        rows.append({
+        for coin in data:
 
-            "symbol": f"COIN{i}USDT",
+            try:
 
-            "price": round(
-                np.random.uniform(1, 70000),
-                4
-            ),
+                symbol = str(
+                    coin.get("symbol", "")
+                )
 
-            "change": round(
-                np.random.uniform(-20, 20),
-                2
-            ),
+                if not symbol.endswith("USDT"):
+                    continue
 
-            "volume": round(
-                np.random.uniform(
-                    1000000,
-                    5000000000
-                ),
-                2
-            )
+                rows.append({
 
-        })
+                    "symbol": symbol,
+
+                    "price": float(
+                        coin.get(
+                            "lastPrice",
+                            0
+                        )
+                    ),
+
+                    "change": float(
+                        coin.get(
+                            "priceChangePercent",
+                            0
+                        )
+                    ),
+
+                    "volume": float(
+                        coin.get(
+                            "quoteVolume",
+                            0
+                        )
+                    )
+
+                })
+
+            except:
+                pass
 
     df = pd.DataFrame(rows)
 
-    return df
+    if len(df) > 0:
+
+        df = df.sort_values(
+            by="volume",
+            ascending=False
+        ).head(100)
+
+        return df
+
+except:
+    pass
+
+rows = []
+
+for i in range(100):
+
+    rows.append({
+
+        "symbol": f"COIN{i}USDT",
+
+        "price": round(
+            np.random.uniform(1, 70000),
+            4
+        ),
+
+        "change": round(
+            np.random.uniform(-20, 20),
+            2
+        ),
+
+        "volume": round(
+            np.random.uniform(
+                1000000,
+                5000000000
+            ),
+            2
+        )
+
+    })
+
+df = pd.DataFrame(rows)
+
+return df
+
 ```
 
 
