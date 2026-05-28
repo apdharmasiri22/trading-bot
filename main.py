@@ -1,3 +1,7 @@
+# =========================================================
+# QUANTUM X TERMINAL - INSTITUTIONAL AI SYSTEM
+# =========================================================
+
 import streamlit as st
 import requests
 import pandas as pd
@@ -42,7 +46,7 @@ html, body, [class*="css"] {
 
 .card{
 
-    background:rgba(15,23,42,0.85);
+    background:rgba(15,23,42,0.90);
 
     backdrop-filter:blur(12px);
 
@@ -53,14 +57,11 @@ html, body, [class*="css"] {
     padding:20px;
 
     margin-bottom:20px;
-
-    box-shadow:
-    0 0 30px rgba(0,0,0,0.4);
 }
 
 .metric{
 
-    background:rgba(17,24,39,0.85);
+    background:rgba(17,24,39,0.88);
 
     border:1px solid rgba(255,255,255,0.08);
 
@@ -141,7 +142,7 @@ Institutional AI Smart Money Analyzer
 """, unsafe_allow_html=True)
 
 # =========================================================
-# RSI
+# INDICATORS
 # =========================================================
 
 def calculate_rsi(data, period=14):
@@ -162,20 +163,12 @@ def calculate_rsi(data, period=14):
 
     return rsi
 
-# =========================================================
-# EMA
-# =========================================================
-
 def calculate_ema(data, period):
 
     return data.ewm(
         span=period,
         adjust=False
     ).mean()
-
-# =========================================================
-# MACD
-# =========================================================
 
 def calculate_macd(data):
 
@@ -189,8 +182,40 @@ def calculate_macd(data):
 
     return macd, signal
 
+def calculate_atr(df, period=14):
+
+    high_low = df["high"] - df["low"]
+
+    high_close = np.abs(
+        df["high"] - df["close"].shift()
+    )
+
+    low_close = np.abs(
+        df["low"] - df["close"].shift()
+    )
+
+    ranges = pd.concat(
+        [
+            high_low,
+            high_close,
+            low_close
+        ],
+        axis=1
+    )
+
+    true_range = np.max(
+        ranges,
+        axis=1
+    )
+
+    atr = pd.Series(
+        true_range
+    ).rolling(period).mean()
+
+    return atr
+
 # =========================================================
-# MARKET
+# MARKET DATA
 # =========================================================
 
 @st.cache_data(ttl=30)
@@ -200,10 +225,6 @@ def get_market():
     headers = {
         "User-Agent":"Mozilla/5.0"
     }
-
-    # =====================================================
-    # BINANCE
-    # =====================================================
 
     try:
 
@@ -281,7 +302,7 @@ def get_market():
         pass
 
     # =====================================================
-    # COINGECKO
+    # COINGECKO FALLBACK
     # =====================================================
 
     try:
@@ -303,15 +324,9 @@ def get_market():
         }
 
         response = requests.get(
-
             cg_url,
-
             params=params,
-
-            headers=headers,
-
             timeout=20
-
         )
 
         data = response.json()
@@ -425,19 +440,14 @@ def get_market():
 
 @st.cache_data(ttl=30)
 
-def get_klines(symbol):
-
-    headers = {
-        "User-Agent":"Mozilla/5.0"
-    }
+def get_klines(symbol, interval="15m"):
 
     try:
 
-        url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval=15m&limit=200"
+        url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit=200"
 
         response = requests.get(
             url,
-            headers=headers,
             timeout=15
         )
 
@@ -515,7 +525,7 @@ def get_klines(symbol):
         return fake
 
 # =========================================================
-# LOAD
+# LOAD MARKET
 # =========================================================
 
 df = get_market()
@@ -565,13 +575,13 @@ with c4:
     )
 
 # =========================================================
-# MAIN
+# MAIN LAYOUT
 # =========================================================
 
-left,center,right = st.columns([1,1.3,1])
+left,center,right = st.columns([1,1.5,1])
 
 # =========================================================
-# TOP GAINERS
+# GAINERS
 # =========================================================
 
 with left:
@@ -590,7 +600,7 @@ with left:
     )
 
 # =========================================================
-# ANALYZER
+# AI ANALYZER
 # =========================================================
 
 with center:
@@ -602,7 +612,21 @@ with center:
         df["symbol"].tolist()
     )
 
-    kline = get_klines(symbol)
+    timeframe = st.selectbox(
+        "Timeframe",
+        [
+            "5m",
+            "15m",
+            "1h",
+            "4h",
+            "1d"
+        ]
+    )
+
+    kline = get_klines(
+        symbol,
+        timeframe
+    )
 
     close = kline["close"]
 
@@ -624,6 +648,8 @@ with center:
 
     ema200 = calculate_ema(close,100).iloc[-1]
 
+    atr = calculate_atr(kline).iloc[-1]
+
     # =====================================================
     # VOLUME
     # =====================================================
@@ -639,7 +665,7 @@ with center:
     )
 
     # =====================================================
-    # SMC
+    # MARKET STRUCTURE
     # =====================================================
 
     last_high = kline["high"].iloc[-1]
@@ -670,13 +696,37 @@ with center:
     )
 
     # =====================================================
+    # FAIR VALUE GAP
+    # =====================================================
+
+    fvg = (
+        "BULLISH FVG"
+        if (
+            kline["low"].iloc[-1]
+            >
+            kline["high"].iloc[-3]
+        )
+        else "NO FVG"
+    )
+
+    # =====================================================
+    # ORDER BLOCK
+    # =====================================================
+
+    order_block = (
+        "BULLISH ORDER BLOCK"
+        if ema20 > ema50
+        else "BEARISH ORDER BLOCK"
+    )
+
+    # =====================================================
     # LONG SCORE
     # =====================================================
 
     long_score = 0
 
     if rsi < 35:
-        long_score += 15
+        long_score += 10
 
     if macd_value > 0:
         long_score += 15
@@ -694,7 +744,13 @@ with center:
         long_score += 15
 
     if "UP" in choch:
-        long_score += 15
+        long_score += 10
+
+    if "FVG" in fvg:
+        long_score += 5
+
+    if "BULLISH" in order_block:
+        long_score += 5
 
     # =====================================================
     # SHORT SCORE
@@ -706,13 +762,13 @@ with center:
     # SIGNAL
     # =====================================================
 
-    if long_score >= 75:
+    if long_score >= 80:
 
         signal = "STRONG LONG"
 
         css = "buy"
 
-    elif long_score >= 55:
+    elif long_score >= 60:
 
         signal = "LONG"
 
@@ -731,18 +787,18 @@ with center:
         css = "sell"
 
     # =====================================================
-    # ENTRY / TP / SL
+    # ENTRY / SL / TP
     # =====================================================
 
     entry = current_price
 
-    sl = current_price * 0.98
+    sl = current_price - (atr * 1.5)
 
-    tp1 = current_price * 1.02
+    tp1 = current_price + (atr * 2)
 
-    tp2 = current_price * 1.04
+    tp2 = current_price + (atr * 4)
 
-    tp3 = current_price * 1.06
+    tp3 = current_price + (atr * 6)
 
     # =====================================================
     # LEVERAGE
@@ -752,17 +808,40 @@ with center:
 
         leverage = "10X"
 
-    elif long_score >= 75:
+    elif long_score >= 80:
 
         leverage = "5X"
 
-    elif long_score >= 60:
+    elif long_score >= 70:
 
         leverage = "3X"
 
     else:
 
         leverage = "1X"
+
+    # =====================================================
+    # AI EXPLANATION
+    # =====================================================
+
+    reasons = []
+
+    if macd_value > 0:
+        reasons.append("MACD bullish momentum")
+
+    if ema20 > ema50:
+        reasons.append("EMA bullish crossover")
+
+    if whale == "🐋 WHALE ACTIVE":
+        reasons.append("Whale activity detected")
+
+    if "BULLISH" in bos:
+        reasons.append("Bullish break of structure")
+
+    if "FVG" in fvg:
+        reasons.append("Fair value gap detected")
+
+    explanation = " • ".join(reasons)
 
     # =====================================================
     # DISPLAY
@@ -780,15 +859,15 @@ with center:
 
     <br>
 
-    <h3>
+    <h2>
     LONG POSSIBILITY:
     {long_score}%
-    </h3>
+    </h2>
 
-    <h3>
+    <h2>
     SHORT POSSIBILITY:
     {short_score}%
-    </h3>
+    </h2>
 
     <hr>
 
@@ -802,6 +881,8 @@ with center:
 
     <div>EMA200 : {ema200:.2f}</div>
 
+    <div>ATR : {atr:.2f}</div>
+
     <div>WHALE : {whale}</div>
 
     <div>BOS : {bos}</div>
@@ -809,6 +890,10 @@ with center:
     <div>CHOCH : {choch}</div>
 
     <div>LIQUIDITY : {liquidity}</div>
+
+    <div>FVG : {fvg}</div>
+
+    <div>ORDER BLOCK : {order_block}</div>
 
     <hr>
 
@@ -823,6 +908,14 @@ with center:
     <h3>TP3 : {tp3:.2f}</h3>
 
     <h3>LEVERAGE : {leverage}</h3>
+
+    <hr>
+
+    <h3>AI EXPLANATION</h3>
+
+    <div>
+    {explanation}
+    </div>
 
     </div>
 
@@ -847,7 +940,7 @@ with right:
     )
 
 # =========================================================
-# CANDLESTICK
+# CANDLE CHART
 # =========================================================
 
 st.subheader("📊 ADVANCED CANDLE CHART")
