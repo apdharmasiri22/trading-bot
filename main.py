@@ -1,6 +1,6 @@
 # =========================================================
-# 👑 ALPHA TERMINAL v5.0 STABLE EDITION
-# Binance Safe Version (No Rate Limit Crash)
+# 👑 ALPHA TERMINAL v6.0 ULTRA STABLE EDITION
+# NO BLINK + NO RATE LIMIT + AUTO REFRESH SMOOTH
 # =========================================================
 
 import numpy as np
@@ -14,27 +14,28 @@ import time
 
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from streamlit_autorefresh import st_autorefresh
 
 # =========================================================
 # PAGE CONFIG
 # =========================================================
 
 st.set_page_config(
-    page_title="ALPHA TERMINAL v5.0",
+    page_title="ALPHA TERMINAL v6.0",
     page_icon="👑",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # =========================================================
-# AUTO REFRESH
+# AUTO REFRESH (NO PAGE BLINK)
 # =========================================================
 
-st.markdown(
-    """
-    <meta http-equiv="refresh" content="20">
-    """,
-    unsafe_allow_html=True
+refresh_time = 20000
+
+st_autorefresh(
+    interval=refresh_time,
+    key="alpha_refresh"
 )
 
 # =========================================================
@@ -56,10 +57,15 @@ h1,h2,h3,h4{
 [data-testid="stMetricValue"]{
     color:#ffb703;
     font-size:28px;
+    font-weight:bold;
 }
 
 section[data-testid="stSidebar"]{
     background:#111827;
+}
+
+.stDataFrame{
+    border-radius:12px;
 }
 
 </style>
@@ -82,7 +88,7 @@ adapter = HTTPAdapter(max_retries=retry)
 session.mount("https://", adapter)
 
 # =========================================================
-# COINS
+# TOP VOLUME COINS
 # =========================================================
 
 COIN_SYMBOLS = {
@@ -92,35 +98,41 @@ COIN_SYMBOLS = {
     "SOLUSDT":"☀️ SOLUSDT",
     "BNBUSDT":"🔶 BNBUSDT",
     "XRPUSDT":"💧 XRPUSDT",
-    "ADAUSDT":"₳ ADAUSDT",
     "DOGEUSDT":"🐕 DOGEUSDT",
+    "ADAUSDT":"₳ ADAUSDT",
     "AVAXUSDT":"🔺 AVAXUSDT",
-    "DOTUSDT":"● DOTUSDT",
     "LINKUSDT":"🔗 LINKUSDT",
+    "DOTUSDT":"● DOTUSDT",
+
+    "TRXUSDT":"🔴 TRXUSDT",
     "MATICUSDT":"💜 MATICUSDT",
     "LTCUSDT":"Ł LTCUSDT",
     "UNIUSDT":"🦄 UNIUSDT",
     "ATOMUSDT":"⚛️ ATOMUSDT",
-    "TRXUSDT":"🔴 TRXUSDT"
+
+    "APTUSDT":"🌀 APTUSDT",
+    "SUIUSDT":"💧 SUIUSDT",
+    "PEPEUSDT":"🐸 PEPEUSDT",
+    "ARBUSDT":"🔵 ARBUSDT",
+    "OPUSDT":"🔴 OPUSDT"
 
 }
 
-# SAFE COIN LIMIT
-SCAN_COINS = list(COIN_SYMBOLS.keys())[:15]
+SCAN_COINS = list(COIN_SYMBOLS.keys())
 
 # =========================================================
-# BINANCE SAFE API
+# BINANCE API
 # =========================================================
 
 @st.cache_data(ttl=20)
-def get_crypto_data(symbol, interval, limit=100):
+def get_crypto_data(symbol, interval, limit=120):
 
     url = "https://data-api.binance.vision/api/v3/klines"
 
     params = {
-        "symbol": symbol,
-        "interval": interval,
-        "limit": limit
+        "symbol":symbol,
+        "interval":interval,
+        "limit":limit
     }
 
     try:
@@ -133,6 +145,9 @@ def get_crypto_data(symbol, interval, limit=100):
                 "User-Agent":"Mozilla/5.0"
             }
         )
+
+        if response.status_code == 429:
+            return None
 
         if response.status_code != 200:
             return None
@@ -150,7 +165,7 @@ def get_crypto_data(symbol, interval, limit=100):
             "Close",
             "Volume",
             "CloseTime",
-            "QuoteAssetVol",
+            "QAV",
             "Trades",
             "TB",
             "TQ",
@@ -192,11 +207,11 @@ def calculate_rsi(series, period=14):
 
 def calculate_macd(series):
 
-    ema12 = calculate_ema(series, 12)
-    ema26 = calculate_ema(series, 26)
+    ema12 = calculate_ema(series,12)
+    ema26 = calculate_ema(series,26)
 
     macd = ema12 - ema26
-    signal = calculate_ema(macd, 9)
+    signal = calculate_ema(macd,9)
 
     return macd, signal
 
@@ -209,13 +224,13 @@ def calculate_atr(df, period=14):
     low_close = abs(df["Low"] - df["Close"].shift())
 
     ranges = pd.concat(
-        [high_low, high_close, low_close],
+        [high_low,high_close,low_close],
         axis=1
     )
 
-    true_range = ranges.max(axis=1)
+    tr = ranges.max(axis=1)
 
-    atr = true_range.rolling(period).mean()
+    atr = tr.rolling(period).mean()
 
     return atr
 
@@ -265,8 +280,8 @@ def calculate_adx(df, period=14):
 
 def analyze_coin(symbol, htf, ltf):
 
-    df_htf = get_crypto_data(symbol, htf, 120)
-    df_ltf = get_crypto_data(symbol, ltf, 120)
+    df_htf = get_crypto_data(symbol, htf)
+    df_ltf = get_crypto_data(symbol, ltf)
 
     if (
         df_htf is None or
@@ -279,7 +294,8 @@ def analyze_coin(symbol, htf, ltf):
     if len(df_htf) < 50 or len(df_ltf) < 50:
         return None
 
-    # TREND
+    # EMA TREND
+
     df_htf["EMA50"] = calculate_ema(
         df_htf["Close"],
         50
@@ -293,6 +309,7 @@ def analyze_coin(symbol, htf, ltf):
     )
 
     # RSI
+
     df_ltf["RSI"] = calculate_rsi(
         df_ltf["Close"]
     )
@@ -300,16 +317,19 @@ def analyze_coin(symbol, htf, ltf):
     rsi = df_ltf["RSI"].iloc[-1]
 
     # MACD
+
     macd, signal = calculate_macd(
         df_ltf["Close"]
     )
 
     # ATR
+
     df_ltf["ATR"] = calculate_atr(df_ltf)
 
     atr = df_ltf["ATR"].iloc[-1]
 
     # ADX
+
     df_ltf["ADX"] = calculate_adx(df_ltf)
 
     adx = df_ltf["ADX"].iloc[-1]
@@ -318,6 +338,7 @@ def analyze_coin(symbol, htf, ltf):
         adx = 0
 
     # VOLUME
+
     avg_volume = df_ltf["Volume"].rolling(20).mean()
 
     volume_ok = (
@@ -329,7 +350,7 @@ def analyze_coin(symbol, htf, ltf):
     bearish = 0
 
     # =====================================================
-    # SCORING
+    # SCORE ENGINE
     # =====================================================
 
     if trend == "BULLISH":
@@ -368,27 +389,27 @@ def analyze_coin(symbol, htf, ltf):
     if bullish >= 45 and trend == "BULLISH":
 
         return {
-            "Coin": symbol,
-            "Signal": "🟩 BUY",
-            "Score": bullish,
-            "Price": current_price,
-            "SL": current_price - (atr * 2),
-            "TP": current_price + (atr * 4),
-            "ADX": adx,
-            "RSI": rsi
+            "Coin":symbol,
+            "Signal":"🟩 BUY",
+            "Score":bullish,
+            "Price":current_price,
+            "SL":current_price - (atr * 2),
+            "TP":current_price + (atr * 4),
+            "ADX":adx,
+            "RSI":rsi
         }
 
     if bearish >= 45 and trend == "BEARISH":
 
         return {
-            "Coin": symbol,
-            "Signal": "🟥 SELL",
-            "Score": bearish,
-            "Price": current_price,
-            "SL": current_price + (atr * 2),
-            "TP": current_price - (atr * 4),
-            "ADX": adx,
-            "RSI": rsi
+            "Coin":symbol,
+            "Signal":"🟥 SELL",
+            "Score":bearish,
+            "Price":current_price,
+            "SL":current_price + (atr * 2),
+            "TP":current_price - (atr * 4),
+            "ADX":adx,
+            "RSI":rsi
         }
 
     return None
@@ -411,16 +432,22 @@ with st.sidebar:
     )
 
     if strategy == "Scalping":
+
         htf = "1h"
         ltf = "5m"
+        refresh_time = 15000
 
     elif strategy == "Day Trading":
+
         htf = "4h"
         ltf = "15m"
+        refresh_time = 30000
 
     else:
+
         htf = "1d"
         ltf = "1h"
+        refresh_time = 60000
 
     selected_coin = st.selectbox(
         "Select Coin",
@@ -450,14 +477,14 @@ with st.sidebar:
 # HEADER
 # =========================================================
 
-st.title("👑 ALPHA TERMINAL v5.0")
+st.title("👑 ALPHA TERMINAL v6.0")
 
 st.caption(
     f"Live Binance Scanner | {strategy}"
 )
 
 # =========================================================
-# DATA STATUS
+# API STATUS
 # =========================================================
 
 btc_test = get_crypto_data(
@@ -497,7 +524,7 @@ with concurrent.futures.ThreadPoolExecutor(
         if result:
             signals.append(result)
 
-        time.sleep(0.5)
+        time.sleep(0.3)
 
 if signals:
 
@@ -515,7 +542,7 @@ else:
     )
 
 # =========================================================
-# SINGLE COIN ANALYSIS
+# SINGLE ANALYSIS
 # =========================================================
 
 st.subheader(
@@ -567,6 +594,7 @@ TAKE PROFIT: {analysis["TP"]:.4f}
     )
 
     # RISK
+
     risk_cash = balance * (
         risk_percent / 100
     )
@@ -605,7 +633,7 @@ else:
     )
 
 # =========================================================
-# TRADINGVIEW
+# TRADINGVIEW CHART
 # =========================================================
 
 st.subheader("📈 LIVE CHART")
