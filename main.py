@@ -1,5 +1,5 @@
 # =========================================================
-# QUANTUM X TERMINAL - ULTIMATE ELITE AI SYSTEM
+# QUANTUM X TERMINAL - GRAND FINAL STABLE VERSION
 # =========================================================
 
 import streamlit as st
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS signals (
 conn.commit()
 
 # =========================================================
-# STYLE
+# DARK STYLE
 # =========================================================
 
 st.markdown("""
@@ -262,14 +262,41 @@ def get_market():
 
     try:
 
+        headers = {
+            "User-Agent": "Mozilla/5.0"
+        }
+
         url = "https://api.binance.com/api/v3/ticker/24hr"
 
         response = requests.get(
             url,
-            timeout=15
+            headers=headers,
+            timeout=20
         )
 
+        if response.status_code != 200:
+
+            return pd.DataFrame(
+                columns=[
+                    "symbol",
+                    "price",
+                    "change",
+                    "volume"
+                ]
+            )
+
         data = response.json()
+
+        if not isinstance(data, list):
+
+            return pd.DataFrame(
+                columns=[
+                    "symbol",
+                    "price",
+                    "change",
+                    "volume"
+                ]
+            )
 
         rows = []
 
@@ -314,6 +341,17 @@ def get_market():
             except:
                 pass
 
+        if len(rows) == 0:
+
+            return pd.DataFrame(
+                columns=[
+                    "symbol",
+                    "price",
+                    "change",
+                    "volume"
+                ]
+            )
+
         df = pd.DataFrame(rows)
 
         df = df.sort_values(
@@ -325,7 +363,14 @@ def get_market():
 
     except:
 
-        return pd.DataFrame()
+        return pd.DataFrame(
+            columns=[
+                "symbol",
+                "price",
+                "change",
+                "volume"
+            ]
+        )
 
 # =========================================================
 # KLINES
@@ -447,11 +492,21 @@ def save_signal(
 
 df = get_market()
 
+if df.empty or "symbol" not in df.columns:
+
+    st.error(
+        "BINANCE API ERROR / NO MARKET DATA"
+    )
+
+    st.stop()
+
 # =========================================================
-# METRICS
+# BTC METRICS
 # =========================================================
 
-btc_data = df[df["symbol"]=="BTCUSDT"]
+btc_data = df[
+    df["symbol"] == "BTCUSDT"
+]
 
 if not btc_data.empty:
     btc_price = btc_data.iloc[0]["price"]
@@ -510,7 +565,7 @@ else:
     timeframe = "1h"
 
 # =========================================================
-# AI SIGNAL SCANNER
+# SIGNAL SCANNER
 # =========================================================
 
 st.subheader("🔥 ELITE AI SIGNAL SCANNER")
@@ -566,8 +621,6 @@ for coin in coins:
 
         short_score = 100 - long_score
 
-        # LONG
-
         if long_score >= 80:
 
             entry = current_price
@@ -590,30 +643,16 @@ for coin in coins:
 
             scan_long.append({
 
-                "COIN":coin,
-                "PRICE":round(current_price,4),
-                "LONG %":long_score,
-                "ENTRY":round(entry,4),
-                "TP1":round(tp1,4),
-                "TP2":round(tp2,4),
-                "TP3":round(tp3,4),
-                "SL":round(sl,4)
+                "COIN": coin,
+                "PRICE": round(current_price,4),
+                "LONG %": long_score,
+                "ENTRY": round(entry,4),
+                "TP1": round(tp1,4),
+                "TP2": round(tp2,4),
+                "TP3": round(tp3,4),
+                "SL": round(sl,4)
 
             })
-
-            save_signal(
-                coin,
-                "LONG",
-                timeframe,
-                entry,
-                tp1,
-                tp2,
-                tp3,
-                sl,
-                long_score
-            )
-
-        # SHORT
 
         if short_score >= 80:
 
@@ -637,28 +676,16 @@ for coin in coins:
 
             scan_short.append({
 
-                "COIN":coin,
-                "PRICE":round(current_price,4),
-                "SHORT %":short_score,
-                "ENTRY":round(entry,4),
-                "TP1":round(tp1,4),
-                "TP2":round(tp2,4),
-                "TP3":round(tp3,4),
-                "SL":round(sl,4)
+                "COIN": coin,
+                "PRICE": round(current_price,4),
+                "SHORT %": short_score,
+                "ENTRY": round(entry,4),
+                "TP1": round(tp1,4),
+                "TP2": round(tp2,4),
+                "TP3": round(tp3,4),
+                "SL": round(sl,4)
 
             })
-
-            save_signal(
-                coin,
-                "SHORT",
-                timeframe,
-                entry,
-                tp1,
-                tp2,
-                tp3,
-                sl,
-                short_score
-            )
 
     except:
         pass
@@ -702,62 +729,6 @@ with scol:
         st.warning("NO SHORT SIGNALS")
 
 # =========================================================
-# ACCURACY DASHBOARD
-# =========================================================
-
-st.subheader("📊 ACCURACY DASHBOARD")
-
-signals_df = pd.read_sql(
-    "SELECT * FROM signals",
-    conn
-)
-
-if not signals_df.empty:
-
-    total_signals = len(signals_df)
-
-    tp1_hits = len(
-        signals_df[
-            signals_df["status"] == "TP1 HIT"
-        ]
-    )
-
-    tp2_hits = len(
-        signals_df[
-            signals_df["status"] == "TP2 HIT"
-        ]
-    )
-
-    tp3_hits = len(
-        signals_df[
-            signals_df["status"] == "TP3 HIT"
-        ]
-    )
-
-    sl_hits = len(
-        signals_df[
-            signals_df["status"] == "SL HIT"
-        ]
-    )
-
-    a,b,c,d,e = st.columns(5)
-
-    with a:
-        st.metric("TOTAL", total_signals)
-
-    with b:
-        st.metric("TP1", tp1_hits)
-
-    with c:
-        st.metric("TP2", tp2_hits)
-
-    with d:
-        st.metric("TP3", tp3_hits)
-
-    with e:
-        st.metric("SL HIT", sl_hits)
-
-# =========================================================
 # COIN FILTER
 # =========================================================
 
@@ -781,7 +752,7 @@ selected_coin = st.selectbox(
 )
 
 # =========================================================
-# TRADINGVIEW CHART
+# TRADINGVIEW
 # =========================================================
 
 st.subheader("📈 TRADINGVIEW LIVE CHART")
