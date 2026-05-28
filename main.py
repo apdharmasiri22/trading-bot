@@ -66,6 +66,7 @@ def get_crypto_data(symbol, interval, limit=100):
     try:
         response = requests.get(url, params=params)
         raw_data = response.json()
+        if not raw_data or len(raw_data) == 0: return None
         df = pd.DataFrame(raw_data, columns=["Time", "Open", "High", "Low", "Close", "Volume", "CloseTime", "QA", "Trades", "TBA", "TAQ", "Ignore"])
         for col in ["Open", "High", "Low", "Close", "Volume", "QA"]:
             df[col] = df[col].astype(float)
@@ -77,6 +78,7 @@ def get_crypto_data(symbol, interval, limit=100):
 # 🧠 ADVANCED QUANT MATH & HIGH ACCURACY SMC ENGINE
 # =====================================================================
 def calculate_rsi(series, period=14):
+    if len(series) < period: return pd.Series(50, index=series.index)
     delta = series.diff()
     gain = delta.where(delta > 0, 0).rolling(window=period).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
@@ -90,34 +92,27 @@ def calculate_macd(series, fast=12, slow=26, signal=9):
     return macd_line, calculate_ema(macd_line, signal)
 
 def calculate_atr(df, period=14):
+    if len(df) < period: return pd.Series(df["Close"] * 0.003)
     tr = pd.concat([df["High"] - df["Low"], abs(df["High"] - df["Close"].shift()), abs(df["Low"] - df["Close"].shift())], axis=1).max(axis=1)
     return tr.rolling(window=period).mean()
 
-# --- NEW: ADVANCED INSTITUTIONAL VOLUMETRIC (CVD) CALCULATION ---
 def calculate_cvd_delta(df):
-    if df is None or df.empty: return 0
-    # Cumulative Volume Delta Approximation (Using Quote Asset Volume & Price Action Spread)
+    if df is None or df.empty or len(df) < 5: return 0
     typical_price_change = df['Close'] - df['Open']
     high_low_spread = df['High'] - df['Low'] + 1e-10
     buyer_volume = df['Volume'] * (0.5 + (typical_price_change / (2 * high_low_spread)))
     seller_volume = df['Volume'] - buyer_volume
-    cvd = (buyer_volume - seller_volume).iloc[-5:].sum() # Last 5 candles momentum delta
+    cvd = (buyer_volume - seller_volume).iloc[-5:].sum()
     return cvd
 
-# --- NEW: ECONOMIC NEWS RADAR FILTER ---
 def is_news_block_active():
-    # Crypto markets are heavily affected by macro news.
-    # This checks if there is any high volatility economic event window currently open.
     now = datetime.datetime.utcnow()
-    # Mock safety filter: blocking trades during critical standard economic update times if necessary
-    # In full production, this connects to ForexFactory API.
-    if now.weekday() in [2, 3] and now.hour in [13, 14]: # Standard US CPI/FED Release Windows (UTC)
+    if now.weekday() in [2, 3] and now.hour in [13, 14]: 
         return True
     return False
 
-# --- MULTI-TIMEFRAME SMC DETECTION ENGINE ---
 def detect_smc_features(df):
-    if df is None or len(df) < 5: return 0, 0, 0, "NONE"
+    if df is None or len(df) < 15: return 0, 0, "NONE"
     
     bos_signal = "NONE"
     if df['Close'].iloc[-1] > df['High'].shift(1).iloc[-6:-1].max():
@@ -125,46 +120,43 @@ def detect_smc_features(df):
     elif df['Close'].iloc[-1] < df['Low'].shift(1).iloc[-6:-1].min():
         bos_signal = "BEARISH_BOS"
         
-    bullish_ob = 1 if (df['Close'].iloc[-2] < df['Open'].iloc[-2]) and (df['Close'].iloc[-1] > df['High'].iloc[-2]) and (df['Volume'].iloc[-1] > df['Volume'].rolling(20).mean().iloc[-1] * 1.3) else 0
-    bearish_ob = 1 if (df['Close'].iloc[-2] > df['Open'].iloc[-2]) and (df['Close'].iloc[-1] < df['Low'].iloc[-2]) and (df['Volume'].iloc[-1] > df['Volume'].rolling(20).mean().iloc[-1] * 1.3) else 0
+    bullish_ob = 1 if (df['Close'].iloc[-2] < df['Open'].iloc[-2]) and (df['Close'].iloc[-1] > df['High'].iloc[-2]) and (df['Volume'].iloc[-1] > df['Volume'].rolling(20).mean().fillna(0).iloc[-1] * 1.3) else 0
+    bearish_ob = 1 if (df['Close'].iloc[-2] > df['Open'].iloc[-2]) and (df['Close'].iloc[-1] < df['Low'].iloc[-2]) and (df['Volume'].iloc[-1] > df['Volume'].rolling(20).mean().fillna(0).iloc[-1] * 1.3) else 0
     
     fvg_bullish = 1 if (df['Low'].iloc[-1] > df['High'].iloc[-3]) and (df['Close'].iloc[-2] > df['Open'].iloc[-2]) else 0
     fvg_bearish = 1 if (df['High'].iloc[-1] < df['Low'].iloc[-3]) and (df['Close'].iloc[-2] < df['Open'].iloc[-2]) else 0
     
-    liq_sweep_bullish = 1 if (df['Low'].iloc[-1] < df['Low'].shift(1).rolling(10).min().iloc[-2]) and (df['Close'].iloc[-1] > df['Open'].iloc[-1]) else 0
-    liq_sweep_bearish = 1 if (df['High'].iloc[-1] > df['High'].shift(1).rolling(10).max().iloc[-2]) and (df['Close'].iloc[-1] < df['Open'].iloc[-1]) else 0
+    liq_sweep_bullish = 1 if (df['Low'].iloc[-1] < df['Low'].shift(1).rolling(10).min().fillna(0).iloc[-2]) and (df['Close'].iloc[-1] > df['Open'].iloc[-1]) else 0
+    liq_sweep_bearish = 1 if (df['High'].iloc[-1] > df['High'].shift(1).rolling(10).max().fillna(0).iloc[-2]) and (df['Close'].iloc[-1] < df['Open'].iloc[-1]) else 0
 
     bull_points = (bullish_ob * 15) + (fvg_bullish * 15) + (liq_sweep_bullish * 10) + (15 if bos_signal == "BULLISH_BOS" else 0)
     bear_points = (bearish_ob * 15) + (fvg_bearish * 15) + (liq_sweep_bearish * 10) + (15 if bos_signal == "BEARISH_BOS" else 0)
     
     return bull_points, bear_points, bos_signal
 
-# Telegram Alert Function
 def send_telegram_alert(token, chat_id, message):
     if token and chat_id:
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         try: requests.post(url, json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"})
         except: pass
 
-# Dynamic Scanning Logic (Integrated with Technicals + SMC + HTF Confluence + Volumetric CVD)
 def analyze_coin_for_scanner(coin, htf, ltf):
     df_htf = get_crypto_data(coin, htf, 100)
     df_ltf = get_crypto_data(coin, ltf, 100)
-    if df_htf is None or df_ltf is None or len(df_htf) < 50 or len(df_ltf) < 50: return None
     
-    # NEW: News Block Check to ensure accuracy
+    if df_htf is None or df_ltf is None or len(df_htf) < 50 or len(df_ltf) < 50: 
+        return None
+    
     if is_news_block_active(): return None
 
     bullish_points, bearish_points, total_checks = 0, 0, 0
     df_htf["EMA_50"] = calculate_ema(df_htf["Close"], 50)
     
-    # 1. High Timeframe Trend Confluence Filter
     htf_trend = "BULLISH" if df_htf["Close"].iloc[-1] > df_htf["EMA_50"].iloc[-1] else "BEARISH"
     bullish_points += 15 if htf_trend == "BULLISH" else 0
     bearish_points += 15 if htf_trend == "BEARISH" else 0
     total_checks += 15
     
-    # 2. Low Timeframe Momentum Filters
     df_ltf["RSI"] = calculate_rsi(df_ltf["Close"], 14)
     c_rsi = df_ltf["RSI"].iloc[-1]
     if c_rsi < 35: bullish_points += 15
@@ -176,10 +168,7 @@ def analyze_coin_for_scanner(coin, htf, ltf):
     else: bearish_points += 10
     total_checks += 10
     
-    # 3. Smart Money Concepts Engine
     smc_bull, smc_bear, bos_sig = detect_smc_features(df_ltf)
-    # NEW: HTF Order block alignment validation
-    _, _, htf_bos = detect_smc_features(df_htf)
     if htf_trend == "BULLISH" and bos_sig == "BULLISH_BOS": bullish_points += 20
     if htf_trend == "BEARISH" and bos_sig == "BEARISH_BOS": bearish_points += 20
     
@@ -187,7 +176,6 @@ def analyze_coin_for_scanner(coin, htf, ltf):
     bearish_points += smc_bear
     total_checks += 75 
     
-    # 4. Volumetric Flow Filter (CVD)
     cvd_flow = calculate_cvd_delta(df_ltf)
     if cvd_flow > 0: bullish_points += 15
     elif cvd_flow < 0: bearish_points += 15
@@ -202,7 +190,6 @@ def analyze_coin_for_scanner(coin, htf, ltf):
     
     coin_display = COIN_SYMBOLS.get(coin, f"🪙 {coin}")
     
-    # High Threshold Filter for Maximum Accuracy (>= 60%)
     if bull_per >= 60 and htf_trend == "BULLISH" and cvd_flow > 0:
         return {"Coin": coin_display, "Signal": "🟩 BUY / LONG", "Strength": f"{bull_per:.1f}%", "Structure": bos_sig, "Entry": f"{c_price:.{dec}f}", "SL": f"{c_price - (c_atr*2):.{dec}f}", "TP": f"{c_price + (c_atr*4):.{dec}f}"}
     elif bear_per >= 60 and htf_trend == "BEARISH" and cvd_flow < 0:
@@ -217,20 +204,17 @@ all_symbols_dict = get_all_binance_symbols_with_symbols()
 with st.sidebar:
     st.markdown("### 👑 TERMINAL CONTROL PANEL")
     
-    # ⏱️ 1. Multi-Timeframe Strategy Selector
     st.markdown("#### ⏱️ STRATEGY TIMEFRAME")
     strategy = st.radio("Select Trading Profile:", ["⚡ Scalping (1H + 5M)", "📈 Day Trading (4H + 15M)", "🐋 Swing Trading (1D + 1H)"], index=1)
     htf, ltf = ("1h", "5m") if "Scalping" in strategy else ("4h", "15m") if "Day Trading" in strategy else ("1d", "1h")
     
     st.markdown("---")
     
-    # 🎯 2. Coin Selector
     selected_coin_display = st.selectbox("🎯 DEEP ANALYSIS COIN:", options=list(all_symbols_dict.values()), index=list(all_symbols_dict.keys()).index("BTCUSDT") if "BTCUSDT" in all_symbols_dict else 0)
     selected_coin = [k for k, v in all_symbols_dict.items() if v == selected_coin_display][0]
     
     st.markdown("---")
     
-    # 💰 3. Risk & Position Calculator Widget
     st.markdown("#### 💰 RISK CALCULATOR")
     balance = st.number_input("Account Balance ($):", min_value=10.0, value=1000.0, step=50.0)
     risk_pct = st.slider("Risk Per Trade (%):", min_value=0.5, max_value=5.0, value=1.0, step=0.5)
@@ -238,7 +222,6 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # 🔔 4. Telegram Alerts Settings
     st.markdown("#### 🔔 TELEGRAM NOTIFIER")
     tg_on = st.checkbox("Enable Live Alerts")
     tg_token = st.text_input("Bot Token:", type="password")
@@ -251,7 +234,6 @@ st.markdown("<h1 style='text-align: center; color: #ffb703;'>👑 ALPHA AUTOMATE
 st.markdown(f"<p style='text-align: center; color: #8b949e;'>Engine Mode: <b>{strategy}</b> | Live High-Accuracy SMC & Volumetric Engine</p>", unsafe_allow_html=True)
 st.markdown("<hr style='border: 1px solid rgba(255,255,255,0.1);'/>", unsafe_allow_html=True)
 
-# News Warning Banner if active
 if is_news_block_active():
     st.warning("⚠️ HIGH IMPACT ECONOMIC NEWS WINDOW OPEN: Signals are locked to prevent false breakout traps.")
 
@@ -310,8 +292,13 @@ df_ltf = get_crypto_data(selected_coin, ltf, 100)
 df_1m = get_crypto_data(selected_coin, "1m", 5)
 
 with col_metrics:
-    if df_htf is not None and df_ltf is not None and df_1m is not None:
+    # 🚨 LINE 26 AND ALL INDEX VISUALIZER SAFETY HANDLES FIXED
+    if df_htf is not None and df_ltf is not None and df_1m is not None and len(df_htf) > 0 and len(df_ltf) > 0 and len(df_1m) > 0:
         bullish_points, bearish_points, total_checks = 0, 0, 0
+        
+        # Safe Metric Price Injection to avoid Line 26 crash
+        current_market_price = df_1m["Close"].iloc[-1]
+        st.metric("📊 LIVE MARKET PRICE", f"${current_market_price:,.2f}")
         
         df_htf["EMA_50"] = calculate_ema(df_htf["Close"], 50)
         htf_trend = "BULLISH 📈" if df_htf["Close"].iloc[-1] > df_htf["EMA_50"].iloc[-1] else "BEARISH 📉"
@@ -348,12 +335,13 @@ with col_metrics:
         
         st.metric(label="🟩 ACCURATE BUY PROBABILITY", value=f"{bull_per:.1f}%")
         st.metric(label="🟥 ACCURATE SELL PROBABILITY", value=f"{bear_per:.1f}%")
-        st.info(f"HTF Trend Setup: **{htf_trend}** | CVD Flow: **{'BULLISH 🟢' if cvd_flow > 0 else 'BEARISH 🔴'}**")
+        st.info(f"HTF Trend Setup: **{htf_trend}**\nCVD Flow: **{'BULLISH 🟢' if cvd_flow > 0 else 'BEARISH 🔴'}**")
     else:
-        st.error("Exchange data mapping failure.")
+        st.error("Exchange data mapping failure or Insufficient history.")
+        bull_per, bear_per, htf_trend, cvd_flow = 0, 0, "NONE", 0
 
 # Execution & Risk Size Output
-if df_htf is not None and df_ltf is not None and df_1m is not None:
+if df_htf is not None and df_ltf is not None and df_1m is not None and len(df_htf) > 0 and len(df_ltf) > 0 and len(df_1m) > 0:
     c_price_1m = df_1m["Close"].iloc[-1]
     df_ltf["ATR"] = calculate_atr(df_ltf)
     c_atr = df_ltf["ATR"].iloc[-1] if not pd.isna(df_ltf["ATR"].iloc[-1]) else (c_price_1m * 0.003)
@@ -364,7 +352,6 @@ if df_htf is not None and df_ltf is not None and df_1m is not None:
     raw_position_size = risk_cash / sl_distance_pct if sl_distance_pct > 0 else balance
     margin_required = raw_position_size / leverage
     
-    # NEW: Dynamic Trailing Stop Loss Recommendation
     trailing_sl_step = c_atr * 1.5
     
     st.markdown("#### ⚡ SIGNAL SYSTEM EXECUTION & RISK SHEET")
