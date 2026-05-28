@@ -1,6 +1,6 @@
 # =========================================================
-# 👑 ALPHA TERMINAL V10 ULTIMATE ENGINE
-# NO FREEZE | NO EMPTY STATE | SMART AI SCORING
+# 👑 ALPHA TERMINAL v5.0 STABLE EDITION
+# Binance Safe Version (No Rate Limit Crash)
 # =========================================================
 
 import numpy as np
@@ -8,69 +8,161 @@ import pandas as pd
 import requests
 import streamlit as st
 import concurrent.futures
+import streamlit.components.v1 as components
 import datetime
 import time
+
 from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # =========================================================
-# CONFIG
+# PAGE CONFIG
 # =========================================================
+
 st.set_page_config(
-    page_title="ALPHA TERMINAL V10",
+    page_title="ALPHA TERMINAL v5.0",
     page_icon="👑",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# SAFE AUTO REFRESH
-if "last" not in st.session_state:
-    st.session_state.last = time.time()
+# =========================================================
+# AUTO REFRESH
+# =========================================================
 
-if time.time() - st.session_state.last > 12:
-    st.session_state.last = time.time()
-    st.rerun()
+st.markdown(
+    """
+    <meta http-equiv="refresh" content="20">
+    """,
+    unsafe_allow_html=True
+)
 
 # =========================================================
-# SAFE SESSION (ANTI BLOCK)
+# UI
 # =========================================================
+
+st.markdown("""
+<style>
+
+.stApp{
+    background:#0d1117;
+    color:white;
+}
+
+h1,h2,h3,h4{
+    color:white !important;
+}
+
+[data-testid="stMetricValue"]{
+    color:#ffb703;
+    font-size:28px;
+}
+
+section[data-testid="stSidebar"]{
+    background:#111827;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# =========================================================
+# SAFE REQUEST SESSION
+# =========================================================
+
 session = requests.Session()
-adapter = HTTPAdapter(max_retries=3)
+
+retry = Retry(
+    total=5,
+    backoff_factor=1,
+    status_forcelist=[429,500,502,503,504]
+)
+
+adapter = HTTPAdapter(max_retries=retry)
+
 session.mount("https://", adapter)
 
 # =========================================================
 # COINS
 # =========================================================
-COINS = [
-    "BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
-    "ADAUSDT","DOGEUSDT","AVAXUSDT","DOTUSDT","LINKUSDT"
-]
+
+COIN_SYMBOLS = {
+
+    "BTCUSDT":"₿ BTCUSDT",
+    "ETHUSDT":"♦️ ETHUSDT",
+    "SOLUSDT":"☀️ SOLUSDT",
+    "BNBUSDT":"🔶 BNBUSDT",
+    "XRPUSDT":"💧 XRPUSDT",
+    "ADAUSDT":"₳ ADAUSDT",
+    "DOGEUSDT":"🐕 DOGEUSDT",
+    "AVAXUSDT":"🔺 AVAXUSDT",
+    "DOTUSDT":"● DOTUSDT",
+    "LINKUSDT":"🔗 LINKUSDT",
+    "MATICUSDT":"💜 MATICUSDT",
+    "LTCUSDT":"Ł LTCUSDT",
+    "UNIUSDT":"🦄 UNIUSDT",
+    "ATOMUSDT":"⚛️ ATOMUSDT",
+    "TRXUSDT":"🔴 TRXUSDT"
+
+}
+
+# SAFE COIN LIMIT
+SCAN_COINS = list(COIN_SYMBOLS.keys())[:15]
 
 # =========================================================
-# DATA ENGINE (STABLE)
+# BINANCE SAFE API
 # =========================================================
-def get_data(symbol):
-    url = "https://api.binance.com/api/v3/klines"
+
+@st.cache_data(ttl=20)
+def get_crypto_data(symbol, interval, limit=100):
+
+    url = "https://data-api.binance.vision/api/v3/klines"
+
+    params = {
+        "symbol": symbol,
+        "interval": interval,
+        "limit": limit
+    }
 
     try:
-        r = session.get(url, params={
-            "symbol": symbol,
-            "interval": "5m",
-            "limit": 100
-        }, timeout=8)
 
-        if r.status_code != 200:
+        response = session.get(
+            url,
+            params=params,
+            timeout=15,
+            headers={
+                "User-Agent":"Mozilla/5.0"
+            }
+        )
+
+        if response.status_code != 200:
             return None
 
-        data = r.json()
+        data = response.json()
 
-        if not isinstance(data, list) or len(data) < 60:
+        if not isinstance(data, list):
             return None
 
-        df = pd.DataFrame(data, columns=[
-            "t","o","h","l","c","v",
-            "ct","qv","n","tb","tq","ig"
-        ])
+        columns = [
+            "Time",
+            "Open",
+            "High",
+            "Low",
+            "Close",
+            "Volume",
+            "CloseTime",
+            "QuoteAssetVol",
+            "Trades",
+            "TB",
+            "TQ",
+            "Ignore"
+        ]
 
-        df = df[["o","h","l","c","v"]].astype(float)
+        df = pd.DataFrame(data, columns=columns)
+
+        for col in ["Open","High","Low","Close","Volume"]:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+        df.dropna(inplace=True)
 
         return df
 
@@ -80,100 +172,493 @@ def get_data(symbol):
 # =========================================================
 # INDICATORS
 # =========================================================
-def ema(s,p): return s.ewm(span=p).mean()
 
-def rsi(s):
-    d = s.diff()
-    g = d.clip(lower=0).rolling(14).mean()
-    l = (-d.clip(upper=0)).rolling(14).mean()
-    rs = g/(l+1e-10)
-    return 100 - (100/(1+rs))
+def calculate_ema(series, period):
+    return series.ewm(span=period, adjust=False).mean()
 
-# =========================================================
-# AI SCORE ENGINE (IMPROVED)
-# =========================================================
-def analyze(symbol):
+def calculate_rsi(series, period=14):
 
-    df = get_data(symbol)
-    if df is None:
-        return None
+    delta = series.diff()
 
-    price = df["c"].iloc[-1]
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
 
-    trend = "BULL" if price > ema(df["c"],50).iloc[-1] else "BEAR"
+    avg_gain = gain.rolling(period).mean()
+    avg_loss = loss.rolling(period).mean()
 
-    r = rsi(df["c"]).iloc[-1]
+    rs = avg_gain / (avg_loss + 1e-10)
 
-    # BASE SCORE
-    bull = 50 if trend=="BULL" else 50
-    bear = 50 if trend=="BEAR" else 50
+    return 100 - (100 / (1 + rs))
 
-    # RSI INTELLIGENCE (SMOOTHED)
-    bull += max(0, 50 - r)
-    bear += max(0, r - 50)
+def calculate_macd(series):
 
-    # VOLUME CONFIRMATION
-    vol_avg = df["v"].rolling(20).mean().iloc[-1]
-    if df["v"].iloc[-1] > vol_avg:
-        bull += 5
-        bear += 5
+    ema12 = calculate_ema(series, 12)
+    ema26 = calculate_ema(series, 26)
 
-    score = max(bull, bear)
+    macd = ema12 - ema26
+    signal = calculate_ema(macd, 9)
 
-    direction = "BUY" if bull > bear else "SELL"
+    return macd, signal
 
-    return {
-        "Coin": symbol,
-        "Signal": direction,
-        "Score": round(score,2),
-        "Price": price
-    }
+def calculate_atr(df, period=14):
 
-# =========================================================
-# UI
-# =========================================================
-st.title("👑 ALPHA TERMINAL V10 ULTIMATE")
+    high_low = df["High"] - df["Low"]
 
-# =========================================================
-# SCANNER (FAST + NO FREEZE)
-# =========================================================
-results = []
+    high_close = abs(df["High"] - df["Close"].shift())
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
-    out = list(ex.map(analyze, COINS))
+    low_close = abs(df["Low"] - df["Close"].shift())
 
-for r in out:
-    if r:
-        results.append(r)
-
-df = pd.DataFrame(results)
-
-# =========================================================
-# IMPORTANT FIX: ALWAYS SHOW SYSTEM STATUS
-# =========================================================
-if df.empty:
-    st.info("📡 Market is active... collecting liquidity data")
-    st.metric("System Status", "RUNNING")
-else:
-    st.subheader("🔥 LIVE SIGNALS")
-    st.dataframe(df.sort_values("Score", ascending=False),
-                 use_container_width=True)
-
-    st.subheader("🏆 TOP 3 COINS")
-    st.dataframe(df.sort_values("Score", ascending=False).head(3))
-
-# =========================================================
-# MARKET BIAS ENGINE (PRO INSIGHT)
-# =========================================================
-if not df.empty:
-    buy_ratio = (df["Signal"] == "BUY").mean() * 100
-    sell_ratio = 100 - buy_ratio
-
-    st.metric("BUY Pressure %", f"{buy_ratio:.1f}")
-    st.metric("SELL Pressure %", f"{sell_ratio:.1f}")
-
-    st.info(
-        "📊 Market is live — scoring updated from real-time volatility flow"
+    ranges = pd.concat(
+        [high_low, high_close, low_close],
+        axis=1
     )
 
-st.caption(f"Updated: {datetime.datetime.utcnow()} UTC")
+    true_range = ranges.max(axis=1)
+
+    atr = true_range.rolling(period).mean()
+
+    return atr
+
+def calculate_adx(df, period=14):
+
+    plus_dm = df["High"].diff()
+    minus_dm = df["Low"].diff()
+
+    plus_dm = plus_dm.where(
+        (plus_dm > minus_dm) & (plus_dm > 0),
+        0
+    )
+
+    minus_dm = minus_dm.where(
+        (minus_dm > plus_dm) & (minus_dm > 0),
+        0
+    )
+
+    tr1 = df["High"] - df["Low"]
+    tr2 = abs(df["High"] - df["Close"].shift())
+    tr3 = abs(df["Low"] - df["Close"].shift())
+
+    tr = pd.concat([tr1,tr2,tr3], axis=1).max(axis=1)
+
+    atr = tr.rolling(period).mean()
+
+    plus_di = 100 * (
+        plus_dm.rolling(period).mean() / atr
+    )
+
+    minus_di = 100 * (
+        minus_dm.rolling(period).mean() / atr
+    )
+
+    dx = (
+        abs(plus_di - minus_di) /
+        (plus_di + minus_di + 1e-10)
+    ) * 100
+
+    adx = dx.rolling(period).mean()
+
+    return adx
+
+# =========================================================
+# ANALYSIS ENGINE
+# =========================================================
+
+def analyze_coin(symbol, htf, ltf):
+
+    df_htf = get_crypto_data(symbol, htf, 120)
+    df_ltf = get_crypto_data(symbol, ltf, 120)
+
+    if (
+        df_htf is None or
+        df_ltf is None or
+        df_htf.empty or
+        df_ltf.empty
+    ):
+        return None
+
+    if len(df_htf) < 50 or len(df_ltf) < 50:
+        return None
+
+    # TREND
+    df_htf["EMA50"] = calculate_ema(
+        df_htf["Close"],
+        50
+    )
+
+    trend = (
+        "BULLISH"
+        if df_htf["Close"].iloc[-1] >
+        df_htf["EMA50"].iloc[-1]
+        else "BEARISH"
+    )
+
+    # RSI
+    df_ltf["RSI"] = calculate_rsi(
+        df_ltf["Close"]
+    )
+
+    rsi = df_ltf["RSI"].iloc[-1]
+
+    # MACD
+    macd, signal = calculate_macd(
+        df_ltf["Close"]
+    )
+
+    # ATR
+    df_ltf["ATR"] = calculate_atr(df_ltf)
+
+    atr = df_ltf["ATR"].iloc[-1]
+
+    # ADX
+    df_ltf["ADX"] = calculate_adx(df_ltf)
+
+    adx = df_ltf["ADX"].iloc[-1]
+
+    if np.isnan(adx):
+        adx = 0
+
+    # VOLUME
+    avg_volume = df_ltf["Volume"].rolling(20).mean()
+
+    volume_ok = (
+        df_ltf["Volume"].iloc[-1] >
+        avg_volume.iloc[-1]
+    )
+
+    bullish = 0
+    bearish = 0
+
+    # =====================================================
+    # SCORING
+    # =====================================================
+
+    if trend == "BULLISH":
+        bullish += 30
+    else:
+        bearish += 30
+
+    if rsi < 45:
+        bullish += 20
+
+    if rsi > 55:
+        bearish += 20
+
+    if macd.iloc[-1] > signal.iloc[-1]:
+        bullish += 30
+    else:
+        bearish += 30
+
+    if adx > 15:
+        bullish += 10
+        bearish += 10
+
+    if volume_ok:
+        bullish += 10
+        bearish += 10
+
+    current_price = df_ltf["Close"].iloc[-1]
+
+    if np.isnan(atr):
+        atr = current_price * 0.003
+
+    # =====================================================
+    # SIGNALS
+    # =====================================================
+
+    if bullish >= 45 and trend == "BULLISH":
+
+        return {
+            "Coin": symbol,
+            "Signal": "🟩 BUY",
+            "Score": bullish,
+            "Price": current_price,
+            "SL": current_price - (atr * 2),
+            "TP": current_price + (atr * 4),
+            "ADX": adx,
+            "RSI": rsi
+        }
+
+    if bearish >= 45 and trend == "BEARISH":
+
+        return {
+            "Coin": symbol,
+            "Signal": "🟥 SELL",
+            "Score": bearish,
+            "Price": current_price,
+            "SL": current_price + (atr * 2),
+            "TP": current_price - (atr * 4),
+            "ADX": adx,
+            "RSI": rsi
+        }
+
+    return None
+
+# =========================================================
+# SIDEBAR
+# =========================================================
+
+with st.sidebar:
+
+    st.title("⚙️ CONTROL PANEL")
+
+    strategy = st.radio(
+        "Trading Mode",
+        [
+            "Scalping",
+            "Day Trading",
+            "Swing"
+        ]
+    )
+
+    if strategy == "Scalping":
+        htf = "1h"
+        ltf = "5m"
+
+    elif strategy == "Day Trading":
+        htf = "4h"
+        ltf = "15m"
+
+    else:
+        htf = "1d"
+        ltf = "1h"
+
+    selected_coin = st.selectbox(
+        "Select Coin",
+        SCAN_COINS
+    )
+
+    balance = st.number_input(
+        "Balance",
+        value=1000.0
+    )
+
+    risk_percent = st.slider(
+        "Risk %",
+        1,
+        5,
+        1
+    )
+
+    leverage = st.slider(
+        "Leverage",
+        1,
+        50,
+        10
+    )
+
+# =========================================================
+# HEADER
+# =========================================================
+
+st.title("👑 ALPHA TERMINAL v5.0")
+
+st.caption(
+    f"Live Binance Scanner | {strategy}"
+)
+
+# =========================================================
+# DATA STATUS
+# =========================================================
+
+btc_test = get_crypto_data(
+    "BTCUSDT",
+    "5m",
+    5
+)
+
+if btc_test is not None:
+    st.success("🟢 Binance Live Feed Connected")
+else:
+    st.error("🔴 Binance API Offline")
+
+# =========================================================
+# MARKET SCANNER
+# =========================================================
+
+st.subheader("📡 LIVE MARKET SCANNER")
+
+signals = []
+
+with concurrent.futures.ThreadPoolExecutor(
+    max_workers=2
+) as executor:
+
+    results = executor.map(
+        lambda coin: analyze_coin(
+            coin,
+            htf,
+            ltf
+        ),
+        SCAN_COINS
+    )
+
+    for result in results:
+
+        if result:
+            signals.append(result)
+
+        time.sleep(0.5)
+
+if signals:
+
+    df = pd.DataFrame(signals)
+
+    st.dataframe(
+        df,
+        use_container_width=True
+    )
+
+else:
+
+    st.warning(
+        "⚠️ No valid setup currently."
+    )
+
+# =========================================================
+# SINGLE COIN ANALYSIS
+# =========================================================
+
+st.subheader(
+    f"🎯 {selected_coin} ANALYSIS"
+)
+
+analysis = analyze_coin(
+    selected_coin,
+    htf,
+    ltf
+)
+
+if analysis:
+
+    col1,col2,col3,col4 = st.columns(4)
+
+    with col1:
+        st.metric(
+            "SIGNAL",
+            analysis["Signal"]
+        )
+
+    with col2:
+        st.metric(
+            "SCORE",
+            f'{analysis["Score"]}%'
+        )
+
+    with col3:
+        st.metric(
+            "ADX",
+            f'{analysis["ADX"]:.2f}'
+        )
+
+    with col4:
+        st.metric(
+            "RSI",
+            f'{analysis["RSI"]:.2f}'
+        )
+
+    st.success(
+        f"""
+ENTRY: {analysis["Price"]:.4f}
+
+STOP LOSS: {analysis["SL"]:.4f}
+
+TAKE PROFIT: {analysis["TP"]:.4f}
+"""
+    )
+
+    # RISK
+    risk_cash = balance * (
+        risk_percent / 100
+    )
+
+    sl_distance = abs(
+        analysis["Price"] -
+        analysis["SL"]
+    )
+
+    if sl_distance > 0:
+
+        position_size = risk_cash / (
+            sl_distance /
+            analysis["Price"]
+        )
+
+        margin = (
+            position_size /
+            leverage
+        )
+
+        st.warning(
+            f"""
+RISK AMOUNT: ${risk_cash:.2f}
+
+POSITION SIZE: ${position_size:.2f}
+
+MARGIN NEEDED: ${margin:.2f}
+"""
+        )
+
+else:
+
+    st.info(
+        "⚪ No valid setup currently."
+    )
+
+# =========================================================
+# TRADINGVIEW
+# =========================================================
+
+st.subheader("📈 LIVE CHART")
+
+tv_interval = (
+    "5"
+    if ltf == "5m"
+    else "15"
+    if ltf == "15m"
+    else "60"
+)
+
+tv_html = f"""
+
+<div id="tv_chart"></div>
+
+<script
+type="text/javascript"
+src="https://s3.tradingview.com/tv.js">
+</script>
+
+<script type="text/javascript">
+
+new TradingView.widget({{
+
+    "width":"100%",
+    "height":500,
+    "symbol":"BINANCE:{selected_coin}",
+    "interval":"{tv_interval}",
+    "timezone":"Etc/UTC",
+    "theme":"dark",
+    "style":"1",
+    "locale":"en",
+    "toolbar_bg":"#111827",
+    "enable_publishing":false,
+    "allow_symbol_change":true,
+    "container_id":"tv_chart"
+
+}});
+
+</script>
+
+"""
+
+components.html(tv_html, height=520)
+
+# =========================================================
+# FOOTER
+# =========================================================
+
+st.caption(
+    f"Last Update: {datetime.datetime.utcnow()} UTC"
+)
+
+if __name__ == "__main__":
+    pass
