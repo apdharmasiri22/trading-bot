@@ -1,547 +1,324 @@
-# 👑 Institutional-Grade Crypto Trading Terminal (Advanced Blueprint)
-
-## 🔥 Core Features
-
-* Smart Money Concepts (BOS / CHOCH / FVG / Liquidity Sweeps)
-* Multi-Timeframe Analysis
-* Volume Confirmation Engine
-* ATR Dynamic Risk Management
-* AI Probability Scoring
-* WebSocket Live Feed
-* Backtesting Engine
-* Telegram Alerts
-* Trade Cooldown System
-* Advanced Dashboard UI
-* Live TradingView Integration
-* Institutional Signal Filtering
-
----
-
-# 📁 Recommended Project Structure
-
-```bash
-project/
-│
-├── app.py
-├── requirements.txt
-│
-├── core/
-│   ├── indicators.py
-│   ├── smc.py
-│   ├── volume.py
-│   ├── risk.py
-│   ├── ai_engine.py
-│   ├── scanner.py
-│   ├── websocket_engine.py
-│   └── backtest.py
-│
-├── alerts/
-│   └── telegram.py
-│
-├── ui/
-│   └── dashboard.py
-│
-└── data/
-    └── cache.py
-```
-
----
-
-# 📦 requirements.txt
-
-```txt
-streamlit
-pandas
-numpy
-requests
-websocket-client
-plotly
-scikit-learn
-joblib
-python-binance
-TA-Lib
-```
-
----
-
-# 🔥 indicators.py
+# app.py
 
 ```python
+import streamlit as st
 import pandas as pd
 import numpy as np
+import requests
 
+# =========================
+# PAGE CONFIG
+# =========================
+st.set_page_config(
+    page_title="ALPHA TERMINAL",
+    page_icon="🚀",
+    layout="wide"
+)
 
+# =========================
+# CUSTOM CSS
+# =========================
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #0e1117;
+        color: white;
+    }
+
+    h1,h2,h3 {
+        color: #f0f2f6;
+    }
+
+    div[data-testid="stMetricValue"] {
+        color: #00ff88;
+        font-size: 28px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# =========================
+# SYMBOLS
+# =========================
+SYMBOLS = [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "DOGEUSDT"
+]
+
+# =========================
+# SIDEBAR
+# =========================
+st.sidebar.title("⚙️ Settings")
+
+selected_coin = st.sidebar.selectbox(
+    "Select Coin",
+    SYMBOLS
+)
+
+selected_tf = st.sidebar.selectbox(
+    "Select Timeframe",
+    ["5m", "15m", "1h", "4h"]
+)
+
+balance = st.sidebar.number_input(
+    "Balance ($)",
+    value=1000.0
+)
+
+risk_percent = st.sidebar.slider(
+    "Risk %",
+    1,
+    10,
+    2
+)
+
+# =========================
+# FETCH DATA
+# =========================
+def get_data(symbol, interval, limit=200):
+    url = "https://api.binance.com/api/v3/klines"
+
+    params = {
+        "symbol": symbol,
+        "interval": interval,
+        "limit": limit
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    columns = [
+        "Time",
+        "Open",
+        "High",
+        "Low",
+        "Close",
+        "Volume",
+        "CloseTime",
+        "Q1",
+        "Trades",
+        "TB",
+        "TQ",
+        "Ignore"
+    ]
+
+    df = pd.DataFrame(data, columns=columns)
+
+    for col in ["Open", "High", "Low", "Close", "Volume"]:
+        df[col] = df[col].astype(float)
+
+    return df
+
+# =========================
+# INDICATORS
+# =========================
 def ema(series, period):
     return series.ewm(span=period, adjust=False).mean()
 
 
 def rsi(series, period=14):
     delta = series.diff()
-    gain = delta.where(delta > 0, 0).rolling(period).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(period).mean()
-    rs = gain / loss
+
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+
+    avg_gain = gain.rolling(period).mean()
+    avg_loss = loss.rolling(period).mean()
+
+    rs = avg_gain / avg_loss
+
     return 100 - (100 / (1 + rs))
 
 
 def atr(df, period=14):
-    tr = pd.concat([
-        df['High'] - df['Low'],
-        abs(df['High'] - df['Close'].shift()),
-        abs(df['Low'] - df['Close'].shift())
-    ], axis=1).max(axis=1)
+    high_low = df['High'] - df['Low']
+    high_close = np.abs(df['High'] - df['Close'].shift())
+    low_close = np.abs(df['Low'] - df['Close'].shift())
 
-    return tr.rolling(period).mean()
+    ranges = pd.concat([high_low, high_close, low_close], axis=1)
+
+    true_range = ranges.max(axis=1)
+
+    return true_range.rolling(period).mean()
 
 
 def macd(series):
-    fast = ema(series, 12)
-    slow = ema(series, 26)
-    macd_line = fast - slow
-    signal = ema(macd_line, 9)
-    return macd_line, signal
+    ema12 = ema(series, 12)
+    ema26 = ema(series, 26)
 
+    macd_line = ema12 - ema26
+    signal_line = ema(macd_line, 9)
 
-def adx(df, period=14):
-    high = df['High']
-    low = df['Low']
-    close = df['Close']
+    return macd_line, signal_line
 
-    plus_dm = high.diff()
-    minus_dm = low.diff()
-
-    plus_dm[plus_dm < 0] = 0
-    minus_dm[minus_dm > 0] = 0
-
-    tr = pd.concat([
-        high - low,
-        abs(high - close.shift()),
-        abs(low - close.shift())
-    ], axis=1).max(axis=1)
-
-    atr_val = tr.rolling(period).mean()
-
-    plus_di = 100 * (plus_dm.rolling(period).mean() / atr_val)
-    minus_di = abs(100 * (minus_dm.rolling(period).mean() / atr_val))
-
-    dx = abs(plus_di - minus_di) / (plus_di + minus_di) * 100
-
-    return dx.rolling(period).mean()
-```
-
----
-
-# 🔥 smc.py
-
-```python
-import pandas as pd
-
-
+# =========================
+# SMC LOGIC
+# =========================
 def detect_bos(df):
-    highs = df['High']
-    lows = df['Low']
+    recent_high = df['High'].iloc[-6:-1].max()
+    recent_low = df['Low'].iloc[-6:-1].min()
 
-    if highs.iloc[-1] > highs.iloc[-5:-1].max():
-        return 'BULLISH_BOS'
+    if df['Close'].iloc[-1] > recent_high:
+        return "Bullish BOS"
 
-    if lows.iloc[-1] < lows.iloc[-5:-1].min():
-        return 'BEARISH_BOS'
+    if df['Close'].iloc[-1] < recent_low:
+        return "Bearish BOS"
 
-    return None
+    return "No BOS"
 
-
-def detect_choch(df):
-    last_high = df['High'].iloc[-2]
-    current_low = df['Low'].iloc[-1]
-
-    if current_low < last_high:
-        return 'CHOCH'
-
-    return None
-
-
-def liquidity_sweep(df):
-    previous_high = df['High'].iloc[-10:-1].max()
-    current_high = df['High'].iloc[-1]
-
-    if current_high > previous_high and df['Close'].iloc[-1] < previous_high:
-        return 'BUY_SIDE_LIQUIDITY_SWEEP'
-
-    previous_low = df['Low'].iloc[-10:-1].min()
-    current_low = df['Low'].iloc[-1]
-
-    if current_low < previous_low and df['Close'].iloc[-1] > previous_low:
-        return 'SELL_SIDE_LIQUIDITY_SWEEP'
-
-    return None
-
-
-def detect_fvg(df):
-    c1 = df.iloc[-3]
-    c2 = df.iloc[-2]
-    c3 = df.iloc[-1]
-
-    if c1['High'] < c3['Low']:
-        return 'BULLISH_FVG'
-
-    if c1['Low'] > c3['High']:
-        return 'BEARISH_FVG'
-
-    return None
-```
-
----
-
-# 🔥 volume.py
-
-```python
-import pandas as pd
-
-
-def volume_spike(df):
-    avg_volume = df['Volume'].rolling(20).mean()
-
-    if df['Volume'].iloc[-1] > avg_volume.iloc[-1] * 2:
-        return True
-
-    return False
-
-
-def vwap(df):
-    tp = (df['High'] + df['Low'] + df['Close']) / 3
-    return (tp * df['Volume']).cumsum() / df['Volume'].cumsum()
-```
-
----
-
-# 🔥 risk.py
-
-```python
-
-def calculate_position(balance, risk_percent, entry, stop_loss, leverage):
-    risk_amount = balance * (risk_percent / 100)
-
-    sl_distance = abs(entry - stop_loss)
-
-    if sl_distance == 0:
-        return 0
-
-    position_size = risk_amount / sl_distance
-
-    leveraged_size = position_size * leverage
-
-    return round(leveraged_size, 2)
-```
-
----
-
-# 🔥 ai_engine.py
-
-```python
-
-def probability_engine(features):
-    score = 0
-
-    if features['trend'] == 'bullish':
-        score += 25
-
-    if features['bos']:
-        score += 20
-
-    if features['volume_spike']:
-        score += 15
-
-    if features['fvg']:
-        score += 15
-
-    if features['macd_bullish']:
-        score += 10
-
-    if features['rsi_bullish']:
-        score += 15
-
-    return min(score, 100)
-```
-
----
-
-# 🔥 telegram.py
-
-```python
-import requests
-
-
-def send_alert(token, chat_id, message):
-    url = f'https://api.telegram.org/bot{token}/sendMessage'
-
-    payload = {
-        'chat_id': chat_id,
-        'text': message,
-        'parse_mode': 'Markdown'
-    }
-
-    try:
-        requests.post(url, json=payload)
-    except:
-        pass
-```
-
----
-
-# 🔥 scanner.py
-
-```python
-from core.indicators import *
-from core.smc import *
-from core.volume import *
-from core.ai_engine import probability_engine
-
-
+# =========================
+# ANALYZE MARKET
+# =========================
 def analyze(df):
     df['EMA50'] = ema(df['Close'], 50)
     df['RSI'] = rsi(df['Close'])
 
-    macd_line, signal = macd(df['Close'])
+    macd_line, signal_line = macd(df['Close'])
 
-    trend = 'bullish' if df['Close'].iloc[-1] > df['EMA50'].iloc[-1] else 'bearish'
+    trend = "Bullish" if df['Close'].iloc[-1] > df['EMA50'].iloc[-1] else "Bearish"
 
-    features = {
-        'trend': trend,
-        'bos': detect_bos(df),
-        'volume_spike': volume_spike(df),
-        'fvg': detect_fvg(df),
-        'macd_bullish': macd_line.iloc[-1] > signal.iloc[-1],
-        'rsi_bullish': df['RSI'].iloc[-1] > 50
-    }
+    rsi_value = df['RSI'].iloc[-1]
 
-    probability = probability_engine(features)
+    bos = detect_bos(df)
 
-    return probability
-```
+    score = 0
 
----
+    if trend == "Bullish":
+        score += 30
 
-# 🔥 websocket_engine.py
+    if rsi_value > 50:
+        score += 20
 
-```python
-from binance import ThreadedWebsocketManager
+    if macd_line.iloc[-1] > signal_line.iloc[-1]:
+        score += 20
 
+    if bos == "Bullish BOS":
+        score += 30
 
-class LiveFeed:
+    signal = "NEUTRAL"
 
-    def __init__(self, api_key='', api_secret=''):
-        self.twm = ThreadedWebsocketManager(api_key, api_secret)
+    if score >= 70:
+        signal = "BUY"
 
-    def start(self):
-        self.twm.start()
-
-    def handle_socket(self, msg):
-        print(msg)
-
-    def stream(self, symbol='btcusdt'):
-        self.twm.start_kline_socket(callback=self.handle_socket, symbol=symbol)
-```
-
----
-
-# 🔥 backtest.py
-
-```python
-import pandas as pd
-
-
-def backtest(df, signals):
-    wins = 0
-    losses = 0
-
-    for signal in signals:
-        if signal['result'] == 'win':
-            wins += 1
-        else:
-            losses += 1
-
-    total = wins + losses
-
-    winrate = (wins / total) * 100 if total > 0 else 0
+    elif score <= 30:
+        signal = "SELL"
 
     return {
-        'wins': wins,
-        'losses': losses,
-        'winrate': round(winrate, 2)
+        "trend": trend,
+        "rsi": round(rsi_value, 2),
+        "score": score,
+        "signal": signal,
+        "bos": bos
     }
+
+# =========================
+# MAIN TITLE
+# =========================
+st.title("👑 ALPHA CRYPTO TERMINAL")
+
+st.write("Advanced Crypto Dashboard")
+
+# =========================
+# LOAD DATA
+# =========================
+df = get_data(selected_coin, selected_tf)
+
+analysis = analyze(df)
+
+# =========================
+# METRICS
+# =========================
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.metric("Trend", analysis['trend'])
+
+with col2:
+    st.metric("RSI", analysis['rsi'])
+
+with col3:
+    st.metric("AI Score", f"{analysis['score']}%")
+
+with col4:
+    st.metric("Signal", analysis['signal'])
+
+# =========================
+# BOS INFO
+# =========================
+st.subheader("📈 Market Structure")
+
+st.info(analysis['bos'])
+
+# =========================
+# PRICE CHART
+# =========================
+st.subheader("📊 Price Data")
+
+chart_df = df[['Close']]
+
+st.line_chart(chart_df)
+
+# =========================
+# RISK MANAGEMENT
+# =========================
+last_price = df['Close'].iloc[-1]
+
+atr_value = atr(df).iloc[-1]
+
+if pd.isna(atr_value):
+    atr_value = last_price * 0.01
+
+stop_loss = last_price - (atr_value * 2)
+
+take_profit = last_price + (atr_value * 4)
+
+risk_amount = balance * (risk_percent / 100)
+
+position_size = risk_amount / abs(last_price - stop_loss)
+
+st.subheader("💰 Risk Management")
+
+risk_col1, risk_col2, risk_col3 = st.columns(3)
+
+with risk_col1:
+    st.metric("Entry", round(last_price, 2))
+
+with risk_col2:
+    st.metric("Stop Loss", round(stop_loss, 2))
+
+with risk_col3:
+    st.metric("Take Profit", round(take_profit, 2))
+
+st.success(f"Recommended Position Size: ${round(position_size, 2)}")
+
+# =========================
+# RAW DATA
+# =========================
+st.subheader("📋 Live Market Data")
+
+st.dataframe(df.tail(20), use_container_width=True)
 ```
 
 ---
 
-# 🔥 app.py
+# requirements.txt
 
-```python
-import streamlit as st
-import pandas as pd
-import requests
-from core.scanner import analyze
-
-st.set_page_config(layout='wide')
-
-st.title('👑 INSTITUTIONAL QUANT TERMINAL')
-
-symbol = st.selectbox('Coin', ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'])
-interval = st.selectbox('Timeframe', ['5m', '15m', '1h'])
-
-url = 'https://api.binance.com/api/v3/klines'
-params = {
-    'symbol': symbol,
-    'interval': interval,
-    'limit': 300
-}
-
-response = requests.get(url, params=params)
-data = response.json()
-
-columns = [
-    'Time', 'Open', 'High', 'Low', 'Close',
-    'Volume', 'CloseTime', 'Q1', 'Trades',
-    'TB', 'TQ', 'Ignore'
-]
-
-
-df = pd.DataFrame(data, columns=columns)
-
-for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
-    df[col] = df[col].astype(float)
-
-probability = analyze(df)
-
-st.metric('AI Probability Score', f'{probability}%')
-
-if probability >= 70:
-    st.success('🚀 HIGH PROBABILITY BUY SETUP')
-
-elif probability <= 30:
-    st.error('📉 HIGH PROBABILITY SELL SETUP')
-
-else:
-    st.warning('⚠️ NO CLEAR EDGE')
+```txt
+streamlit
+pandas
+numpy
+requests
 ```
 
 ---
 
-# 🚀 Future Upgrades
-
-## Add Later
-
-* Open Interest
-* Funding Rates
-* Liquidation Heatmap
-* CVD
-* DOM / Footprint Charts
-* ML Prediction Models
-* Redis Cache
-* PostgreSQL
-* FastAPI Backend
-* React Frontend
-* GPU AI Engine
-* Auto Trade Execution
-* Multi Exchange Support
-* Whale Tracking
-* Economic Calendar
-
----
-
-# 🔥 Professional Accuracy Tips
-
-## BEST SIGNAL COMBO
-
-### HTF
-
-* BOS
-* Trend
-* Premium/Discount
-
-### Mid TF
-
-* Liquidity Sweep
-* FVG
-* Volume Spike
-
-### LTF
-
-* Confirmation Candle
-* Delta Shift
-* Momentum Confirmation
-
----
-
-# ⚠️ Important Reality
-
-No system is 100% accurate.
-
-Professional systems focus on:
-
-* risk management
-* consistency
-* probability
-* filtering low-quality setups
-
-Even hedge funds lose trades.
-
-Goal:
-
-* controlled losses
-* high RR
-* consistent execution
-
----
-
-# 🚀 Full Production Upgrade Path
-
-## Recommended Next Modules
-
-### 1. Live Orderbook Engine
-
-* Binance depth websocket
-* DOM analysis
-* imbalance detection
-* spoof detection
-
-### 2. Advanced SMC
-
-* inducement detection
-* mitigation blocks
-* breaker blocks
-* liquidity pools
-
-### 3. AI Layer
-
-* XGBoost probability engine
-* trade quality ranking
-* volatility classifier
-* adaptive weighting
-
-### 4. Professional Dashboard
-
-* Plotly live charts
-* heatmaps
-* footprint candles
-* multi-monitor support
-* live alerts panel
-
-### 5. Auto Trading
-
-* Binance Futures execution
-* TP/SL automation
-* trailing stop engine
-* trade journal
-
-### 6. Database
-
-* PostgreSQL
-* Redis cache
-* historical candle storage
-* signal logging
-
----
-
-# ⚡ Run Instructions
+# RUN COMMAND
 
 ```bash
 pip install -r requirements.txt
@@ -550,30 +327,11 @@ streamlit run app.py
 
 ---
 
-# ⚠️ Production Notes
+# IMPORTANT
 
-This blueprint is the foundation.
+Only copy the code inside:
 
-A true institutional-grade engine normally grows into:
+* app.py
+* requirements.txt
 
-* 10,000+ lines
-* multi-service architecture
-* websocket microservices
-* AI models
-* database systems
-* live execution engines
-
-So build and test module by module.
-
----
-
-# 👑 Final Goal
-
-This architecture can evolve into:
-
-* SaaS Signal Platform
-* Institutional Dashboard
-* Quant Engine
-* AI Trading Assistant
-* Automated Trade Infrastructure
-* Prop Firm Tool
+Do NOT copy markdown headings or explanations into Python files.
