@@ -7,16 +7,19 @@ import streamlit.components.v1 as components
 import datetime
 import time
 
+# 🔑 CRYPTOCOMPARE LIVE GLOBAL FEED API KEY
+CRYPTOCOMPARE_API_KEY = "02cde33bf0c2982646ebb3aee6b63db7811ac11fae16a81a230d6c79f2cc6437"
+
 # වෙබ් පිටුවේ සැකසුම් (Page Configuration)
 st.set_page_config(
-    page_title="ALPHA TRADING TERMINAL v4.2",
+    page_title="ALPHA TRADING TERMINAL v4.5",
     page_icon="👑",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # =====================================================================
-# 🎨 PREMIUM UI DESIGN (ULTIMATE CRYPTO TERMINAL VIBE)
+# 🎨 PREMIUM UI DESIGN
 # =====================================================================
 st.markdown("""
     <style>
@@ -37,7 +40,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # =====================================================================
-# 🛠️ DATA MODULES & COIN SYMBOLS (BYBIT COMPATIBLE)
+# 🛠️ DATA MODULES (CRYPTOCOMPARE COMPATIBLE)
 # =====================================================================
 COIN_SYMBOLS = {
     "BTCUSDT": "₿ BTCUSDT", "ETHUSDT": "♦️ ETHUSDT", "SOLUSDT": "☀️ SOLUSDT", "BNBUSDT": "🔶 BNBUSDT",
@@ -52,26 +55,35 @@ def get_all_binance_symbols_with_symbols():
     return COIN_SYMBOLS
 
 def get_crypto_data(symbol, interval, limit=100):
-    bybit_intervals = {"1m": "1", "5m": "5", "15m": "15", "1h": "60", "4h": "240", "1d": "D"}
-    bybit_inv = bybit_intervals.get(interval, "15")
+    coin = symbol.replace("USDT", "")
     
-    url = "https://api.bybit.com/v5/market/kline"
-    params = {"category": "linear", "symbol": symbol, "interval": bybit_inv, "limit": limit}
+    if interval in ["1m", "5m", "15m"]:
+        url = "https://min-api.cryptocompare.com/data/v2/histominute"
+        agg = 1 if interval == "1m" else 5 if interval == "5m" else 15
+    elif interval in ["1h", "4h"]:
+        url = "https://min-api.cryptocompare.com/data/v2/histohour"
+        agg = 1 if interval == "1h" else 4
+    else:
+        url = "https://min-api.cryptocompare.com/data/v2/histoday"
+        agg = 1
+
+    headers = {"Authorization": f"Apikey {CRYPTOCOMPARE_API_KEY}"}
+    params = {"fsym": coin, "tsym": "USDT", "limit": limit, "aggregate": agg}
     
     try:
-        response = requests.get(url, params=params, timeout=5)
+        response = requests.get(url, params=params, headers=headers, timeout=7)
         if response.status_code == 200:
-            data = response.json()
-            raw_list = data.get("result", {}).get("list", [])
+            res_json = response.json()
+            raw_list = res_json.get("Data", {}).get("Data", [])
             if not raw_list or len(raw_list) < 5:
                 return None
             
-            df = pd.DataFrame(raw_list, columns=["Time", "Open", "High", "Low", "Close", "Volume", "Turnover"])
+            df = pd.DataFrame(raw_list)
+            df = df.rename(columns={"time": "Time", "open": "Open", "high": "High", "low": "Low", "close": "Close", "volumeto": "Volume"})
             
             for col in ["Open", "High", "Low", "Close", "Volume"]:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
                 
-            df = df.iloc[::-1].reset_index(drop=True)
             return df
     except:
         return None
@@ -233,8 +245,8 @@ with st.sidebar:
 # =====================================================================
 # 👑 MAIN INTERFACE
 # =====================================================================
-st.markdown("<h1 style='text-align: center; color: #ffb703;'>👑 ALPHA AUTOMATED QUANT TERMINAL v4.2</h1>", unsafe_allow_html=True)
-st.markdown(f"<p style='text-align: center; color: #8b949e;'>Engine Mode: <b>{strategy}</b> | Live Bybit-Powered High-Accuracy SMC Engine</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #ffb703;'>👑 ALPHA AUTOMATED QUANT TERMINAL v4.5</h1>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align: center; color: #8b949e;'>Engine Mode: <b>{strategy}</b> | Live CryptoCompare Global Feed Stream</p>", unsafe_allow_html=True)
 st.markdown("<hr style='border: 1px solid rgba(255,255,255,0.1);'/>", unsafe_allow_html=True)
 
 if is_news_block_active():
@@ -249,7 +261,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         if r is not None: 
             active_signals.append(r)
             if tg_on and tg_token and tg_id:
-                msg = f"⚠️ *ALPHA TERMINAL MASTER v4.2*\n\n🪙 Coin: {r['Coin']}\n🚨 Action: {r['Signal']}\n💪 Strength: {r['Strength']}\n🏛️ Structure: {r['Structure']}\n\n💵 Entry: {r['Entry']}\n🛑 SL: {r['SL']}\n🎯 TP: {r['TP']}"
+                msg = f"⚠️ *ALPHA TERMINAL MASTER v4.5*\n\n🪙 Coin: {r['Coin']}\n🚨 Action: {r['Signal']}\n💪 Strength: {r['Strength']}\n🏛️ Structure: {r['Structure']}\n\n💵 Entry: {r['Entry']}\n🛑 SL: {r['SL']}\n🎯 TP: {r['TP']}"
                 send_telegram_alert(tg_token, tg_id, msg)
 
 if active_signals:
@@ -273,7 +285,7 @@ with col_chart:
     new TradingView.widget({{
       "width": "100%",
       "height": 450,
-      "symbol": "BYBIT:{selected_coin}.P",
+      "symbol": "BINANCE:{selected_coin}",
       "interval": "{tv_interval}",
       "timezone": "Etc/UTC",
       "theme": "dark",
@@ -345,7 +357,7 @@ with col_metrics:
             data_isValid = False
     
     if not data_isValid:
-        st.error("🔄 Connecting to Live Feed Stream... Please refresh or toggle the asset.")
+        st.error("🔄 Connecting to Live Feed Stream... Ensure API Key is correct.")
         bull_per, bear_per, htf_trend, cvd_flow = 0, 0, "NONE", 0
 
 # Execution & Risk Size Output
