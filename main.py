@@ -1,37 +1,47 @@
-<!-- ================= CLEAN RESPONSIVE UPGRADE PATCH ================= -->
+from flask import Flask, render_template_string
+
+app = Flask(__name__)
+
+html = """
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Institutional Dashboard</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<script src="https://cdn.tailwindcss.com"></script>
 
 <style>
 
-/* ===== GLOBAL RESET ===== */
-
-*{
-    box-sizing:border-box;
-}
-
-html,
 body{
+    background:#020617;
+    color:white;
+    font-family:'Inter',sans-serif;
     margin:0;
     padding:0;
-    width:100%;
-    min-height:100vh;
     overflow-x:hidden;
-    background:#020617;
-    font-family:'Inter',sans-serif;
 }
 
-/* ===== BODY FIX ===== */
-
-body{
-    background:#020617 !important;
-    color:#f8fafc;
+.orbitron{
+    font-family:'Orbitron',sans-serif;
 }
-
-/* ===== MAIN WRAPPER ===== */
 
 .dashboard-wrapper{
     width:100%;
     min-height:100vh;
-    padding:16px;
+    padding:20px;
 }
 
 .dashboard-container{
@@ -41,48 +51,25 @@ body{
     border:1px solid #22304d;
     border-radius:24px;
     padding:20px;
-    overflow:hidden;
 }
-
-/* ===== TOP BAR ===== */
-
-.topbar{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:16px;
-    flex-wrap:wrap;
-    margin-bottom:20px;
-}
-
-/* ===== MAIN GRID ===== */
 
 .main-grid{
     display:grid;
     grid-template-columns:repeat(12,minmax(0,1fr));
     gap:20px;
-    align-items:start;
 }
-
-/* ===== LEFT ===== */
 
 .left-panel{
     grid-column:span 4;
 }
 
-/* ===== CENTER ===== */
-
 .center-panel{
     grid-column:span 4;
 }
 
-/* ===== RIGHT ===== */
-
 .right-panel{
     grid-column:span 4;
 }
-
-/* ===== PANEL STYLE ===== */
 
 .pro-panel{
     background:linear-gradient(
@@ -90,15 +77,60 @@ body{
         rgba(15,23,42,0.95),
         rgba(2,6,23,0.98)
     );
+
     border:1px solid #22304d;
     border-radius:18px;
     padding:16px;
     overflow:hidden;
-    backdrop-filter:blur(12px);
-    box-shadow:0 0 25px rgba(56,189,248,0.05);
 }
 
-/* ===== RESPONSIVE ===== */
+.card-box{
+    background:#111827;
+    border:1px solid #22304d;
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:14px;
+}
+
+.live-dot{
+    width:10px;
+    height:10px;
+    background:#10b981;
+    border-radius:50%;
+    animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+    0%{
+        opacity:0.3;
+        transform:scale(1);
+    }
+
+    50%{
+        opacity:1;
+        transform:scale(1.3);
+    }
+
+    100%{
+        opacity:0.3;
+        transform:scale(1);
+    }
+}
+
+.copy-target{
+    cursor:pointer;
+    transition:0.25s;
+    padding:4px 8px;
+    border-radius:8px;
+}
+
+.copy-target:hover{
+    background:rgba(56,189,248,0.12);
+}
+
+iframe{
+    border:none;
+}
 
 @media(max-width:1200px){
 
@@ -114,74 +146,9 @@ body{
 
 }
 
-/* ===== MOBILE ===== */
-
-@media(max-width:768px){
-
-    .dashboard-wrapper{
-        padding:10px;
-    }
-
-    .dashboard-container{
-        border-radius:14px;
-        padding:12px;
-    }
-
-    .orbitron{
-        font-size:90% !important;
-        letter-spacing:0 !important;
-    }
-
-    .copy-target{
-        font-size:11px !important;
-    }
-
-    .pro-panel{
-        padding:12px;
-    }
-
-}
-
-/* ===== COPY TARGET ===== */
-
-.copy-target{
-    cursor:pointer;
-    transition:0.25s;
-    user-select:all;
-    padding:4px 8px;
-    border-radius:8px;
-}
-
-.copy-target:hover{
-    background:rgba(56,189,248,0.12);
-}
-
-/* ===== SCROLLBAR ===== */
-
-::-webkit-scrollbar{
-    width:6px;
-}
-
-::-webkit-scrollbar-track{
-    background:#0f172a;
-}
-
-::-webkit-scrollbar-thumb{
-    background:#22304d;
-    border-radius:10px;
-}
-
-::-webkit-scrollbar-thumb:hover{
-    background:#38bdf8;
-}
-
 </style>
 
-<!-- ================= END CLEAN UPGRADE ================= -->
-
-
-
-<!-- ================= BODY REPLACE ================= -->
+</head>
 
 <body>
 
@@ -190,72 +157,155 @@ body{
 <div class="dashboard-container">
 
 <!-- TOP BAR -->
-<div class="topbar">
+
+<div class="flex flex-wrap justify-between items-center gap-4 mb-6">
 
     <div>
-        <h1 class="orbitron text-xl lg:text-2xl font-bold text-accentBlue tracking-wider flex items-center gap-3">
-            <i class="fa-solid fa-tower-broadcast text-accentGreen"></i>
-            INSTITUTIONAL
-            <span class="text-white">UNIVERSAL SCANNER</span>
+
+        <h1 class="orbitron text-2xl text-cyan-400 font-bold flex items-center gap-3">
+
+            <i class="fa-solid fa-tower-broadcast text-green-400"></i>
+
+            INSTITUTIONAL UNIVERSAL SCANNER
+
         </h1>
 
-        <p class="text-xs text-textSecondary mt-1">
-            Sifting 300+ Binance Coins instantly to find trades with Setup Scores above 75%
+        <p class="text-slate-400 text-sm mt-2">
+
+            Professional Binance Institutional Dashboard
+
         </p>
+
     </div>
 
-    <div class="flex flex-wrap items-center gap-3">
+    <div class="flex items-center gap-3">
 
-        <span id="scanLoader"
-        class="text-accentBlue orbitron text-xs flex items-center gap-2 bg-accentBlue/10 border border-accentBlue/30 px-3 py-1.5 rounded-full">
+        <div class="live-dot"></div>
 
-            <i class="fa-solid fa-spinner fa-spin"></i>
-            DISCOVERING GOLDEN SETUPS...
-
+        <span class="text-green-400 orbitron text-sm">
+            LIVE
         </span>
-
-        <div class="bg-accentGreen/10 border border-accentGreen/30 text-accentGreen px-3 py-1.5 rounded-full text-xs orbitron flex items-center gap-2 font-semibold">
-
-            <i class="fa-solid fa-circle pulse-indicator"></i>
-            WEBSOCKET LIVE
-
-        </div>
 
     </div>
 
 </div>
 
 <!-- MAIN GRID -->
+
 <div class="main-grid">
 
-    <!-- LEFT -->
-    <div class="left-panel">
+<!-- LEFT PANEL -->
 
-        <div class="pro-panel">
+<div class="left-panel">
 
-            <!-- YOUR LEFT PANEL CONTENT HERE -->
+    <div class="pro-panel">
 
+        <div class="orbitron text-cyan-400 mb-4">
+            MARKET SCANNER
         </div>
+
+        <div id="scannerList"></div>
 
     </div>
 
-    <!-- CENTER -->
-    <div class="center-panel">
+</div>
 
-        <div class="pro-panel">
+<!-- CENTER PANEL -->
 
-            <!-- YOUR CENTER PANEL CONTENT HERE -->
+<div class="center-panel">
+
+    <div class="pro-panel">
+
+        <div class="orbitron text-cyan-400 mb-4">
+            ACTIVE ASSET
+        </div>
+
+        <div class="card-box">
+
+            <label class="text-slate-400 text-sm">
+                Symbol
+            </label>
+
+            <div class="flex gap-2 mt-2">
+
+                <input
+                id="symbolInput"
+                value="BTC"
+                class="bg-slate-900 border border-slate-700 px-4 py-2 rounded-lg w-full text-white">
+
+                <button
+                onclick="loadSymbol()"
+                class="bg-cyan-500 hover:bg-cyan-400 px-4 py-2 rounded-lg text-black font-bold">
+
+                    LOAD
+
+                </button>
+
+            </div>
 
         </div>
 
-    </div>
+        <div class="card-box">
 
-    <!-- RIGHT -->
-    <div class="right-panel">
+            <div class="flex justify-between mb-3">
 
-        <div class="pro-panel">
+                <span class="text-slate-400">
+                    Current Price
+                </span>
 
-            <!-- YOUR RIGHT PANEL CONTENT HERE -->
+                <span id="currentPrice"
+                class="orbitron text-cyan-400 font-bold">
+
+                    Loading...
+
+                </span>
+
+            </div>
+
+            <div class="flex justify-between mb-3">
+
+                <span class="text-slate-400">
+                    24H High
+                </span>
+
+                <span id="highPrice"
+                class="orbitron text-green-400 font-bold">
+
+                    Loading...
+
+                </span>
+
+            </div>
+
+            <div class="flex justify-between">
+
+                <span class="text-slate-400">
+                    24H Low
+                </span>
+
+                <span id="lowPrice"
+                class="orbitron text-red-400 font-bold">
+
+                    Loading...
+
+                </span>
+
+            </div>
+
+        </div>
+
+        <div class="card-box">
+
+            <div class="orbitron text-sm text-cyan-400 mb-3">
+                SIGNAL ENGINE
+            </div>
+
+            <div id="signalText"
+            class="text-lg font-bold text-green-400">
+
+                WAITING...
+
+            </div>
 
         </div>
 
@@ -263,157 +313,358 @@ body{
 
 </div>
 
-</div>
-</div>
+<!-- RIGHT PANEL -->
 
-</body>
+<div class="right-panel">
 
-<!-- ================= END BODY REPLACE ================= -->
+    <div class="pro-panel">
 
-
-
-<!-- ================= REMOVE THESE OLD CSS BLOCKS ================= -->
-
-<!-- REMOVE:
-FINAL TOP ADJUST
-RIGHT PANEL TOP FIX
-GAP REDUCTION FIX
-INLINE STATUS POSITION FIX
-TOP SPACING FIX
-REAL FULLSCREEN FIX
-FULLSCREEN PROFESSIONAL MODE
--->
-
-
-
-<!-- ================= ADD LIVE TRADINGVIEW CHART ================= -->
-
-<div class="pro-panel mt-5">
-
-    <div class="orbitron text-sm font-bold mb-4 text-textPrimary">
-        LIVE TRADINGVIEW CHART
-    </div>
-
-    <div class="rounded-xl overflow-hidden border border-borderCol">
+        <div class="orbitron text-cyan-400 mb-4">
+            LIVE CHART
+        </div>
 
         <iframe
-        src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:BTCUSDT&interval=15&theme=dark&style=1&locale=en"
+        src="https://s.tradingview.com/widgetembed/?symbol=BINANCE:BTCUSDT&interval=15&theme=dark"
         width="100%"
-        height="500"
-        frameborder="0"
-        allowtransparency="true"
-        scrolling="no">
+        height="500">
         </iframe>
 
     </div>
 
 </div>
 
-<!-- ================= END TRADINGVIEW ================= -->
+</div>
 
+<!-- BOTTOM -->
 
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-6">
 
-<!-- ================= ULTRA PERFORMANCE FIX ================= -->
+    <div class="card-box">
+
+        <div class="text-slate-400 text-sm mb-2">
+            AI SCORE
+        </div>
+
+        <div id="aiScore"
+        class="orbitron text-2xl text-cyan-400">
+
+            82 / 100
+
+        </div>
+
+    </div>
+
+    <div class="card-box">
+
+        <div class="text-slate-400 text-sm mb-2">
+            Funding Rate
+        </div>
+
+        <div id="fundingRate"
+        class="orbitron text-green-400">
+
+            Loading...
+
+        </div>
+
+    </div>
+
+    <div class="card-box">
+
+        <div class="text-slate-400 text-sm mb-2">
+            Open Interest
+        </div>
+
+        <div id="openInterest"
+        class="orbitron text-yellow-400">
+
+            Loading...
+
+        </div>
+
+    </div>
+
+    <div class="card-box">
+
+        <div class="text-slate-400 text-sm mb-2">
+            Whale Status
+        </div>
+
+        <div id="whaleStatus"
+        class="orbitron text-red-400">
+
+            Monitoring...
+
+        </div>
+
+    </div>
+
+</div>
+
+</div>
+
+</div>
 
 <script>
 
-/* ===== PERFORMANCE BOOST ===== */
+let activeSymbol = "BTCUSDT";
 
-document.addEventListener('DOMContentLoaded',()=>{
+async function loadSymbol(){
 
-    console.log('Institutional Dashboard Loaded');
+    const symbol =
+    document.getElementById("symbolInput")
+    .value
+    .toUpperCase() + "USDT";
 
-    // REMOVE DUPLICATE INTERVALS
-    if(window.scannerLoop){
-        clearInterval(window.scannerLoop);
-    }
+    activeSymbol = symbol;
 
-    if(window.activeAssetLoop){
-        clearInterval(window.activeAssetLoop);
-    }
+    await loadTicker();
+}
 
-    // START CLEAN LOOPS
-    window.scannerLoop = setInterval(()=>{
+async function loadTicker(){
 
-        if(typeof runMarketScanner === 'function'){
-            runMarketScanner();
+    try{
+
+        const response =
+        await fetch(
+        `https://api.binance.com/api/v3/ticker/24hr?symbol=${activeSymbol}`
+        );
+
+        const data = await response.json();
+
+        document.getElementById("currentPrice").innerText =
+        "$" + parseFloat(data.lastPrice).toLocaleString();
+
+        document.getElementById("highPrice").innerText =
+        "$" + parseFloat(data.highPrice).toLocaleString();
+
+        document.getElementById("lowPrice").innerText =
+        "$" + parseFloat(data.lowPrice).toLocaleString();
+
+        const change =
+        parseFloat(data.priceChangePercent);
+
+        const signal =
+        document.getElementById("signalText");
+
+        if(change > 0){
+
+            signal.innerText =
+            "STRONG LONG";
+
+            signal.className =
+            "text-lg font-bold text-green-400";
+
+        }else{
+
+            signal.innerText =
+            "STRONG SHORT";
+
+            signal.className =
+            "text-lg font-bold text-red-400";
         }
 
-    },15000);
+    }catch(err){
 
-    window.activeAssetLoop = setInterval(()=>{
+        console.log(err);
 
-        if(typeof fetchLiveSymbol === 'function'){
-            fetchLiveSymbol();
+    }
+
+}
+
+async function scanner(){
+
+    try{
+
+        const response =
+        await fetch(
+        "https://api.binance.com/api/v3/ticker/24hr"
+        );
+
+        const data = await response.json();
+
+        const usdt =
+        data
+        .filter(x => x.symbol.endsWith("USDT"))
+        .slice(0,15);
+
+        const container =
+        document.getElementById("scannerList");
+
+        container.innerHTML = "";
+
+        usdt.forEach(coin => {
+
+            const change =
+            parseFloat(coin.priceChangePercent);
+
+            const color =
+            change >= 0
+            ? "text-green-400"
+            : "text-red-400";
+
+            container.innerHTML += `
+
+                <div
+                onclick="selectCoin('${coin.symbol}')"
+                class="card-box cursor-pointer hover:border-cyan-400 transition-all">
+
+                    <div class="flex justify-between">
+
+                        <span class="orbitron">
+                            ${coin.symbol}
+                        </span>
+
+                        <span class="${color} font-bold">
+                            ${change.toFixed(2)}%
+                        </span>
+
+                    </div>
+
+                </div>
+
+            `;
+        });
+
+    }catch(err){
+
+        console.log(err);
+
+    }
+
+}
+
+function selectCoin(symbol){
+
+    document.getElementById("symbolInput")
+    .value =
+    symbol.replace("USDT","");
+
+    activeSymbol = symbol;
+
+    loadTicker();
+
+}
+
+async function funding(){
+
+    try{
+
+        const response =
+        await fetch(
+        `https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${activeSymbol}`
+        );
+
+        const data = await response.json();
+
+        document.getElementById("fundingRate")
+        .innerText =
+        parseFloat(data.lastFundingRate * 100)
+        .toFixed(4) + "%";
+
+    }catch(err){
+
+        console.log(err);
+
+    }
+
+}
+
+async function whale(){
+
+    try{
+
+        const response =
+        await fetch(
+        `https://api.binance.com/api/v3/depth?symbol=${activeSymbol}&limit=50`
+        );
+
+        const data = await response.json();
+
+        let detected = false;
+
+        data.bids.forEach(b => {
+
+            const usd =
+            parseFloat(b[0]) *
+            parseFloat(b[1]);
+
+            if(usd > 1000000){
+                detected = true;
+            }
+
+        });
+
+        document.getElementById("whaleStatus")
+        .innerText =
+        detected
+        ? "Whale Wall Detected"
+        : "Normal";
+
+    }catch(err){
+
+        console.log(err);
+
+    }
+
+}
+
+async function openInterest(){
+
+    try{
+
+        const response =
+        await fetch(
+        `https://fapi.binance.com/futures/data/openInterestHist?symbol=${activeSymbol}&period=5m&limit=1`
+        );
+
+        const data = await response.json();
+
+        if(data[0]){
+
+            document.getElementById("openInterest")
+            .innerText =
+            parseFloat(data[0].sumOpenInterest)
+            .toLocaleString();
+
         }
 
-    },12000);
+    }catch(err){
 
-});
+        console.log(err);
 
-/* ===== AUTO RESIZE ===== */
+    }
 
-window.addEventListener('resize',()=>{
+}
 
-    document.body.style.overflowX='hidden';
+async function boot(){
 
-});
+    await loadTicker();
+
+    await scanner();
+
+    await funding();
+
+    await whale();
+
+    await openInterest();
+
+}
+
+boot();
+
+setInterval(boot,15000);
 
 </script>
 
-<!-- ================= END PERFORMANCE FIX ================= -->
+</body>
+</html>
 
+"""
 
+@app.route("/")
+def home():
+    return render_template_string(html)
 
-<!-- ================= OPTIONAL GLASS EFFECT ================= -->
-
-<style>
-
-.glass-effect{
-
-    background:rgba(15,23,42,0.72);
-
-    backdrop-filter:blur(16px);
-
-    border:1px solid rgba(255,255,255,0.06);
-
-    box-shadow:
-        0 8px 32px rgba(0,0,0,0.35),
-        inset 0 1px 0 rgba(255,255,255,0.04);
-
-}
-
-</style>
-
-<!-- ================= END GLASS EFFECT ================= -->
-
-
-
-<!-- ================= MOBILE OPTIMIZATION ================= -->
-
-<style>
-
-@media(max-width:640px){
-
-    input,
-    button{
-        min-height:44px;
-    }
-
-    .orbitron{
-        font-size:12px !important;
-    }
-
-    .text-xs{
-        font-size:11px !important;
-    }
-
-    .text-sm{
-        font-size:12px !important;
-    }
-
-}
-
-</style>
-
-<!-- ================= END MOBILE OPTIMIZATION ================= -->
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
