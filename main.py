@@ -4,8 +4,6 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-import ta
-from datetime import datetime
 
 # ================= PAGE =================
 
@@ -14,7 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ================= BACKGROUND =================
+# ================= STYLE =================
 
 st.markdown("""
 
@@ -38,10 +36,6 @@ html, body, [class*="css"] {
     padding-top:1rem;
 }
 
-section[data-testid="stSidebar"]{
-    background:#020617;
-}
-
 .card{
 
     background:rgba(15,23,42,0.85);
@@ -55,9 +49,6 @@ section[data-testid="stSidebar"]{
     padding:20px;
 
     margin-bottom:20px;
-
-    box-shadow:
-    0 0 30px rgba(0,0,0,0.4);
 }
 
 .metric{
@@ -91,61 +82,27 @@ section[data-testid="stSidebar"]{
     -webkit-text-fill-color:transparent;
 }
 
-.small{
-    color:#94a3b8;
-}
-
-.green{
-    color:#22c55e;
-    font-weight:bold;
-}
-
-.red{
-    color:#ef4444;
-    font-weight:bold;
-}
-
-.blue{
-    color:#38bdf8;
-    font-weight:bold;
-}
-
 .buy{
-
     background:#14532d;
-
     padding:12px;
-
     border-radius:12px;
-
     text-align:center;
-
     font-weight:bold;
 }
 
 .sell{
-
     background:#7f1d1d;
-
     padding:12px;
-
     border-radius:12px;
-
     text-align:center;
-
     font-weight:bold;
 }
 
 .neutral{
-
     background:#334155;
-
     padding:12px;
-
     border-radius:12px;
-
     text-align:center;
-
     font-weight:bold;
 }
 
@@ -163,15 +120,51 @@ st.markdown("""
 ⚡ QUANTUM X AI
 </div>
 
-<div class="small">
-Institutional Smart Money Intelligence System
+<div>
+Institutional Smart Money Intelligence
 </div>
 
 </div>
 
 """, unsafe_allow_html=True)
 
-# ================= MARKET DATA =================
+# ================= RSI =================
+
+def calculate_rsi(data, period=14):
+
+    delta = data.diff()
+
+    gain = (delta.where(delta > 0, 0)).rolling(period).mean()
+
+    loss = (-delta.where(delta < 0, 0)).rolling(period).mean()
+
+    rs = gain / loss
+
+    rsi = 100 - (100 / (1 + rs))
+
+    return rsi
+
+# ================= EMA =================
+
+def calculate_ema(data, period):
+
+    return data.ewm(span=period, adjust=False).mean()
+
+# ================= MACD =================
+
+def calculate_macd(data):
+
+    ema12 = calculate_ema(data, 12)
+
+    ema26 = calculate_ema(data, 26)
+
+    macd = ema12 - ema26
+
+    signal = calculate_ema(macd, 9)
+
+    return macd, signal
+
+# ================= MARKET =================
 
 @st.cache_data(ttl=30)
 
@@ -232,7 +225,7 @@ def get_market():
 
     return df
 
-# ================= CANDLE DATA =================
+# ================= KLINES =================
 
 @st.cache_data(ttl=30)
 
@@ -265,27 +258,25 @@ def get_klines(symbol):
 
     ]
 
-    frame["open"] = frame["open"].astype(float)
-    frame["high"] = frame["high"].astype(float)
-    frame["low"] = frame["low"].astype(float)
-    frame["close"] = frame["close"].astype(float)
-    frame["volume"] = frame["volume"].astype(float)
+    for col in [
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+    ]:
+
+        frame[col] = frame[col].astype(float)
 
     return frame
 
-# ================= LOAD DATA =================
+# ================= LOAD =================
 
 df = get_market()
 
 # ================= METRICS =================
 
 btc = df[df["symbol"]=="BTCUSDT"].iloc[0]
-
-green = len(df[df["change"] > 0])
-
-red = len(df[df["change"] < 0])
-
-volume = df["volume"].sum()
 
 c1,c2,c3,c4 = st.columns(4)
 
@@ -299,22 +290,22 @@ with c1:
 with c2:
 
     st.metric(
-        "GREEN COINS",
-        green
+        "COINS",
+        len(df)
     )
 
 with c3:
 
     st.metric(
-        "RED COINS",
-        red
+        "GREEN",
+        len(df[df["change"] > 0])
     )
 
 with c4:
 
     st.metric(
-        "24H VOLUME",
-        f"${volume/1000000000:.2f}B"
+        "RED",
+        len(df[df["change"] < 0])
     )
 
 # ================= MAIN =================
@@ -325,15 +316,7 @@ left,center,right = st.columns([1,1.2,1])
 
 with left:
 
-    st.markdown("""
-
-    <div class="card">
-
-    <h2>🚀 TOP GAINERS</h2>
-
-    </div>
-
-    """, unsafe_allow_html=True)
+    st.subheader("🚀 TOP GAINERS")
 
     gainers = df.sort_values(
         by="change",
@@ -343,22 +326,14 @@ with left:
     st.dataframe(
         gainers,
         use_container_width=True,
-        height=650
+        height=600
     )
 
 # ================= ANALYSIS =================
 
 with center:
 
-    st.markdown("""
-
-    <div class="card">
-
-    <h2>🧠 SMART MONEY ANALYSIS</h2>
-
-    </div>
-
-    """, unsafe_allow_html=True)
+    st.subheader("🧠 AI ANALYSIS")
 
     symbol = st.selectbox(
         "Select Coin",
@@ -367,39 +342,23 @@ with center:
 
     kline = get_klines(symbol)
 
-    # ================= REAL RSI =================
+    close = kline["close"]
 
-    rsi = ta.momentum.RSIIndicator(
-        close=kline["close"],
-        window=14
-    ).rsi().iloc[-1]
+    # ================= REAL INDICATORS =================
 
-    # ================= REAL MACD =================
+    rsi = calculate_rsi(close).iloc[-1]
 
-    macd_indicator = ta.trend.MACD(
-        close=kline["close"]
-    )
+    macd, signal_line = calculate_macd(close)
 
-    macd = macd_indicator.macd().iloc[-1]
+    macd_value = macd.iloc[-1]
 
-    # ================= EMA =================
+    ema20 = calculate_ema(close,20).iloc[-1]
 
-    ema20 = ta.trend.EMAIndicator(
-        close=kline["close"],
-        window=20
-    ).ema_indicator().iloc[-1]
+    ema50 = calculate_ema(close,50).iloc[-1]
 
-    ema50 = ta.trend.EMAIndicator(
-        close=kline["close"],
-        window=50
-    ).ema_indicator().iloc[-1]
+    ema200 = calculate_ema(close,100).iloc[-1]
 
-    ema200 = ta.trend.EMAIndicator(
-        close=kline["close"],
-        window=100
-    ).ema_indicator().iloc[-1]
-
-    # ================= VOLUME =================
+    # ================= WHALE =================
 
     current_volume = kline["volume"].iloc[-1]
 
@@ -414,9 +373,11 @@ with center:
     # ================= SMC =================
 
     last_high = kline["high"].iloc[-1]
+
     prev_high = kline["high"].iloc[-2]
 
     last_low = kline["low"].iloc[-1]
+
     prev_low = kline["low"].iloc[-2]
 
     bos = (
@@ -431,67 +392,33 @@ with center:
         else "CHOCH DOWN"
     )
 
-    order_block = (
-        "BULLISH OB"
-        if ema20 > ema50
-        else "BEARISH OB"
-    )
-
     liquidity = (
         "LIQUIDITY SWEEP"
         if last_high > prev_high
-        and kline["close"].iloc[-1] < prev_high
+        and close.iloc[-1] < prev_high
         else "NO SWEEP"
     )
 
-    fvg = (
-        "FVG PRESENT"
-        if abs(
-            kline["open"].iloc[-1]
-            -
-            kline["close"].iloc[-1]
-        ) > 100
-        else "NO FVG"
-    )
-
-    # ================= FUTURES =================
-
-    funding = np.random.uniform(
-        -0.05,
-        0.05
-    )
-
-    open_interest = np.random.uniform(
-        1,
-        10
-    )
-
-    # ================= AI SCORE =================
+    # ================= SCORE =================
 
     score = 0
 
     if rsi < 35:
-        score += 15
+        score += 20
 
-    if macd > 0:
-        score += 15
+    if macd_value > 0:
+        score += 20
 
     if ema20 > ema50:
-        score += 15
+        score += 20
 
     if ema50 > ema200:
-        score += 15
+        score += 20
 
     if whale == "🐋 WHALE ACTIVE":
         score += 10
 
     if "BULLISH" in bos:
-        score += 10
-
-    if "UP" in choch:
-        score += 10
-
-    if "SWEEP" in liquidity:
         score += 10
 
     # ================= SIGNAL =================
@@ -534,7 +461,7 @@ with center:
 
     <div>RSI : {rsi:.2f}</div>
 
-    <div>MACD : {macd:.2f}</div>
+    <div>MACD : {macd_value:.2f}</div>
 
     <div>EMA20 : {ema20:.2f}</div>
 
@@ -548,15 +475,7 @@ with center:
 
     <div>CHOCH : {choch}</div>
 
-    <div>ORDER BLOCK : {order_block}</div>
-
     <div>LIQUIDITY : {liquidity}</div>
-
-    <div>FVG : {fvg}</div>
-
-    <div>FUNDING : {funding:.4f}</div>
-
-    <div>OPEN INTEREST : ${open_interest:.2f}B</div>
 
     <br>
 
@@ -568,31 +487,11 @@ with center:
 
     """, unsafe_allow_html=True)
 
-    if score >= 70:
-
-        st.success(
-            "🚨 INSTITUTIONAL BUY SIGNAL"
-        )
-
-    elif score <= 35:
-
-        st.error(
-            "🚨 STRONG SELL PRESSURE"
-        )
-
 # ================= LOSERS =================
 
 with right:
 
-    st.markdown("""
-
-    <div class="card">
-
-    <h2>📉 TOP LOSERS</h2>
-
-    </div>
-
-    """, unsafe_allow_html=True)
+    st.subheader("📉 TOP LOSERS")
 
     losers = df.sort_values(
         by="change"
@@ -601,20 +500,12 @@ with right:
     st.dataframe(
         losers,
         use_container_width=True,
-        height=650
+        height=600
     )
 
-# ================= CANDLE CHART =================
+# ================= CHART =================
 
-st.markdown("""
-
-<div class="card">
-
-<h2>📊 ADVANCED CANDLESTICK</h2>
-
-</div>
-
-""", unsafe_allow_html=True)
+st.subheader("📊 CANDLESTICK")
 
 fig = go.Figure(data=[
 
@@ -635,11 +526,8 @@ fig = go.Figure(data=[
 ])
 
 fig.update_layout(
-
     template="plotly_dark",
-
     height=700
-
 )
 
 st.plotly_chart(
@@ -649,15 +537,7 @@ st.plotly_chart(
 
 # ================= HEATMAP =================
 
-st.markdown("""
-
-<div class="card">
-
-<h2>🌡️ MARKET HEATMAP</h2>
-
-</div>
-
-""", unsafe_allow_html=True)
+st.subheader("🌡️ HEATMAP")
 
 heat = df.head(100)
 
@@ -685,45 +565,9 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# ================= TRADINGVIEW =================
-
-st.markdown("""
-
-<div class="card">
-
-<h2>📈 LIVE TRADINGVIEW</h2>
-
-</div>
-
-""", unsafe_allow_html=True)
-
-tv = f"""
-
-<iframe
-src="https://s.tradingview.com/widgetembed/?symbol=BINANCE:{symbol}&interval=15&theme=dark"
-width="100%"
-height="700"
-frameborder="0">
-</iframe>
-
-"""
-
-st.components.v1.html(
-    tv,
-    height=720
-)
-
 # ================= SEARCH =================
 
-st.markdown("""
-
-<div class="card">
-
-<h2>🔍 SEARCH MARKET</h2>
-
-</div>
-
-""", unsafe_allow_html=True)
+st.subheader("🔍 SEARCH")
 
 search = st.text_input(
     "Search Coin",
@@ -740,11 +584,11 @@ filtered = df[
 st.dataframe(
     filtered,
     use_container_width=True,
-    height=700
+    height=500
 )
 
 # ================= FOOTER =================
 
 st.success(
-    "SYSTEM ONLINE • SMC ACTIVE • AI ACTIVE • WHALE DETECTION ENABLED"
+    "SYSTEM ONLINE • AI ACTIVE • SMART MONEY ACTIVE"
 )
