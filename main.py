@@ -44,7 +44,6 @@ st.markdown("""
 # =====================================================================
 @st.cache_data(ttl=300)  # විනාඩි 5කට සැරයක් Top Coins ටික අප්ඩේට් කරනවා
 def fetch_top_volume_usdt_pairs(limit=100):
-    # CryptoCompare එකේ Volume වැඩිම Top Coins ඇදගන්නා API එන්ඩ්පොයින්ට් එක
     url = "https://min-api.cryptocompare.com/data/top/mktcapfull"
     headers = {"Authorization": f"Apikey {CRYPTOCOMPARE_API_KEY}"}
     params = {"limit": limit, "tsym": "USDT"}
@@ -61,7 +60,6 @@ def fetch_top_volume_usdt_pairs(limit=100):
                 symbol = base_info.get("Name")
                 
                 if symbol:
-                    # අනවශ්‍ය ස්ටේබල් කොයින් සහ ලෙවෙරේජ් ටෝකන් ලිස්ට් එකෙන් අයින් කිරීම
                     if symbol not in ["USDT", "USDC", "FDUSD", "TUSD", "DAI", "BUSD"]:
                         sym = f"{symbol}USDT"
                         pairs[sym] = f"🪙 {sym}"
@@ -70,14 +68,13 @@ def fetch_top_volume_usdt_pairs(limit=100):
     except:
         pass
     
-    # මොකක් හරි හදිසි අවුලක් ආවොත් බැක්අප් එක විදිහට වැඩ කරන්න ලිස්ට් එක
     return {
         "BTCUSDT": "₿ BTCUSDT", "ETHUSDT": "♦️ ETHUSDT", "SOLUSDT": "☀️ SOLUSDT", "BNBUSDT": "🔶 BNBUSDT",
         "XRPUSDT": "💧 XRPUSDT", "ADAUSDT": "₳ ADAUSDT", "DOGEUSDT": "🐕 DOGEUSDT", "SHIBUSDT": "🦊 SHIBUSDT"
     }
 
 # ලයිව් කොයින් ලිස්ට් එක ඩයිනමික් ලෙස ලෝඩ් කිරීම
-COIN_SYMBOLS = fetch_top_volume_usdt_pairs(limit=120) # Top Coins 120ක් විතර ඇදගන්නවා
+COIN_SYMBOLS = fetch_top_volume_usdt_pairs(limit=120)
 SCAN_COINS = list(COIN_SYMBOLS.keys())
 
 def get_all_binance_symbols_with_symbols():
@@ -227,17 +224,22 @@ def analyze_coin_for_scanner(coin, htf, ltf):
 
     bull_per = (bullish_points / total_checks) * 100
     bear_per = (bearish_points / total_checks) * 100
-    c_price = df_ltf["Close"].iloc[-1]
-    df_ltf["ATR"] = calculate_atr(df_ltf)
-    c_atr = df_ltf["ATR"].iloc[-1] if not pd.isna(df_ltf["ATR"].iloc[-1]) else (c_price * 0.003)
-    dec = 6 if c_price < 0.1 else 4
     
-    coin_display = COIN_SYMBOLS.get(coin, f"🪙 {coin}")
-    
-    if bull_per >= 60 and htf_trend == "BULLISH" and cvd_flow > 0:
-        return {"Coin": coin_display, "Signal": "🟩 BUY / LONG", "Strength": f"{bull_per:.1f}%", "Structure": bos_sig, "Entry": f"{c_price:.{dec}f}", "SL": f"{c_price - (c_atr*2):.{dec}f}", "TP": f"{c_price + (c_atr*4):.{dec}f}"}
-    elif bear_per >= 60 and htf_trend == "BEARISH" and cvd_flow < 0:
-        return {"Coin": coin_display, "Signal": "🟥 SELL / SHORT", "Strength": f"{bear_per:.1f}%", "Structure": bos_sig, "Entry": f"{c_price:.{dec}f}", "SL": f"{c_price + (c_atr*2):.{dec}f}", "TP": f"{c_price - (c_atr*4):.{dec}f}"}
+    try:
+        c_price = df_ltf["Close"].iloc[-1]
+        df_ltf["ATR"] = calculate_atr(df_ltf)
+        c_atr = df_ltf["ATR"].iloc[-1] if not pd.isna(df_ltf["ATR"].iloc[-1]) else (c_price * 0.003)
+        dec = 6 if c_price < 0.1 else 4
+        
+        coin_display = COIN_SYMBOLS.get(coin, f"🪙 {coin}")
+        
+        if bull_per >= 60 and htf_trend == "BULLISH" and cvd_flow > 0:
+            return {"Coin": coin_display, "Signal": "🟩 BUY / LONG", "Strength": f"{bull_per:.1f}%", "Structure": bos_sig, "Entry": f"{c_price:.{dec}f}", "SL": f"{c_price - (c_atr*2):.{dec}f}", "TP": f"{c_price + (c_atr*4):.{dec}f}"}
+        elif bear_per >= 60 and htf_trend == "BEARISH" and cvd_flow < 0:
+            return {"Coin": coin_display, "Signal": "🟥 SELL / SHORT", "Strength": f"{bear_per:.1f}%", "Structure": bos_sig, "Entry": f"{c_price:.{dec}f}", "SL": f"{c_price + (c_atr*2):.{dec}f}", "TP": f"{c_price - (c_atr*4):.{dec}f}"}
+    except:
+        pass
+        
     return None
 
 # =====================================================================
@@ -393,4 +395,34 @@ with col_metrics:
 # Execution & Risk Size Output
 if data_isValid:
     try:
-        c_price
+        c_price_1m = df_1m["Close"].iloc[-1]
+        df_ltf["ATR"] = calculate_atr(df_ltf)
+        c_atr = df_ltf["ATR"].iloc[-1] if not pd.isna(df_ltf["ATR"].iloc[-1]) else (c_price_1m * 0.003)
+        dec_places = 6 if c_price_1m < 0.1 else 4
+        
+        risk_cash = balance * (risk_pct / 100)
+        sl_distance_pct = (c_atr * 2) / c_price_1m
+        raw_position_size = risk_cash / sl_distance_pct if sl_distance_pct > 0 else balance
+        margin_required = raw_position_size / leverage
+        
+        trailing_sl_step = c_atr * 1.5
+        
+        st.markdown("#### ⚡ SIGNAL SYSTEM EXECUTION & RISK SHEET")
+        
+        col_sig, col_risk = st.columns(2)
+        
+        with col_sig:
+            if bull_per >= 60 and htf_trend == "BULLISH 📈" and cvd_flow > 0:
+                buy_msg = f"### 🚀 SYSTEM DIRECTIVE: BUY / LONG\n\n**Entry:** ${c_price_1m:.{dec_places}f}\n\n**Stop Loss:** ${c_price_1m - (c_atr*2):.{dec_places}f}\n\n**Take Profit:** ${c_price_1m + (c_atr*4):.{dec_places}f}\n\n*🛡️ Trailing SL Step:* Move SL up every +${trailing_sl_step:.{dec_places}f} profit."
+                st.success(buy_msg)
+            elif bear_per >= 60 and htf_trend == "BEARISH 📉" and cvd_flow < 0:
+                sell_msg = f"### 📉 SYSTEM DIRECTIVE: SELL / SHORT\n\n**Entry:** ${c_price_1m:.{dec_places}f}\n\n**Stop Loss:** ${c_price_1m + (c_atr*2):.{dec_places}f}\n\n**Take Profit:** ${c_price_1m - (c_atr*4):.{dec_places}f}\n\n*🛡️ Trailing SL Step:* Move SL down every -${trailing_sl_step:.{dec_places}f} profit."
+                st.error(sell_msg)
+            else:
+                st.info("⚪ ENGINE STATUS: High-accuracy confluence threshold not met. Standby.")
+                
+        with col_risk:
+            risk_msg = f"### 🧮 CALCULATED RISK QUANTITIES\n\n* **Risk Cash Amount:** ${risk_cash:.2f}\n\n* **Recommended Position Size:** ${raw_position_size:.2f}\n\n* **Margin Allocation Needed:** ${margin_required:.2f} (at {leverage}x)"
+            st.warning(risk_msg)
+    except:
+        pass
