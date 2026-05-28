@@ -124,9 +124,9 @@ SMC • Futures • Whale Tracking • AI Signals
 
 """, unsafe_allow_html=True)
 
-# ================= FETCH MARKET =================
+# ================= MARKET =================
 
-@st.cache_data(ttl=20)
+@st.cache_data(ttl=30)
 
 def get_market():
 
@@ -165,7 +165,10 @@ def get_market():
                     "symbol":symbol,
 
                     "price":float(
-                        coin.get("lastPrice",0)
+                        coin.get(
+                            "lastPrice",
+                            0
+                        )
                     ),
 
                     "change":float(
@@ -190,7 +193,16 @@ def get_market():
         if len(rows) == 0:
             raise Exception()
 
-        return pd.DataFrame(rows)
+        df = pd.DataFrame(rows)
+
+        # ================= SAFE FILTER =================
+
+        df = df.sort_values(
+            by="volume",
+            ascending=False
+        ).head(200)
+
+        return df
 
     except:
 
@@ -214,13 +226,18 @@ def get_market():
             rows.append({
 
                 "symbol":x[0],
+
                 "price":x[1],
+
                 "change":x[2] + random.uniform(-1,1),
+
                 "volume":x[3]
 
             })
 
         return pd.DataFrame(rows)
+
+# ================= DATA =================
 
 df = get_market()
 
@@ -228,9 +245,13 @@ df = get_market()
 
 btc = df[df["symbol"]=="BTCUSDT"].iloc[0]
 
-green = len(df[df["change"] > 0])
+green = len(
+    df[df["change"] > 0]
+)
 
-red = len(df[df["change"] < 0])
+red = len(
+    df[df["change"] < 0]
+)
 
 volume = df["volume"].sum()
 
@@ -268,7 +289,7 @@ with c4:
 
 left,center,right = st.columns([1,1,1])
 
-# ================= GAINERS =================
+# ================= TOP GAINERS =================
 
 with left:
 
@@ -277,11 +298,12 @@ with left:
     gainers = df.sort_values(
         by="change",
         ascending=False
-    ).head(10)
+    ).head(50)
 
     st.dataframe(
         gainers,
-        use_container_width=True
+        use_container_width=True,
+        height=600
     )
 
 # ================= AI ENGINE =================
@@ -316,7 +338,9 @@ with center:
 
     ema50 = coin["price"] * random.uniform(0.97,1.03)
 
-    # ================= VOLUME =================
+    ema200 = coin["price"] * random.uniform(0.95,1.05)
+
+    # ================= WHALE =================
 
     whale = (
         "🐋 WHALE ACTIVE"
@@ -362,6 +386,12 @@ with center:
         random.uniform(1,10),
         2
     )
+
+    liquidation = random.choice([
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+    ])
 
     # ================= AI SCORE =================
 
@@ -457,6 +487,10 @@ with center:
     </div>
 
     <div>
+    EMA200 : {ema200:.2f}
+    </div>
+
+    <div>
     WHALE : {whale}
     </div>
 
@@ -488,6 +522,10 @@ with center:
     OPEN INTEREST : ${open_interest}B
     </div>
 
+    <div>
+    LIQUIDATION : {liquidation}
+    </div>
+
     <br>
 
     <h2>
@@ -512,7 +550,7 @@ with center:
             "🚨 SELL PRESSURE DETECTED"
         )
 
-# ================= LOSERS =================
+# ================= TOP LOSERS =================
 
 with right:
 
@@ -520,14 +558,15 @@ with right:
 
     losers = df.sort_values(
         by="change"
-    ).head(10)
+    ).head(50)
 
     st.dataframe(
         losers,
-        use_container_width=True
+        use_container_width=True,
+        height=600
     )
 
-# ================= CHART =================
+# ================= MULTI CHART =================
 
 st.subheader("📈 LIVE TRADINGVIEW")
 
@@ -553,7 +592,7 @@ if PLOTLY:
 
     st.subheader("🌡️ MARKET HEATMAP")
 
-    heat = df.head(20)
+    heat = df.head(100)
 
     fig = px.treemap(
 
@@ -571,7 +610,7 @@ if PLOTLY:
 
     fig.update_layout(
         template="plotly_dark",
-        height=600
+        height=700
     )
 
     st.plotly_chart(
@@ -617,6 +656,28 @@ if PLOTLY:
         use_container_width=True
     )
 
+# ================= SEARCH =================
+
+st.subheader("🔍 SEARCH COINS")
+
+search = st.text_input(
+    "Search Coin",
+    ""
+)
+
+filtered = df[
+    df["symbol"].str.contains(
+        search.upper(),
+        na=False
+    )
+]
+
+st.dataframe(
+    filtered,
+    use_container_width=True,
+    height=700
+)
+
 # ================= FUTURES =================
 
 st.subheader("🔥 FUTURES INTELLIGENCE")
@@ -641,25 +702,11 @@ with f3:
 
     st.metric(
         "Liquidation Risk",
-        random.choice([
-            "LOW",
-            "MEDIUM",
-            "HIGH"
-        ])
+        liquidation
     )
-
-# ================= TABLE =================
-
-st.subheader("📋 LIVE MARKET TABLE")
-
-st.dataframe(
-    df,
-    use_container_width=True,
-    height=500
-)
 
 # ================= FOOTER =================
 
 st.success(
-    "SYSTEM ONLINE • SMC ACTIVE • AI ACTIVE • WHALE DETECTION ENABLED"
+    "SYSTEM ONLINE • AI ACTIVE • SMC ACTIVE • WHALE DETECTION ENABLED"
 )
