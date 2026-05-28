@@ -89,8 +89,6 @@ html, body, [class*="css"] {
 
     background:rgba(15,23,42,0.90);
 
-    backdrop-filter:blur(12px);
-
     border:1px solid rgba(255,255,255,0.08);
 
     border-radius:22px;
@@ -262,20 +260,18 @@ def calculate_atr(df, period=14):
 @st.cache_data(ttl=60)
 def get_market():
 
-try:
+    try:
 
-    url = "https://api.binance.com/api/v3/ticker/24hr"
+        url = "https://api.binance.com/api/v3/ticker/24hr"
 
-    response = requests.get(
-        url,
-        timeout=15
-    )
+        response = requests.get(
+            url,
+            timeout=15
+        )
 
-    data = response.json()
+        data = response.json()
 
-    rows = []
-
-    if isinstance(data, list):
+        rows = []
 
         for coin in data:
 
@@ -318,9 +314,7 @@ try:
             except:
                 pass
 
-    df = pd.DataFrame(rows)
-
-    if len(df) > 0:
+        df = pd.DataFrame(rows)
 
         df = df.sort_values(
             by="volume",
@@ -329,46 +323,15 @@ try:
 
         return df
 
-except:
-    pass
+    except:
 
-rows = []
+        return pd.DataFrame()
 
-for i in range(100):
-
-    rows.append({
-
-        "symbol": f"COIN{i}USDT",
-
-        "price": round(
-            np.random.uniform(1, 70000),
-            4
-        ),
-
-        "change": round(
-            np.random.uniform(-20, 20),
-            2
-        ),
-
-        "volume": round(
-            np.random.uniform(
-                1000000,
-                5000000000
-            ),
-            2
-        )
-
-    })
-
-df = pd.DataFrame(rows)
-
-return df
 # =========================================================
 # KLINES
 # =========================================================
 
 @st.cache_data(ttl=30)
-
 def get_klines(symbol, interval="15m"):
 
     try:
@@ -384,27 +347,23 @@ def get_klines(symbol, interval="15m"):
 
         frame = pd.DataFrame(data)
 
-        frame = frame.iloc[:,:6]
+        frame = frame.iloc[:, :6]
 
         frame.columns = [
-
             "time",
             "open",
             "high",
             "low",
             "close",
             "volume"
-
         ]
 
         for col in [
-
             "open",
             "high",
             "low",
             "close",
             "volume"
-
         ]:
 
             frame[col] = frame[col].astype(float)
@@ -413,41 +372,7 @@ def get_klines(symbol, interval="15m"):
 
     except:
 
-        fake = pd.DataFrame({
-
-            "open":np.random.uniform(
-                68000,
-                69000,
-                200
-            ),
-
-            "high":np.random.uniform(
-                69000,
-                70000,
-                200
-            ),
-
-            "low":np.random.uniform(
-                67000,
-                68000,
-                200
-            ),
-
-            "close":np.random.uniform(
-                68000,
-                69000,
-                200
-            ),
-
-            "volume":np.random.uniform(
-                1000,
-                5000,
-                200
-            )
-
-        })
-
-        return fake
+        return pd.DataFrame()
 
 # =========================================================
 # SAVE SIGNAL
@@ -517,129 +442,10 @@ def save_signal(
         pass
 
 # =========================================================
-# UPDATE SIGNAL STATUS
-# =========================================================
-
-def update_signal_status():
-
-    try:
-
-        signals = pd.read_sql(
-            "SELECT * FROM signals WHERE status='RUNNING'",
-            conn
-        )
-
-        if signals.empty:
-            return
-
-        for _, row in signals.iterrows():
-
-            try:
-
-                coin = row["coin"]
-
-                timeframe = row["timeframe"]
-
-                signal_type = row["signal"]
-
-                tp1 = float(row["tp1"])
-
-                tp2 = float(row["tp2"])
-
-                tp3 = float(row["tp3"])
-
-                sl = float(row["sl"])
-
-                signal_id = int(row["id"])
-
-                kline = get_klines(
-                    coin,
-                    timeframe
-                )
-
-                current_price = kline["close"].iloc[-1]
-
-                # LONG
-                if signal_type == "LONG":
-
-                    if current_price >= tp3:
-
-                        cursor.execute(
-                            "UPDATE signals SET status='TP3 HIT' WHERE id=?",
-                            (signal_id,)
-                        )
-
-                    elif current_price >= tp2:
-
-                        cursor.execute(
-                            "UPDATE signals SET status='TP2 HIT' WHERE id=?",
-                            (signal_id,)
-                        )
-
-                    elif current_price >= tp1:
-
-                        cursor.execute(
-                            "UPDATE signals SET status='TP1 HIT' WHERE id=?",
-                            (signal_id,)
-                        )
-
-                    elif current_price <= sl:
-
-                        cursor.execute(
-                            "UPDATE signals SET status='SL HIT' WHERE id=?",
-                            (signal_id,)
-                        )
-
-                # SHORT
-                else:
-
-                    if current_price <= tp3:
-
-                        cursor.execute(
-                            "UPDATE signals SET status='TP3 HIT' WHERE id=?",
-                            (signal_id,)
-                        )
-
-                    elif current_price <= tp2:
-
-                        cursor.execute(
-                            "UPDATE signals SET status='TP2 HIT' WHERE id=?",
-                            (signal_id,)
-                        )
-
-                    elif current_price <= tp1:
-
-                        cursor.execute(
-                            "UPDATE signals SET status='TP1 HIT' WHERE id=?",
-                            (signal_id,)
-                        )
-
-                    elif current_price >= sl:
-
-                        cursor.execute(
-                            "UPDATE signals SET status='SL HIT' WHERE id=?",
-                            (signal_id,)
-                        )
-
-                conn.commit()
-
-            except:
-                pass
-
-    except:
-        pass
-
-# =========================================================
 # LOAD MARKET
 # =========================================================
 
 df = get_market()
-
-# =========================================================
-# UPDATE SIGNALS
-# =========================================================
-
-update_signal_status()
 
 # =========================================================
 # METRICS
@@ -648,38 +454,31 @@ update_signal_status()
 btc_data = df[df["symbol"]=="BTCUSDT"]
 
 if not btc_data.empty:
-
     btc_price = btc_data.iloc[0]["price"]
-
 else:
-
     btc_price = 0
 
 c1,c2,c3,c4 = st.columns(4)
 
 with c1:
-
     st.metric(
         "BTC PRICE",
         f"${btc_price:,.2f}"
     )
 
 with c2:
-
     st.metric(
         "TOTAL COINS",
         len(df)
     )
 
 with c3:
-
     st.metric(
         "GREEN COINS",
         len(df[df["change"] > 0])
     )
 
 with c4:
-
     st.metric(
         "RED COINS",
         len(df[df["change"] < 0])
@@ -702,25 +501,21 @@ trading_type = st.selectbox(
 )
 
 if trading_type == "SCALPING":
-
     timeframe = "5m"
 
 elif trading_type == "DAY TRADING":
-
     timeframe = "15m"
 
 else:
-
     timeframe = "1h"
 
 # =========================================================
-# AI SCANNER
+# AI SIGNAL SCANNER
 # =========================================================
 
 st.subheader("🔥 ELITE AI SIGNAL SCANNER")
 
 scan_long = []
-
 scan_short = []
 
 coins = df["symbol"].tolist()[:75]
@@ -733,6 +528,9 @@ for coin in coins:
             coin,
             timeframe
         )
+
+        if kline.empty:
+            continue
 
         close = kline["close"]
 
@@ -878,20 +676,14 @@ with lcol:
     if len(scan_long) > 0:
 
         st.dataframe(
-
             pd.DataFrame(scan_long),
-
             use_container_width=True,
-
             height=500
-
         )
 
     else:
 
-        st.warning(
-            "NO LONG SIGNALS"
-        )
+        st.warning("NO LONG SIGNALS")
 
 with scol:
 
@@ -900,20 +692,14 @@ with scol:
     if len(scan_short) > 0:
 
         st.dataframe(
-
             pd.DataFrame(scan_short),
-
             use_container_width=True,
-
             height=500
-
         )
 
     else:
 
-        st.warning(
-            "NO SHORT SIGNALS"
-        )
+        st.warning("NO SHORT SIGNALS")
 
 # =========================================================
 # ACCURACY DASHBOARD
@@ -954,122 +740,25 @@ if not signals_df.empty:
         ]
     )
 
-    running = len(
-        signals_df[
-            signals_df["status"] == "RUNNING"
-        ]
-    )
-
-    total_wins = (
-        tp1_hits +
-        tp2_hits +
-        tp3_hits
-    )
-
-    if total_signals > 0:
-
-        win_rate = round(
-            (
-                total_wins /
-                total_signals
-            ) * 100,
-            2
-        )
-
-    else:
-
-        win_rate = 0
-
-    a,b,c,d,e,f = st.columns(6)
+    a,b,c,d,e = st.columns(5)
 
     with a:
-        st.metric(
-            "TOTAL",
-            total_signals
-        )
+        st.metric("TOTAL", total_signals)
 
     with b:
-        st.metric(
-            "RUNNING",
-            running
-        )
+        st.metric("TP1", tp1_hits)
 
     with c:
-        st.metric(
-            "TP1",
-            tp1_hits
-        )
+        st.metric("TP2", tp2_hits)
 
     with d:
-        st.metric(
-            "TP2",
-            tp2_hits
-        )
+        st.metric("TP3", tp3_hits)
 
     with e:
-        st.metric(
-            "TP3",
-            tp3_hits
-        )
-
-    with f:
-        st.metric(
-            "WIN RATE",
-            f"{win_rate}%"
-        )
-
-    chart_df = pd.DataFrame({
-
-        "STATUS":[
-            "TP1",
-            "TP2",
-            "TP3",
-            "SL"
-        ],
-
-        "COUNT":[
-            tp1_hits,
-            tp2_hits,
-            tp3_hits,
-            sl_hits
-        ]
-
-    })
-
-    fig_acc = px.bar(
-
-        chart_df,
-
-        x="STATUS",
-
-        y="COUNT",
-
-        template="plotly_dark",
-
-        title="AI SIGNAL ACCURACY"
-
-    )
-
-    st.plotly_chart(
-        fig_acc,
-        use_container_width=True
-    )
-
-    st.dataframe(
-
-        signals_df.sort_values(
-            by="id",
-            ascending=False
-        ),
-
-        use_container_width=True,
-
-        height=400
-
-    )
+        st.metric("SL HIT", sl_hits)
 
 # =========================================================
-# PROFESSIONAL COIN FILTER
+# COIN FILTER
 # =========================================================
 
 st.subheader("🔍 AI COIN FILTER")
@@ -1092,171 +781,10 @@ selected_coin = st.selectbox(
 )
 
 # =========================================================
-# SELECTED COIN ANALYSIS
-# =========================================================
-
-st.subheader("🧠 SELECTED COIN AI ANALYSIS")
-
-kline = get_klines(
-    selected_coin,
-    timeframe
-)
-
-close = kline["close"]
-
-current_price = close.iloc[-1]
-
-rsi = calculate_rsi(close).iloc[-1]
-
-macd, signal_line = calculate_macd(close)
-
-macd_value = macd.iloc[-1]
-
-ema20 = calculate_ema(close,20).iloc[-1]
-
-ema50 = calculate_ema(close,50).iloc[-1]
-
-ema200 = calculate_ema(close,100).iloc[-1]
-
-atr = calculate_atr(kline).iloc[-1]
-
-long_score = 0
-
-if rsi < 35:
-    long_score += 25
-
-if macd_value > 0:
-    long_score += 25
-
-if ema20 > ema50:
-    long_score += 25
-
-if ema50 > ema200:
-    long_score += 25
-
-short_score = 100 - long_score
-
-if long_score >= 80:
-
-    signal = "🚀 STRONG LONG"
-
-    css = "buy"
-
-elif short_score >= 80:
-
-    signal = "🔴 STRONG SHORT"
-
-    css = "sell"
-
-else:
-
-    signal = "⚪ NEUTRAL"
-
-    css = "neutral"
-
-entry = current_price
-
-# LONG VALUES
-
-tp1_long = current_price + (
-    atr * 2
-)
-
-tp2_long = current_price + (
-    atr * 4
-)
-
-tp3_long = current_price + (
-    atr * 6
-)
-
-sl_long = current_price - (
-    atr * 1.5
-)
-
-# SHORT VALUES
-
-tp1_short = current_price - (
-    atr * 2
-)
-
-tp2_short = current_price - (
-    atr * 4
-)
-
-tp3_short = current_price - (
-    atr * 6
-)
-
-sl_short = current_price + (
-    atr * 1.5
-)
-
-st.markdown(f"""
-
-<div class="metric">
-
-<h2>{selected_coin}</h2>
-
-<div class="{css}">
-{signal}
-</div>
-
-<br>
-
-<h2>
-LONG POSSIBILITY :
-{long_score}%
-</h2>
-
-<h2>
-SHORT POSSIBILITY :
-{short_score}%
-</h2>
-
-<hr>
-
-<h3>MARKET PRICE : {current_price:.4f}</h3>
-
-<h3>ENTRY : {entry:.4f}</h3>
-
-<hr>
-
-<h3>LONG TP1 : {tp1_long:.4f}</h3>
-<h3>LONG TP2 : {tp2_long:.4f}</h3>
-<h3>LONG TP3 : {tp3_long:.4f}</h3>
-<h3>LONG SL : {sl_long:.4f}</h3>
-
-<hr>
-
-<h3>SHORT TP1 : {tp1_short:.4f}</h3>
-<h3>SHORT TP2 : {tp2_short:.4f}</h3>
-<h3>SHORT TP3 : {tp3_short:.4f}</h3>
-<h3>SHORT SL : {sl_short:.4f}</h3>
-
-<hr>
-
-<div>RSI : {rsi:.2f}</div>
-<div>MACD : {macd_value:.2f}</div>
-<div>EMA20 : {ema20:.2f}</div>
-<div>EMA50 : {ema50:.2f}</div>
-<div>EMA200 : {ema200:.2f}</div>
-<div>ATR : {atr:.2f}</div>
-
-</div>
-
-""", unsafe_allow_html=True)
-
-# =========================================================
-# TRADINGVIEW LIVE CHART
+# TRADINGVIEW CHART
 # =========================================================
 
 st.subheader("📈 TRADINGVIEW LIVE CHART")
-
-tv_symbol = selected_coin.replace(
-    "USDT",
-    "USDT"
-)
 
 tradingview_html = f"""
 
@@ -1272,31 +800,15 @@ src="https://s3.tradingview.com/tv.js"></script>
 new TradingView.widget({{
 
     "width": "100%",
-
     "height": 700,
-
-    "symbol": "BINANCE:{tv_symbol}",
-
+    "symbol": "BINANCE:{selected_coin}",
     "interval": "{timeframe}",
-
     "timezone": "Etc/UTC",
-
     "theme": "dark",
-
     "style": "1",
-
     "locale": "en",
-
     "toolbar_bg": "#0f172a",
-
     "enable_publishing": false,
-
-    "hide_top_toolbar": false,
-
-    "hide_legend": false,
-
-    "save_image": false,
-
     "container_id": "tradingview_chart"
 
 }});
@@ -1310,132 +822,6 @@ new TradingView.widget({{
 st.components.v1.html(
     tradingview_html,
     height=720
-)
-
-# =========================================================
-# TOP GAINERS / LOSERS
-# =========================================================
-
-g1,g2 = st.columns(2)
-
-with g1:
-
-    st.subheader("🚀 TOP GAINERS")
-
-    gainers = df.sort_values(
-        by="change",
-        ascending=False
-    ).head(15)
-
-    st.dataframe(
-        gainers,
-        use_container_width=True,
-        height=500
-    )
-
-with g2:
-
-    st.subheader("🔴 TOP LOSERS")
-
-    losers = df.sort_values(
-        by="change"
-    ).head(15)
-
-    st.dataframe(
-        losers,
-        use_container_width=True,
-        height=500
-    )
-
-# =========================================================
-# MARKET HEATMAP
-# =========================================================
-
-st.subheader("🌡️ MARKET HEATMAP")
-
-heat = df.head(50)
-
-fig_heat = px.treemap(
-
-    heat,
-
-    path=["symbol"],
-
-    values="volume",
-
-    color="change",
-
-    color_continuous_scale="RdYlGn"
-
-)
-
-fig_heat.update_layout(
-    template="plotly_dark",
-    height=700
-)
-
-st.plotly_chart(
-    fig_heat,
-    use_container_width=True
-)
-
-# =========================================================
-# ADVANCED CANDLE CHART
-# =========================================================
-
-st.subheader("📊 ADVANCED CANDLE CHART")
-
-fig = go.Figure(data=[
-
-    go.Candlestick(
-
-        x=kline.index,
-
-        open=kline["open"],
-
-        high=kline["high"],
-
-        low=kline["low"],
-
-        close=kline["close"]
-
-    )
-
-])
-
-fig.update_layout(
-
-    template="plotly_dark",
-
-    height=700
-
-)
-
-st.plotly_chart(
-    fig,
-    use_container_width=True
-)
-
-# =========================================================
-# SL HIT METRIC
-# =========================================================
-
-signals_df = pd.read_sql(
-    "SELECT * FROM signals",
-    conn
-)
-
-sl_hits = len(
-
-    signals_df[
-        signals_df["status"] == "SL HIT"
-    ]
-
-)
-
-st.metric(
-    "TOTAL SL HITS",
-    sl_hits
 )
 
 # =========================================================
