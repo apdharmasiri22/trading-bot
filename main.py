@@ -1,5 +1,5 @@
 # =========================================================
-# 👑 ALPHA TERMINAL v5.0 STABLE EDITION (SMOOTH REFRESH FIX)
+# 👑 ALPHA TERMINAL v5.1 STABLE (SMOOTH REFRESH FIX)
 # =========================================================
 
 import numpy as np
@@ -13,27 +13,33 @@ import time
 
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from streamlit_autorefresh import st_autorefresh   # ✅ ADDED
 
 # =========================================================
 # PAGE CONFIG
 # =========================================================
 
 st.set_page_config(
-    page_title="ALPHA TERMINAL v5.0",
+    page_title="ALPHA TERMINAL v5.1",
     page_icon="👑",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # =========================================================
-# SMOOTH AUTO REFRESH (FIXED)
+# SMOOTH AUTO REFRESH (NO FLASH / NO EXTRA LIB)
 # =========================================================
 
-st_autorefresh(interval=15000, key="data_refresh")  # ✅ ONLY FIX HERE
+if "last_refresh" not in st.session_state:
+    st.session_state.last_refresh = time.time()
+
+REFRESH_SECONDS = 15
+
+if time.time() - st.session_state.last_refresh > REFRESH_SECONDS:
+    st.session_state.last_refresh = time.time()
+    st.rerun()
 
 # =========================================================
-# UI
+# UI STYLE
 # =========================================================
 
 st.markdown("""
@@ -61,7 +67,7 @@ section[data-testid="stSidebar"]{
 """, unsafe_allow_html=True)
 
 # =========================================================
-# SAFE REQUEST SESSION
+# SAFE SESSION
 # =========================================================
 
 session = requests.Session()
@@ -100,7 +106,7 @@ COIN_SYMBOLS = {
 SCAN_COINS = list(COIN_SYMBOLS.keys())[:15]
 
 # =========================================================
-# DATA FETCH
+# BINANCE DATA
 # =========================================================
 
 @st.cache_data(ttl=20)
@@ -108,22 +114,26 @@ def get_crypto_data(symbol, interval, limit=100):
 
     url = "https://data-api.binance.vision/api/v3/klines"
 
+    params = {
+        "symbol": symbol,
+        "interval": interval,
+        "limit": limit
+    }
+
     try:
-        response = session.get(
-            url,
-            params={"symbol": symbol, "interval": interval, "limit": limit},
-            timeout=15
-        )
+        response = session.get(url, params=params, timeout=10)
 
         if response.status_code != 200:
             return None
 
         data = response.json()
+
         if not isinstance(data, list):
             return None
 
         df = pd.DataFrame(data)
-        df = df.iloc[:, :6]
+
+        df = df.iloc[:, 0:6]
         df.columns = ["Time","Open","High","Low","Close","Volume"]
 
         for col in ["Open","High","Low","Close","Volume"]:
@@ -139,125 +149,106 @@ def get_crypto_data(symbol, interval, limit=100):
 # INDICATORS
 # =========================================================
 
-def ema(s, n):
-    return s.ewm(span=n, adjust=False).mean()
+def ema(series, period):
+    return series.ewm(span=period, adjust=False).mean()
 
-def rsi(s, n=14):
-    d = s.diff()
-    gain = d.clip(lower=0).rolling(n).mean()
-    loss = (-d.clip(upper=0)).rolling(n).mean()
-    rs = gain / (loss + 1e-10)
+def rsi(series, period=14):
+    delta = series.diff()
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+
+    avg_gain = gain.rolling(period).mean()
+    avg_loss = loss.rolling(period).mean()
+
+    rs = avg_gain / (avg_loss + 1e-10)
     return 100 - (100 / (1 + rs))
-
-def macd(s):
-    m = ema(s, 12) - ema(s, 26)
-    sig = ema(m, 9)
-    return m, sig
-
-def atr(df, n=14):
-    h,l,c = df["High"],df["Low"],df["Close"]
-    tr = pd.concat([
-        h-l,
-        abs(h-c.shift()),
-        abs(l-c.shift())
-    ], axis=1).max(axis=1)
-    return tr.rolling(n).mean()
 
 # =========================================================
 # ANALYSIS
 # =========================================================
 
-def analyze(symbol):
+def analyze_coin(symbol, htf, ltf):
 
-    df = get_crypto_data(symbol, "5m", 120)
-    if df is None or len(df) < 60:
+    df = get_crypto_data(symbol, ltf, 120)
+    df_htf = get_crypto_data(symbol, htf, 120)
+
+    if df is None or df_htf is None:
         return None
+
+    if len(df) < 50:
+        return None
+
+    df["EMA50"] = ema(df["Close"], 50)
+    trend = "BULLISH" if df["Close"].iloc[-1] > df["EMA50"].iloc[-1] else "BEARISH"
+
+    df["RSI"] = rsi(df["Close"])
+    rsi_val = df["RSI"].iloc[-1]
 
     price = df["Close"].iloc[-1]
 
-    trend = "BULLISH" if price > ema(df["Close"], 50).iloc[-1] else "BEARISH"
+    score = 0
+    signal = None
 
-    r = rsi(df["Close"]).iloc[-1]
-    m,s = macd(df["Close"])
+    if trend == "BULLISH":
+        score += 30
+    else:
+        score += 30
 
-    a = atr(df).iloc[-1]
-    if np.isnan(a):
-        a = price * 0.003
+    if rsi_val < 45:
+        score += 25
+        signal = "🟩 BUY"
 
-    vol_ok = df["Volume"].iloc[-1] > df["Volume"].rolling(20).mean().iloc[-1]
+    if rsi_val > 55:
+        score += 25
+        signal = "🟥 SELL"
 
-    bull = 0
-    bear = 0
+    if score < 40:
+        return None
 
-    bull += 25 if trend == "BULLISH" else 0
-    bear += 25 if trend == "BEARISH" else 0
-
-    bull += 20 if r < 48 else 0
-    bear += 20 if r > 52 else 0
-
-    bull += 25 if m.iloc[-1] > s.iloc[-1] else 0
-    bear += 25 if m.iloc[-1] <= s.iloc[-1] else 0
-
-    bull += 10 if vol_ok else 0
-    bear += 10 if vol_ok else 0
-
-    if bull >= 40 and trend == "BULLISH":
-        return {
-            "Coin": symbol,
-            "Signal": "BUY",
-            "Price": price,
-            "SL": price - a*2,
-            "TP": price + a*3,
-            "Score": bull
-        }
-
-    if bear >= 40 and trend == "BEARISH":
-        return {
-            "Coin": symbol,
-            "Signal": "SELL",
-            "Price": price,
-            "SL": price + a*2,
-            "TP": price - a*3,
-            "Score": bear
-        }
-
-    return None
+    return {
+        "Coin": symbol,
+        "Signal": signal or "WAIT",
+        "Score": score,
+        "Price": price
+    }
 
 # =========================================================
-# UI HEADER
+# UI
 # =========================================================
 
-st.title("👑 ALPHA TERMINAL v5.0 (SMOOTH MODE)")
+st.title("👑 ALPHA TERMINAL v5.1")
+st.caption("Stable Smooth Refresh Edition")
 
-# =========================================================
-# SCANNER
-# =========================================================
+btc = get_crypto_data("BTCUSDT","5m",5)
 
-st.subheader("MARKET SCANNER")
+if btc is not None:
+    st.success("🟢 Live Feed OK")
+else:
+    st.error("🔴 API Issue")
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
-    results = list(ex.map(analyze, SCAN_COINS))
+st.subheader("📡 MARKET SCANNER")
 
-signals = [r for r in results if r]
+signals = []
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=3) as ex:
+    results = ex.map(lambda c: analyze_coin(c,"1h","5m"), SCAN_COINS)
+
+    for r in results:
+        if r:
+            signals.append(r)
 
 if signals:
     st.dataframe(pd.DataFrame(signals), use_container_width=True)
 else:
-    st.warning("No valid setup currently")
+    st.warning("⚠️ No valid setup currently")
 
-# =========================================================
-# STATUS
-# =========================================================
+st.subheader("🎯 BTC ANALYSIS")
 
-test = get_crypto_data("BTCUSDT","5m",10)
+btc_signal = analyze_coin("BTCUSDT","1h","5m")
 
-if test is not None:
-    st.success("LIVE CONNECTED")
+if btc_signal:
+    st.write(btc_signal)
 else:
-    st.error("API ERROR")
+    st.info("No setup")
 
-# =========================================================
-# FOOTER
-# =========================================================
-
-st.caption(str(datetime.datetime.utcnow()))
+st.caption(f"Last Update: {datetime.datetime.utcnow()} UTC")
