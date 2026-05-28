@@ -1,21 +1,32 @@
-import streamlit as st
-import pandas as pd
+# ================================
+# 👑 ALPHA TERMINAL v4.5 STABLE
+# ================================
+
 import numpy as np
+import pandas as pd
 import requests
+import streamlit as st
+import concurrent.futures
+import streamlit.components.v1 as components
 import datetime
+import time
+
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # =========================================================
 # PAGE CONFIG
 # =========================================================
 
 st.set_page_config(
-    page_title="ALPHA TERMINAL",
+    page_title="ALPHA TRADING TERMINAL v4.5",
     page_icon="👑",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # =========================================================
-# UI
+# PREMIUM UI
 # =========================================================
 
 st.markdown("""
@@ -26,27 +37,66 @@ st.markdown("""
     color:white;
 }
 
-h1,h2,h3{
+h1,h2,h3,h4{
     color:white !important;
 }
 
 [data-testid="stMetricValue"]{
     color:#ffb703;
+    font-size:28px;
+}
+
+section[data-testid="stSidebar"]{
+    background-color:#111827;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
+# SAFE SESSION
+# =========================================================
+
+session = requests.Session()
+
+retries = Retry(
+    total=5,
+    backoff_factor=1,
+    status_forcelist=[429,500,502,503,504]
+)
+
+session.mount(
+    "https://",
+    HTTPAdapter(max_retries=retries)
+)
+
+# =========================================================
 # COINS
 # =========================================================
 
 COIN_SYMBOLS = {
-    "BTCUSDT": "₿ BTCUSDT",
-    "ETHUSDT": "♦️ ETHUSDT",
-    "SOLUSDT": "☀️ SOLUSDT",
-    "BNBUSDT": "🔶 BNBUSDT",
-    "XRPUSDT": "💧 XRPUSDT"
+
+    "BTCUSDT":"₿ BTCUSDT",
+    "ETHUSDT":"♦️ ETHUSDT",
+    "SOLUSDT":"☀️ SOLUSDT",
+    "BNBUSDT":"🔶 BNBUSDT",
+    "XRPUSDT":"💧 XRPUSDT",
+    "ADAUSDT":"₳ ADAUSDT",
+    "DOGEUSDT":"🐕 DOGEUSDT",
+    "AVAXUSDT":"🔺 AVAXUSDT",
+    "DOTUSDT":"● DOTUSDT",
+    "LINKUSDT":"🔗 LINKUSDT",
+    "MATICUSDT":"💜 MATICUSDT",
+    "LTCUSDT":"Ł LTCUSDT",
+    "UNIUSDT":"🦄 UNIUSDT",
+    "ATOMUSDT":"⚛️ ATOMUSDT",
+    "TRXUSDT":"🔴 TRXUSDT",
+    "APTUSDT":"🌀 APTUSDT",
+    "ARBUSDT":"🔵 ARBUSDT",
+    "OPUSDT":"🔴 OPUSDT",
+    "SUIUSDT":"💧 SUIUSDT",
+    "INJUSDT":"💉 INJUSDT"
+
 }
 
 SCAN_COINS = list(COIN_SYMBOLS.keys())
@@ -55,7 +105,7 @@ SCAN_COINS = list(COIN_SYMBOLS.keys())
 # API
 # =========================================================
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=300)
 def get_crypto_data(symbol, interval, limit=100):
 
     url = "https://data-api.binance.vision/api/v3/klines"
@@ -66,17 +116,15 @@ def get_crypto_data(symbol, interval, limit=100):
         "limit": limit
     }
 
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-
     try:
 
-        response = requests.get(
+        response = session.get(
             url,
             params=params,
-            headers=headers,
-            timeout=10
+            timeout=20,
+            headers={
+                "User-Agent":"Mozilla/5.0"
+            }
         )
 
         if response.status_code != 200:
@@ -104,7 +152,7 @@ def get_crypto_data(symbol, interval, limit=100):
 
         df = pd.DataFrame(data, columns=columns)
 
-        for col in ["Open", "High", "Low", "Close", "Volume"]:
+        for col in ["Open","High","Low","Close","Volume"]:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
         df.dropna(inplace=True)
@@ -133,9 +181,7 @@ def calculate_rsi(series, period=14):
 
     rs = avg_gain / (avg_loss + 1e-10)
 
-    rsi = 100 - (100 / (1 + rs))
-
-    return rsi
+    return 100 - (100 / (1 + rs))
 
 def calculate_macd(series):
 
@@ -151,9 +197,9 @@ def calculate_atr(df, period=14):
 
     high_low = df["High"] - df["Low"]
 
-    high_close = np.abs(df["High"] - df["Close"].shift())
+    high_close = abs(df["High"] - df["Close"].shift())
 
-    low_close = np.abs(df["Low"] - df["Close"].shift())
+    low_close = abs(df["Low"] - df["Close"].shift())
 
     ranges = pd.concat(
         [high_low, high_close, low_close],
@@ -215,14 +261,22 @@ def analyze_coin(symbol, htf, ltf):
     df_htf = get_crypto_data(symbol, htf, 120)
     df_ltf = get_crypto_data(symbol, ltf, 120)
 
-    if df_htf is None or df_ltf is None:
+    if (
+        df_htf is None or
+        df_ltf is None or
+        df_htf.empty or
+        df_ltf.empty
+    ):
         return None
 
     if len(df_htf) < 50 or len(df_ltf) < 50:
         return None
 
-    # EMA
-    df_htf["EMA50"] = calculate_ema(df_htf["Close"], 50)
+    # EMA TREND
+    df_htf["EMA50"] = calculate_ema(
+        df_htf["Close"],
+        50
+    )
 
     trend = (
         "BULLISH"
@@ -232,15 +286,16 @@ def analyze_coin(symbol, htf, ltf):
     )
 
     # RSI
-    df_ltf["RSI"] = calculate_rsi(df_ltf["Close"])
+    df_ltf["RSI"] = calculate_rsi(
+        df_ltf["Close"]
+    )
 
     rsi = df_ltf["RSI"].iloc[-1]
 
     # MACD
-    macd, signal = calculate_macd(df_ltf["Close"])
-
-    df_ltf["MACD"] = macd
-    df_ltf["SIGNAL"] = signal
+    macd, signal = calculate_macd(
+        df_ltf["Close"]
+    )
 
     # ATR
     df_ltf["ATR"] = calculate_atr(df_ltf)
@@ -252,7 +307,10 @@ def analyze_coin(symbol, htf, ltf):
 
     adx = df_ltf["ADX"].iloc[-1]
 
-    # Volume
+    if np.isnan(adx):
+        adx = 0
+
+    # VOLUME FILTER
     avg_volume = df_ltf["Volume"].rolling(20).mean()
 
     volume_ok = (
@@ -263,7 +321,7 @@ def analyze_coin(symbol, htf, ltf):
     bullish = 0
     bearish = 0
 
-    # Trend
+    # TREND
     if trend == "BULLISH":
         bullish += 20
     else:
@@ -287,13 +345,10 @@ def analyze_coin(symbol, htf, ltf):
         bullish += 10
         bearish += 10
 
-    # Volume
+    # VOLUME
     if volume_ok:
         bullish += 10
         bearish += 10
-
-    bull_score = bullish
-    bear_score = bearish
 
     current_price = df_ltf["Close"].iloc[-1]
 
@@ -301,12 +356,12 @@ def analyze_coin(symbol, htf, ltf):
         atr = current_price * 0.003
 
     # BUY
-    if bull_score >= 60 and trend == "BULLISH":
+    if bullish >= 60 and trend == "BULLISH":
 
         return {
             "Coin": symbol,
-            "Signal": "BUY",
-            "Score": bull_score,
+            "Signal": "🟩 BUY",
+            "Score": bullish,
             "Price": current_price,
             "SL": current_price - (atr * 2),
             "TP": current_price + (atr * 4),
@@ -314,12 +369,12 @@ def analyze_coin(symbol, htf, ltf):
         }
 
     # SELL
-    if bear_score >= 60 and trend == "BEARISH":
+    if bearish >= 60 and trend == "BEARISH":
 
         return {
             "Coin": symbol,
-            "Signal": "SELL",
-            "Score": bear_score,
+            "Signal": "🟥 SELL",
+            "Score": bearish,
             "Price": current_price,
             "SL": current_price + (atr * 2),
             "TP": current_price - (atr * 4),
@@ -385,37 +440,48 @@ with st.sidebar:
 # HEADER
 # =========================================================
 
-st.title("👑 ALPHA QUANT TERMINAL")
+st.title("👑 ALPHA TERMINAL v4.5")
 
 st.caption(
-    f"Mode: {strategy} | Binance Live Data"
+    f"Mode: {strategy} | Binance Live Feed"
 )
 
 # =========================================================
-# SCANNER
+# MARKET SCANNER
 # =========================================================
 
 st.subheader("📡 LIVE MARKET SCANNER")
 
 signals = []
 
-for coin in SCAN_COINS:
+st.cache_data.clear()
 
-    result = analyze_coin(
-        coin,
-        htf,
-        ltf
+with concurrent.futures.ThreadPoolExecutor(
+    max_workers=5
+) as executor:
+
+    results = executor.map(
+        lambda coin: analyze_coin(
+            coin,
+            htf,
+            ltf
+        ),
+        SCAN_COINS
     )
 
-    if result:
-        signals.append(result)
+    for result in results:
+
+        if result:
+            signals.append(result)
+
+        time.sleep(0.25)
 
 if signals:
 
-    signals_df = pd.DataFrame(signals)
+    df = pd.DataFrame(signals)
 
     st.dataframe(
-        signals_df,
+        df,
         use_container_width=True
     )
 
@@ -429,7 +495,9 @@ else:
 # SINGLE COIN ANALYSIS
 # =========================================================
 
-st.subheader(f"🎯 {selected_coin} ANALYSIS")
+st.subheader(
+    f"🎯 {selected_coin} ANALYSIS"
+)
 
 analysis = analyze_coin(
     selected_coin,
@@ -469,22 +537,27 @@ Take Profit: {analysis["TP"]:.4f}
 """
     )
 
-    # Risk Calculation
+    # RISK
     risk_cash = balance * (
         risk_percent / 100
     )
 
     sl_distance = abs(
-        analysis["Price"] - analysis["SL"]
+        analysis["Price"] -
+        analysis["SL"]
     )
 
     if sl_distance > 0:
 
         position_size = risk_cash / (
-            sl_distance / analysis["Price"]
+            sl_distance /
+            analysis["Price"]
         )
 
-        margin = position_size / leverage
+        margin = (
+            position_size /
+            leverage
+        )
 
         st.warning(
             f"""
@@ -501,6 +574,53 @@ else:
     st.info(
         "No valid setup currently."
     )
+
+# =========================================================
+# TRADINGVIEW
+# =========================================================
+
+st.subheader("📈 LIVE CHART")
+
+tv_interval = (
+    "5"
+    if ltf == "5m"
+    else "15"
+    if ltf == "15m"
+    else "60"
+)
+
+tv_html = f"""
+
+<div id="tv_chart"></div>
+
+<script
+type="text/javascript"
+src="https://s3.tradingview.com/tv.js">
+</script>
+
+<script type="text/javascript">
+
+new TradingView.widget({{
+
+    "width":"100%",
+    "height":500,
+    "symbol":"BINANCE:{selected_coin}",
+    "interval":"{tv_interval}",
+    "timezone":"Etc/UTC",
+    "theme":"dark",
+    "style":"1",
+    "locale":"en",
+    "toolbar_bg":"#111827",
+    "enable_publishing":false,
+    "allow_symbol_change":true,
+    "container_id":"tv_chart"
+
+}});
+
+</script>
+"""
+
+components.html(tv_html, height=520)
 
 # =========================================================
 # FOOTER
