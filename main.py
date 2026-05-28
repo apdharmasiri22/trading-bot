@@ -259,7 +259,6 @@ def calculate_atr(df, period=14):
 # MARKET DATA
 # =========================================================
 
-```python
 @st.cache_data(ttl=60)
 
 def get_market():
