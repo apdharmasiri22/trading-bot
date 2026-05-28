@@ -40,41 +40,38 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # =====================================================================
-# 🛠️ DATA MODULES (HIGH-VOLUME LIVE COINS FEED)
+# 🛠️ DIRECT COIN LIST DATA MODULE (HARDCODED FOR 100% RELIABILITY)
 # =====================================================================
-@st.cache_data(ttl=300)  # විනාඩි 5කට සැරයක් Top Coins ටික අප්ඩේට් කරනවා
-def fetch_top_volume_usdt_pairs(limit=100):
-    url = "https://min-api.cryptocompare.com/data/top/mktcapfull"
-    headers = {"Authorization": f"Apikey {CRYPTOCOMPARE_API_KEY}"}
-    params = {"limit": limit, "tsym": "USDT"}
-    
-    try:
-        response = requests.get(url, params=params, headers=headers, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            raw_coins = data.get("Data", [])
-            
-            pairs = {}
-            for coin_info in raw_coins:
-                base_info = coin_info.get("CoinInfo", {})
-                symbol = base_info.get("Name")
-                
-                if symbol:
-                    if symbol not in ["USDT", "USDC", "FDUSD", "TUSD", "DAI", "BUSD"]:
-                        sym = f"{symbol}USDT"
-                        pairs[sym] = f"🪙 {sym}"
-            if pairs:
-                return pairs
-    except:
-        pass
-    
-    return {
-        "BTCUSDT": "₿ BTCUSDT", "ETHUSDT": "♦️ ETHUSDT", "SOLUSDT": "☀️ SOLUSDT", "BNBUSDT": "🔶 BNBUSDT",
-        "XRPUSDT": "💧 XRPUSDT", "ADAUSDT": "₳ ADAUSDT", "DOGEUSDT": "🐕 DOGEUSDT", "SHIBUSDT": "🦊 SHIBUSDT"
-    }
+# API එකෙන් එනකන් බලන් ඉන්නේ නැතුව ෂුවර්ම කොයින් ටික මෙතනටම දැම්මා මචං
+COIN_SYMBOLS = {
+    "BTCUSDT": "₿ BTCUSDT", "ETHUSDT": "♦️ ETHUSDT", "SOLUSDT": "☀️ SOLUSDT", "BNBUSDT": "🔶 BNBUSDT",
+    "XRPUSDT": "💧 XRPUSDT", "ADAUSDT": "₳ ADAUSDT", "DOGEUSDT": "🐕 DOGEUSDT", "SHIBUSDT": "🦊 SHIBUSDT",
+    "AVAXUSDT": "🔺 AVAXUSDT", "DOTUSDT": "⚫ DOTUSDT", "LINKUSDT": "🔗 LINKUSDT", "MATICUSDT": "💜 MATICUSDT",
+    "NEARUSDT": "🌌 NEARUSDT", "UNIUSDT": "🦄 UNIUSDT", "LTCUSDT": "🪙 LTCUSDT", "APTUSDT": "🌀 APTUSDT",
+    "SUIUSDT": "💧 SUIUSDT", "OPUSDT": "🔴 OPUSDT", "ARBUSDT": "🔵 ARBUSDT", "ATOMUSDT": "⚛️ ATOMUSDT",
+    "STXUSDT": "🪙 STXUSDT", "FILUSDT": "📂 FILUSDT", "LDOUSDT": "💧 LDOUSDT", "ICPUSDT": "♾️ ICPUSDT",
+    "VETUSDT": "📐 VETUSDT", "RNDRUSDT": "🎨 RNDRUSDT", "MKRUSDT": "Ⓜ️ MKRUSDT", "INJUSDT": "💉 INJUSDT",
+    "RUNEUSDT": "⚡ RUNEUSDT", "GRTUSDT": "📊 GRTUSDT", "SEIUSDT": "🌊 SEIUSDT", "THETAUSDT": "📹 THETAUSDT",
+    "IMXUSDT": "🎮 IMXUSDT", "FETUSDT": "🧠 FETUSDT", "AAVEUSDT": "👻 AAVEUSDT", "FLOWUSDT": "🌊 FLOWUSDT",
+    "FTMUSDT": "👻 FTMUSDT", "GALAUSDT": "🎮 GALAUSDT", "EGLDUSDT": "⚡ EGLDUSDT", "MINAUSDT": "📐 MINAUSDT",
+    "QNTUSDT": "🪙 QNTUSDT", "AXSUSDT": "👾 AXSUSDT", "SANDUSDT": "⏳ SANDUSDT", "MANAUSDT": "🏛️ MANAUSDT",
+    "CHZUSDT": "⚽ CHZUSDT", "EOSUSDT": "🪙 EOSUSDT", "IOTAUSDT": "🤖 IOTAUSDT", "NEOUSDT": "💚 NEOUSDT",
+    "CRVUSDT": "🪙 CRVUSDT", "ALGOUSDT": "₳ ALGOUSDT", "XLMUSDT": "🚀 XLMUSDT", "TRXUSDT": "🔴 TRXUSDT",
+    "WIFUSDT": "👒 WIFUSDT", "PEPEUSDT": "🐸 PEPEUSDT", "FLOKIUSDT": "🐕 FLOKIUSDT", "BONKUSDT": "🐕 BONKUSDT",
+    "TIAUSDT": "🌌 TIAUSDT", "DYDXUSDT": "📊 DYDXUSDT", "ENSUSDT": "🌐 ENSUSDT", "WOOUSDT": "🪙 WOOUSDT",
+    "GMTUSDT": "👟 GMTUSDT", "JUPUSDT": "🪐 JUPUSDT", "PYTHUSDT": "🔮 PYTHUSDT", "ZETAUSDT": "🪙 ZETAUSDT",
+    "MANTAUSDT": "🪙 MANTAUSDT", "STRKUSDT": "🪙 STRKUSDT", "AXLUSDT": "🪙 AXLUSDT", "METISUSDT": "🪙 METISUSDT",
+    "PENDLEUSDT": "🪙 PENDLEUSDT", "AGIXUSDT": "🧠 AGIXUSDT", "OCEANUSDT": "🌊 OCEANUSDT", "XMRUSDT": "🔒 XMRUSDT",
+    "ZECUSDT": "🔒 ZECUSDT", "DASHUSDT": "🪙 DASHUSDT", "WAVESUSDT": "🌊 WAVESUSDT", "1INCHUSDT": "🦄 1INCHUSDT",
+    "ANKRUSDT": "⚓ ANKRUSDT", "BATUSDT": "🦁 BATUSDT", "CELOUSDT": "🪙 CELOUSDT", "COMPUSDT": "🪙 COMPUSDT",
+    "ENJUSDT": "🎮 ENJUSDT", "KAVAUSDT": "🪙 KAVAUSDT", "KSMUSDT": "🐦 KSMUSDT", "LRCUSDT": "🪙 LRCUSDT",
+    "ONEUSDT": "🪙 ONEUSDT", "QTUMUSDT": "🪙 QTUMUSDT", "RVNUSDT": "🦅 RVNUSDT", "SNXUSDT": "🪙 SNXUSDT",
+    "SUSHIUSDT": "🍣 SUSHIUSDT", "YFIUSDT": "🪙 YFIUSDT", "ZILUSDT": "🪙 ZILUSDT", "JTOUSDT": "🪙 JTOUSDT",
+    "ORDIUSDT": "🪙 ORDIUSDT", "SATSUSDT": "🪙 SATSUSDT", "MEMEUSDT": "🪙 MEMEUSDT", "BLURUSDT": "🪙 BLURUSDT",
+    "ILVUSDT": "🪙 ILVUSDT", "SUPERUSDT": "🪙 SUPERUSDT", "RAREUSDT": "🪙 RAREUSDT", "AUDIOUSDT": "🎵 AUDIOUSDT",
+    "HBARUSDT": "🪙 HBARUSDT", "EGLDUSDT": "⚡ EGLDUSDT", "FLOWUSDT": "🌊 FLOWUSDT", "ICPUSDT": "♾️ ICPUSDT"
+}
 
-# ලයිව් කොයින් ලිස්ට් එක ඩයිනමික් ලෙස ලෝඩ් කිරීම
-COIN_SYMBOLS = fetch_top_volume_usdt_pairs(limit=120)
 SCAN_COINS = list(COIN_SYMBOLS.keys())
 
 def get_all_binance_symbols_with_symbols():
@@ -277,7 +274,7 @@ with st.sidebar:
 # 👑 MAIN INTERFACE
 # =====================================================================
 st.markdown("<h1 style='text-align: center; color: #ffb703;'>👑 ALPHA AUTOMATED QUANT TERMINAL v4.5</h1>", unsafe_allow_html=True)
-st.markdown(f"<p style='text-align: center; color: #8b949e;'>Engine Mode: <b>{strategy}</b> | Live CryptoCompare Paid Volume Stream</p>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align: center; color: #8b949e;'>Engine Mode: <b>{strategy}</b> | Core Hardcoded Binance Coin Stream</p>", unsafe_allow_html=True)
 st.markdown("<hr style='border: 1px solid rgba(255,255,255,0.1);'/>", unsafe_allow_html=True)
 
 if is_news_block_active():
