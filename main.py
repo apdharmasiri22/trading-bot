@@ -1,5 +1,5 @@
 # =========================================================
-# QUANTUM X TERMINAL - ELITE AI DASHBOARD
+# QUANTUM X TERMINAL - ELITE AI TRADING DASHBOARD
 # =========================================================
 
 import streamlit as st
@@ -33,7 +33,7 @@ html, body, [class*="css"] {
     linear-gradient(
         135deg,
         #020617 0%,
-        #0f172a 35%,
+        #0f172a 40%,
         #111827 100%
     );
 
@@ -56,7 +56,7 @@ html, body, [class*="css"] {
 
     border:1px solid rgba(255,255,255,0.08);
 
-    backdrop-filter:blur(12px);
+    backdrop-filter:blur(14px);
 
     border-radius:22px;
 
@@ -267,7 +267,13 @@ def get_market():
                         )
                     )
 
-                    if not symbol.endswith("USDT"):
+                    if (
+                        not symbol.endswith("USDT")
+                        or "UPUSDT" in symbol
+                        or "DOWNUSDT" in symbol
+                        or "BULLUSDT" in symbol
+                        or "BEARUSDT" in symbol
+                    ):
                         continue
 
                     rows.append({
@@ -304,21 +310,29 @@ def get_market():
 
             df = pd.DataFrame(rows)
 
+            # HIGH VOLUME COINS ONLY
+
             df = df[
-                df["volume"] > 1000000
+                df["volume"] > 10000000
             ]
+
+            # SORT BY BIGGEST VOLUME
 
             df = df.sort_values(
                 by="volume",
                 ascending=False
             )
 
-            df = df.head(300)
+            # TOP MARKET COINS
+
+            df = df.head(75)
 
             return df
 
     except:
         pass
+
+    # FALLBACK
 
     fallback = pd.DataFrame({
 
@@ -359,7 +373,7 @@ def get_market():
     return fallback
 
 # =========================================================
-# KLINES
+# KLINE DATA
 # =========================================================
 
 @st.cache_data(ttl=60)
@@ -436,13 +450,13 @@ with c1:
     st.metric("BTC PRICE", f"${btc_price:,.2f}")
 
 with c2:
-    st.metric("TOTAL COINS", len(df))
+    st.metric("ACTIVE COINS", len(df))
 
 with c3:
-    st.metric("GREEN COINS", len(df[df["change"] > 0]))
+    st.metric("GREEN MARKET", len(df[df["change"] > 0]))
 
 with c4:
-    st.metric("RED COINS", len(df[df["change"] < 0]))
+    st.metric("RED MARKET", len(df[df["change"] < 0]))
 
 # =========================================================
 # MAIN LAYOUT
@@ -451,7 +465,7 @@ with c4:
 left,center,right = st.columns([1,1.6,1])
 
 # =========================================================
-# GAINERS
+# TOP GAINERS
 # =========================================================
 
 with left:
@@ -461,16 +475,16 @@ with left:
     gainers = df.sort_values(
         by="change",
         ascending=False
-    ).head(100)
+    ).head(50)
 
     st.dataframe(
         gainers,
         use_container_width=True,
-        height=650
+        height=700
     )
 
 # =========================================================
-# ANALYZER
+# AI ANALYZER
 # =========================================================
 
 with center:
@@ -524,7 +538,7 @@ with center:
     atr = calculate_atr(kline).iloc[-1]
 
     # =====================================================
-    # SIGNAL ENGINE
+    # AI SIGNAL ENGINE
     # =====================================================
 
     long_score = 0
@@ -568,7 +582,7 @@ with center:
         css = "sell"
 
     # =====================================================
-    # TRADE LEVELS
+    # ENTRY / TP / SL
     # =====================================================
 
     entry = current_price
@@ -582,10 +596,6 @@ with center:
     tp3 = current_price + (atr * 6)
 
     leverage = "10X" if long_score >= 80 else "5X"
-
-    # =====================================================
-    # WHALE
-    # =====================================================
 
     whale = "🐋 WHALE ACTIVE"
 
@@ -648,7 +658,7 @@ with center:
     """, unsafe_allow_html=True)
 
 # =========================================================
-# LOSERS
+# TOP LOSERS
 # =========================================================
 
 with right:
@@ -657,16 +667,16 @@ with right:
 
     losers = df.sort_values(
         by="change"
-    ).head(100)
+    ).head(50)
 
     st.dataframe(
         losers,
         use_container_width=True,
-        height=650
+        height=700
     )
 
 # =========================================================
-# CHART
+# CANDLE CHART
 # =========================================================
 
 st.subheader("📊 ADVANCED CANDLE CHART")
@@ -700,12 +710,12 @@ st.plotly_chart(
 )
 
 # =========================================================
-# HEATMAP
+# MARKET HEATMAP
 # =========================================================
 
 st.subheader("🌡️ MARKET HEATMAP")
 
-heat = df.head(100)
+heat = df.head(75)
 
 fig2 = px.treemap(
 
@@ -732,7 +742,7 @@ st.plotly_chart(
 )
 
 # =========================================================
-# SEARCH
+# SEARCH MARKET
 # =========================================================
 
 st.subheader("🔍 SEARCH MARKET")
