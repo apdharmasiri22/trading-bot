@@ -1,5 +1,5 @@
 # =========================================================
-# QUANTUM X TERMINAL - FULL AI SYSTEM
+# QUANTUM X TERMINAL - ELITE AI DASHBOARD
 # =========================================================
 
 import streamlit as st
@@ -15,11 +15,12 @@ import plotly.express as px
 
 st.set_page_config(
     page_title="QUANTUM X TERMINAL",
+    page_icon="⚡",
     layout="wide"
 )
 
 # =========================================================
-# STYLE
+# CUSTOM CSS
 # =========================================================
 
 st.markdown("""
@@ -32,7 +33,7 @@ html, body, [class*="css"] {
     linear-gradient(
         135deg,
         #020617 0%,
-        #0f172a 40%,
+        #0f172a 35%,
         #111827 100%
     );
 
@@ -42,39 +43,47 @@ html, body, [class*="css"] {
 
 .block-container{
     padding-top:1rem;
+    padding-bottom:2rem;
+}
+
+[data-testid="stSidebar"]{
+    background:#020617;
 }
 
 .card{
 
-    background:rgba(15,23,42,0.90);
+    background:rgba(15,23,42,0.88);
+
+    border:1px solid rgba(255,255,255,0.08);
 
     backdrop-filter:blur(12px);
 
-    border:1px solid rgba(255,255,255,0.08);
-
     border-radius:22px;
 
-    padding:20px;
+    padding:22px;
 
     margin-bottom:20px;
+
+    box-shadow:
+    0 0 25px rgba(0,0,0,0.35);
 }
 
-.metric{
+.metric-card{
 
-    background:rgba(17,24,39,0.88);
-
-    border:1px solid rgba(255,255,255,0.08);
+    background:rgba(17,24,39,0.92);
 
     border-radius:18px;
 
     padding:16px;
 
-    margin-bottom:14px;
+    border:1px solid rgba(255,255,255,0.07);
+
+    text-align:center;
 }
 
 .title{
 
-    font-size:46px;
+    font-size:48px;
 
     font-weight:900;
 
@@ -96,7 +105,7 @@ html, body, [class*="css"] {
     border-radius:12px;
     text-align:center;
     font-weight:bold;
-    font-size:20px;
+    font-size:22px;
 }
 
 .sell{
@@ -105,7 +114,7 @@ html, body, [class*="css"] {
     border-radius:12px;
     text-align:center;
     font-weight:bold;
-    font-size:20px;
+    font-size:22px;
 }
 
 .neutral{
@@ -114,7 +123,12 @@ html, body, [class*="css"] {
     border-radius:12px;
     text-align:center;
     font-weight:bold;
-    font-size:20px;
+    font-size:22px;
+}
+
+.small-text{
+    color:#94a3b8;
+    font-size:14px;
 }
 
 </style>
@@ -133,8 +147,8 @@ st.markdown("""
 ⚡ QUANTUM X TERMINAL
 </div>
 
-<div>
-Institutional AI Smart Money Analyzer
+<div class="small-text">
+Institutional AI Smart Money Dashboard
 </div>
 
 </div>
@@ -163,14 +177,12 @@ def calculate_rsi(data, period=14):
 
     return rsi
 
-
 def calculate_ema(data, period):
 
     return data.ewm(
         span=period,
         adjust=False
     ).mean()
-
 
 def calculate_macd(data):
 
@@ -183,7 +195,6 @@ def calculate_macd(data):
     signal = calculate_ema(macd, 9)
 
     return macd, signal
-
 
 def calculate_atr(df, period=14):
 
@@ -221,9 +232,13 @@ def calculate_atr(df, period=14):
 # MARKET DATA
 # =========================================================
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=60)
 
 def get_market():
+
+    headers = {
+        "User-Agent":"Mozilla/5.0"
+    }
 
     try:
 
@@ -231,6 +246,7 @@ def get_market():
 
         response = requests.get(
             url,
+            headers=headers,
             timeout=15
         )
 
@@ -288,20 +304,14 @@ def get_market():
 
             df = pd.DataFrame(rows)
 
-            # REMOVE DEAD COINS
-
             df = df[
-                (df["volume"] > 1000000)
+                df["volume"] > 1000000
             ]
-
-            # SORT
 
             df = df.sort_values(
                 by="volume",
                 ascending=False
             )
-
-            # TAKE MANY COINS
 
             df = df.head(300)
 
@@ -352,7 +362,7 @@ def get_market():
 # KLINES
 # =========================================================
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=60)
 
 def get_klines(symbol, interval="15m"):
 
@@ -438,7 +448,7 @@ with c4:
 # MAIN LAYOUT
 # =========================================================
 
-left,center,right = st.columns([1,1.5,1])
+left,center,right = st.columns([1,1.6,1])
 
 # =========================================================
 # GAINERS
@@ -460,27 +470,34 @@ with left:
     )
 
 # =========================================================
-# AI ANALYZER
+# ANALYZER
 # =========================================================
 
 with center:
 
-    st.subheader("🧠 QUANTUM X PRO AI ANALYZER")
+    st.subheader("🧠 AI SMART MONEY ANALYZER")
 
-    symbol = st.selectbox(
-        "🪙 SELECT COIN",
-        df["symbol"].tolist()
+    trade_type = st.selectbox(
+        "🎯 Trading Type",
+        [
+            "SCALPING",
+            "DAY TRADING",
+            "SWING"
+        ]
     )
 
-    timeframe = st.selectbox(
-        "⏱️ TIMEFRAME",
-        [
-            "5m",
-            "15m",
-            "1h",
-            "4h",
-            "1d"
-        ]
+    if trade_type == "SCALPING":
+        timeframe = "5m"
+
+    elif trade_type == "DAY TRADING":
+        timeframe = "1h"
+
+    else:
+        timeframe = "4h"
+
+    symbol = st.selectbox(
+        "🪙 Select Coin",
+        df["symbol"].tolist()
     )
 
     kline = get_klines(
@@ -506,6 +523,10 @@ with center:
 
     atr = calculate_atr(kline).iloc[-1]
 
+    # =====================================================
+    # SIGNAL ENGINE
+    # =====================================================
+
     long_score = 0
 
     if rsi < 35:
@@ -521,6 +542,10 @@ with center:
         long_score += 25
 
     short_score = 100 - long_score
+
+    # =====================================================
+    # SIGNAL
+    # =====================================================
 
     if long_score >= 80:
 
@@ -542,6 +567,10 @@ with center:
         signal = "🔴 SHORT"
         css = "sell"
 
+    # =====================================================
+    # TRADE LEVELS
+    # =====================================================
+
     entry = current_price
 
     sl = current_price - (atr * 1.5)
@@ -552,9 +581,21 @@ with center:
 
     tp3 = current_price + (atr * 6)
 
+    leverage = "10X" if long_score >= 80 else "5X"
+
+    # =====================================================
+    # WHALE
+    # =====================================================
+
+    whale = "🐋 WHALE ACTIVE"
+
+    # =====================================================
+    # DISPLAY
+    # =====================================================
+
     st.markdown(f"""
 
-    <div class="metric">
+    <div class="card">
 
     <h1>{symbol}</h1>
 
@@ -565,13 +606,11 @@ with center:
     <br>
 
     <h2>
-    🟢 LONG POSSIBILITY :
-    {long_score}%
+    🟢 LONG POSSIBILITY : {long_score}%
     </h2>
 
     <h2>
-    🔴 SHORT POSSIBILITY :
-    {short_score}%
+    🔴 SHORT POSSIBILITY : {short_score}%
     </h2>
 
     <hr>
@@ -588,6 +627,8 @@ with center:
 
     <div>🌊 ATR : {atr:.2f}</div>
 
+    <div>🐋 WHALE STATUS : {whale}</div>
+
     <hr>
 
     <h3>🎯 ENTRY : {entry:.2f}</h3>
@@ -599,6 +640,8 @@ with center:
     <h3>💰 TP2 : {tp2:.2f}</h3>
 
     <h3>💰 TP3 : {tp3:.2f}</h3>
+
+    <h3>⚡ LEVERAGE : {leverage}</h3>
 
     </div>
 
@@ -623,7 +666,7 @@ with right:
     )
 
 # =========================================================
-# CANDLE CHART
+# CHART
 # =========================================================
 
 st.subheader("📊 ADVANCED CANDLE CHART")
@@ -717,5 +760,5 @@ st.dataframe(
 # =========================================================
 
 st.success(
-    "SYSTEM ONLINE • AI ACTIVE • SMART MONEY ACTIVE"
+    "SYSTEM ONLINE • AI ACTIVE • SMART MONEY ACTIVE • WHALE DETECTION ENABLED"
 )
