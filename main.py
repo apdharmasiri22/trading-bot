@@ -1,6 +1,6 @@
 # =========================================================
-# 👑 ALPHA TERMINAL v8.0 ULTRA STABLE EDITION
-# No Freeze | No Rate Limit Crash | Fast Scan | Safe Streamlit
+# 👑 ALPHA TERMINAL v9.0 PRO ENGINE
+# No Freeze | Always Active | Smart Signal System
 # =========================================================
 
 import numpy as np
@@ -8,250 +8,152 @@ import pandas as pd
 import requests
 import streamlit as st
 import concurrent.futures
-import streamlit.components.v1 as components
 import datetime
 import time
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # =========================================================
-# PAGE CONFIG
+# CONFIG
 # =========================================================
 st.set_page_config(
-    page_title="ALPHA TERMINAL v8.0",
+    page_title="ALPHA TERMINAL V9",
     page_icon="👑",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# =========================================================
-# AUTO REFRESH (SAFE - NO EXTRA LIB)
-# =========================================================
-if "last_refresh" not in st.session_state:
-    st.session_state.last_refresh = time.time()
+# AUTO REFRESH SAFE
+if "t" not in st.session_state:
+    st.session_state.t = time.time()
 
-if time.time() - st.session_state.last_refresh > 20:
-    st.session_state.last_refresh = time.time()
+if time.time() - st.session_state.t > 15:
+    st.session_state.t = time.time()
     st.rerun()
 
 # =========================================================
-# UI STYLE
-# =========================================================
-st.markdown("""
-<style>
-.stApp { background:#0d1117; color:white; }
-h1,h2,h3,h4 { color:white !important; }
-[data-testid="stMetricValue"] { color:#ffb703; font-size:28px; }
-section[data-testid="stSidebar"] { background:#111827; }
-</style>
-""", unsafe_allow_html=True)
-
-# =========================================================
-# SAFE SESSION (ANTI BLOCK)
+# SESSION (SAFE)
 # =========================================================
 session = requests.Session()
-retry = Retry(total=3, backoff_factor=0.5,
-              status_forcelist=[429,500,502,503,504])
-session.mount("https://", HTTPAdapter(max_retries=retry))
+session.mount("https://", HTTPAdapter(max_retries=3))
 
 # =========================================================
-# COINS (UNCHANGED - AS YOU REQUESTED)
+# COINS
 # =========================================================
-COIN_SYMBOLS = {
-    "BTCUSDT":"₿ BTCUSDT",
-    "ETHUSDT":"♦️ ETHUSDT",
-    "SOLUSDT":"☀️ SOLUSDT",
-    "BNBUSDT":"🔶 BNBUSDT",
-    "XRPUSDT":"💧 XRPUSDT",
-    "ADAUSDT":"₳ ADAUSDT",
-    "DOGEUSDT":"🐕 DOGEUSDT",
-    "AVAXUSDT":"🔺 AVAXUSDT",
-    "DOTUSDT":"● DOTUSDT",
-    "LINKUSDT":"🔗 LINKUSDT",
-    "MATICUSDT":"💜 MATICUSDT",
-    "LTCUSDT":"Ł LTCUSDT",
-    "UNIUSDT":"🦄 UNIUSDT",
-    "ATOMUSDT":"⚛️ ATOMUSDT",
-    "TRXUSDT":"🔴 TRXUSDT"
-}
-
-SCAN_COINS = list(COIN_SYMBOLS.keys())
+COINS = [
+    "BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
+    "ADAUSDT","DOGEUSDT","AVAXUSDT","DOTUSDT","LINKUSDT"
+]
 
 # =========================================================
-# BINANCE DATA (SAFE + FAST + NO BLOCK)
+# DATA
 # =========================================================
 @st.cache_data(ttl=10)
-def get_crypto_data(symbol, interval, limit=100):
+def get_data(symbol):
     url = "https://api.binance.com/api/v3/klines"
-
     try:
         r = session.get(url, params={
             "symbol": symbol,
-            "interval": interval,
-            "limit": limit
+            "interval": "5m",
+            "limit": 100
         }, timeout=10)
 
-        if r.status_code != 200:
-            return None
-
         data = r.json()
-        if not isinstance(data, list):
-            return None
+        df = pd.DataFrame(data)
 
-        df = pd.DataFrame(data, columns=[
-            "t","o","h","l","c","v",
-            "ct","qv","n","tb","tq","ig"
-        ])
+        df = df.iloc[:, [1,2,3,4,5]]
+        df.columns = ["o","h","l","c","v"]
 
-        for c in ["o","h","l","c","v"]:
-            df[c] = pd.to_numeric(df[c], errors="coerce")
-
-        return df.dropna()
+        df = df.astype(float)
+        return df
 
     except:
         return None
 
 # =========================================================
-# INDICATORS (OPTIMIZED)
+# INDICATORS
 # =========================================================
-def ema(s, p): return s.ewm(span=p, adjust=False).mean()
+def ema(s,p): return s.ewm(span=p).mean()
 
-def rsi(s, p=14):
+def rsi(s):
     d = s.diff()
-    g = d.clip(lower=0).rolling(p).mean()
-    l = (-d.clip(upper=0)).rolling(p).mean()
-    rs = g / (l + 1e-10)
-    return 100 - (100 / (1 + rs))
-
-def macd(s):
-    m = ema(s,12) - ema(s,26)
-    sig = ema(m,9)
-    return m, sig
-
-def atr(df, p=14):
-    h,l,c = df["h"], df["l"], df["c"].shift()
-    tr = pd.concat([(h-l), (h-c).abs(), (l-c).abs()], axis=1).max(axis=1)
-    return tr.rolling(p).mean()
+    g = d.clip(lower=0).rolling(14).mean()
+    l = (-d.clip(upper=0)).rolling(14).mean()
+    rs = g/(l+1e-10)
+    return 100 - (100/(1+rs))
 
 # =========================================================
-# ANALYSIS ENGINE (FAST + SAFE)
+# ENGINE (SMART SCORING)
 # =========================================================
-def analyze(symbol, htf, ltf):
+def analyze(symbol):
 
-    dfh = get_crypto_data(symbol, htf, 100)
-    dfl = get_crypto_data(symbol, ltf, 100)
-
-    if dfh is None or dfl is None or len(dfl) < 50:
+    df = get_data(symbol)
+    if df is None or len(df) < 50:
         return None
 
-    dfh["ema50"] = ema(dfh["c"], 50)
+    price = df["c"].iloc[-1]
 
-    trend = "BULL" if dfh["c"].iloc[-1] > dfh["ema50"].iloc[-1] else "BEAR"
+    trend = "BULL" if price > ema(df["c"],50).iloc[-1] else "BEAR"
 
-    dfl["rsi"] = rsi(dfl["c"])
-    dfl["macd"], dfl["sig"] = macd(dfl["c"])
-    dfl["atr"] = atr(dfl)
+    r = rsi(df["c"]).iloc[-1]
 
-    r = dfl["rsi"].iloc[-1]
-    m = dfl["macd"].iloc[-1]
-    s = dfl["sig"].iloc[-1]
-    price = dfl["c"].iloc[-1]
-    a = dfl["atr"].iloc[-1]
+    bull = 50 if trend=="BULL" else 50
+    bear = 50 if trend=="BEAR" else 50
 
-    if np.isnan(a):
-        a = price * 0.003
+    # RSI soft scoring (IMPORTANT FIX)
+    if r < 50:
+        bull += (50 - r)
+    else:
+        bear += (r - 50)
 
-    bull = 0
-    bear = 0
+    score = max(bull, bear)
 
-    if trend == "BULL": bull += 30
-    else: bear += 30
+    direction = "BUY" if bull > bear else "SELL"
 
-    if r < 45: bull += 20
-    if r > 55: bear += 20
-
-    if m > s: bull += 30
-    else: bear += 30
-
-    if bull >= 55 and trend == "BULL":
-        return {
-            "Coin": symbol,
-            "Signal": "BUY",
-            "Price": price,
-            "SL": price - a*2,
-            "TP": price + a*4,
-            "Score": bull
-        }
-
-    if bear >= 55 and trend == "BEAR":
-        return {
-            "Coin": symbol,
-            "Signal": "SELL",
-            "Price": price,
-            "SL": price + a*2,
-            "TP": price - a*4,
-            "Score": bear
-        }
-
-    return None
+    return {
+        "Coin": symbol,
+        "Direction": direction,
+        "Score": round(score,2),
+        "Price": price
+    }
 
 # =========================================================
-# SIDEBAR
+# UI
 # =========================================================
-with st.sidebar:
-    st.title("CONTROL PANEL")
-
-    mode = st.radio("Mode", ["Scalping","Day","Swing"])
-
-    htf, ltf = (
-        ("1h","5m") if mode=="Scalping"
-        else ("4h","15m") if mode=="Day"
-        else ("1d","1h")
-    )
-
-    coin = st.selectbox("Coin", SCAN_COINS)
+st.title("👑 ALPHA TERMINAL V9 PRO")
 
 # =========================================================
-# HEADER
+# SCANNER (FAST + NO FREEZE)
 # =========================================================
-st.title("👑 ALPHA TERMINAL v8.0 ULTRA STABLE")
-
-# =========================================================
-# SAFE SCANNER (NO FREEZE FIX)
-# =========================================================
-st.subheader("MARKET SCANNER")
-
-signals = []
+results = []
 
 with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
-    results = list(ex.map(lambda c: analyze(c, htf, ltf), SCAN_COINS))
+    out = list(ex.map(analyze, COINS))
 
-for r in results:
+for r in out:
     if r:
-        signals.append(r)
+        results.append(r)
 
-if signals:
-    st.dataframe(pd.DataFrame(signals), use_container_width=True)
+df = pd.DataFrame(results)
+
+# =========================================================
+# ALWAYS SHOW DATA (NO EMPTY SCREEN FIX)
+# =========================================================
+if len(df) == 0:
+    st.warning("Market scanning... retrying")
 else:
-    st.warning("No valid setup")
+    st.dataframe(df.sort_values("Score", ascending=False))
+
+    st.subheader("🔥 TOP 3 COINS")
+    st.dataframe(df.sort_values("Score", ascending=False).head(3))
 
 # =========================================================
-# SINGLE COIN
+# MARKET BIAS (IMPORTANT FIX)
 # =========================================================
-st.subheader(f"{coin} ANALYSIS")
+if len(df) > 0:
+    bull_avg = (df["Direction"] == "BUY").mean() * 100
+    bear_avg = 100 - bull_avg
 
-a = analyze(coin, htf, ltf)
+    st.metric("Market Bias BUY %", f"{bull_avg:.1f}")
+    st.metric("Market Bias SELL %", f"{bear_avg:.1f}")
 
-if a:
-    st.metric("Signal", a["Signal"])
-    st.metric("Score", a["Score"])
-    st.write(f"Entry: {a['Price']}")
-    st.write(f"SL: {a['SL']}")
-    st.write(f"TP: {a['TP']}")
-else:
-    st.info("Waiting for setup...")
-
-# =========================================================
-# FOOTER
-# =========================================================
-st.caption(f"Updated: {datetime.datetime.utcnow()}")
+st.caption(f"Updated {datetime.datetime.utcnow()}")
