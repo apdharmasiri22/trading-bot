@@ -259,6 +259,7 @@ def calculate_atr(df, period=14):
 # MARKET DATA
 # =========================================================
 
+```python
 @st.cache_data(ttl=60)
 
 def get_market():
@@ -283,7 +284,7 @@ def get_market():
                 try:
 
                     symbol = str(
-                        coin.get("symbol","")
+                        coin.get("symbol", "")
                     )
 
                     if not symbol.endswith("USDT"):
@@ -291,23 +292,23 @@ def get_market():
 
                     rows.append({
 
-                        "symbol":symbol,
+                        "symbol": symbol,
 
-                        "price":float(
+                        "price": float(
                             coin.get(
                                 "lastPrice",
                                 0
                             )
                         ),
 
-                        "change":float(
+                        "change": float(
                             coin.get(
                                 "priceChangePercent",
                                 0
                             )
                         ),
 
-                        "volume":float(
+                        "volume": float(
                             coin.get(
                                 "quoteVolume",
                                 0
@@ -321,50 +322,53 @@ def get_market():
 
         df = pd.DataFrame(rows)
 
-        if "volume" not in df.columns:
+        if len(df) > 0:
 
-            raise Exception()
+            df = df.sort_values(
+                by="volume",
+                ascending=False
+            ).head(100)
 
-        df = df.sort_values(
-            by="volume",
-            ascending=False
-        ).head(100)
+            return df
 
-        return df
+    except:
+        pass
 
-     except:
+    # FALLBACK
 
-        rows = []
+    rows = []
 
-        for i in range(100):
+    for i in range(100):
 
-            rows.append({
+        rows.append({
 
-                "symbol":f"COIN{i}USDT",
+            "symbol": f"COIN{i}USDT",
 
-                "price":round(
-                    np.random.uniform(1,70000),
-                    4
+            "price": round(
+                np.random.uniform(1, 70000),
+                4
+            ),
+
+            "change": round(
+                np.random.uniform(-20, 20),
+                2
+            ),
+
+            "volume": round(
+                np.random.uniform(
+                    1000000,
+                    5000000000
                 ),
+                2
+            )
 
-                "change":round(
-                    np.random.uniform(-20,20),
-                    2
-                ),
+        })
 
-                "volume":round(
-                    np.random.uniform(
-                        1000000,
-                        5000000000
-                    ),
-                    2
-                )
+    df = pd.DataFrame(rows)
 
-            })
+    return df
+```
 
-        df = pd.DataFrame(rows)
-
-        return df
 
 # =========================================================
 # KLINES
