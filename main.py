@@ -1,7 +1,7 @@
-# ================================
-# 👑 ALPHA TERMINAL v4.6
-# MORE SIGNALS + LIVE DATA
-# ================================
+# =========================================================
+# 👑 ALPHA TERMINAL v5.0 STABLE EDITION
+# Binance Safe Version (No Rate Limit Crash)
+# =========================================================
 
 import numpy as np
 import pandas as pd
@@ -20,10 +20,21 @@ from urllib3.util.retry import Retry
 # =========================================================
 
 st.set_page_config(
-    page_title="ALPHA TERMINAL v4.6",
+    page_title="ALPHA TERMINAL v5.0",
     page_icon="👑",
     layout="wide",
     initial_sidebar_state="expanded"
+)
+
+# =========================================================
+# AUTO REFRESH
+# =========================================================
+
+st.markdown(
+    """
+    <meta http-equiv="refresh" content="20">
+    """,
+    unsafe_allow_html=True
 )
 
 # =========================================================
@@ -34,7 +45,7 @@ st.markdown("""
 <style>
 
 .stApp{
-    background-color:#0d1117;
+    background:#0d1117;
     color:white;
 }
 
@@ -48,28 +59,27 @@ h1,h2,h3,h4{
 }
 
 section[data-testid="stSidebar"]{
-    background-color:#111827;
+    background:#111827;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# SAFE SESSION
+# SAFE REQUEST SESSION
 # =========================================================
 
 session = requests.Session()
 
-retries = Retry(
+retry = Retry(
     total=5,
     backoff_factor=1,
     status_forcelist=[429,500,502,503,504]
 )
 
-session.mount(
-    "https://",
-    HTTPAdapter(max_retries=retries)
-)
+adapter = HTTPAdapter(max_retries=retry)
+
+session.mount("https://", adapter)
 
 # =========================================================
 # COINS
@@ -91,22 +101,18 @@ COIN_SYMBOLS = {
     "LTCUSDT":"Ł LTCUSDT",
     "UNIUSDT":"🦄 UNIUSDT",
     "ATOMUSDT":"⚛️ ATOMUSDT",
-    "TRXUSDT":"🔴 TRXUSDT",
-    "APTUSDT":"🌀 APTUSDT",
-    "ARBUSDT":"🔵 ARBUSDT",
-    "OPUSDT":"🔴 OPUSDT",
-    "SUIUSDT":"💧 SUIUSDT",
-    "INJUSDT":"💉 INJUSDT"
+    "TRXUSDT":"🔴 TRXUSDT"
 
 }
 
-SCAN_COINS = list(COIN_SYMBOLS.keys())
+# SAFE COIN LIMIT
+SCAN_COINS = list(COIN_SYMBOLS.keys())[:15]
 
 # =========================================================
-# API
+# BINANCE SAFE API
 # =========================================================
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=20)
 def get_crypto_data(symbol, interval, limit=100):
 
     url = "https://data-api.binance.vision/api/v3/klines"
@@ -122,7 +128,7 @@ def get_crypto_data(symbol, interval, limit=100):
         response = session.get(
             url,
             params=params,
-            timeout=20,
+            timeout=15,
             headers={
                 "User-Agent":"Mozilla/5.0"
             }
@@ -145,9 +151,9 @@ def get_crypto_data(symbol, interval, limit=100):
             "Volume",
             "CloseTime",
             "QuoteAssetVol",
-            "NumTrades",
-            "TakerBuyBase",
-            "TakerBuyQuote",
+            "Trades",
+            "TB",
+            "TQ",
             "Ignore"
         ]
 
@@ -232,7 +238,7 @@ def calculate_adx(df, period=14):
     tr2 = abs(df["High"] - df["Close"].shift())
     tr3 = abs(df["Low"] - df["Close"].shift())
 
-    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    tr = pd.concat([tr1,tr2,tr3], axis=1).max(axis=1)
 
     atr = tr.rolling(period).mean()
 
@@ -273,7 +279,7 @@ def analyze_coin(symbol, htf, ltf):
     if len(df_htf) < 50 or len(df_ltf) < 50:
         return None
 
-    # EMA TREND
+    # TREND
     df_htf["EMA50"] = calculate_ema(
         df_htf["Close"],
         50
@@ -323,34 +329,29 @@ def analyze_coin(symbol, htf, ltf):
     bearish = 0
 
     # =====================================================
-    # NEW MORE ACTIVE SIGNAL SYSTEM
+    # SCORING
     # =====================================================
 
-    # TREND
     if trend == "BULLISH":
         bullish += 30
     else:
         bearish += 30
 
-    # RSI
     if rsi < 45:
         bullish += 20
 
     if rsi > 55:
         bearish += 20
 
-    # MACD
     if macd.iloc[-1] > signal.iloc[-1]:
         bullish += 30
     else:
         bearish += 30
 
-    # ADX
     if adx > 15:
         bullish += 10
         bearish += 10
 
-    # VOLUME
     if volume_ok:
         bullish += 10
         bearish += 10
@@ -360,7 +361,10 @@ def analyze_coin(symbol, htf, ltf):
     if np.isnan(atr):
         atr = current_price * 0.003
 
-    # BUY
+    # =====================================================
+    # SIGNALS
+    # =====================================================
+
     if bullish >= 45 and trend == "BULLISH":
 
         return {
@@ -374,7 +378,6 @@ def analyze_coin(symbol, htf, ltf):
             "RSI": rsi
         }
 
-    # SELL
     if bearish >= 45 and trend == "BEARISH":
 
         return {
@@ -447,22 +450,26 @@ with st.sidebar:
 # HEADER
 # =========================================================
 
-st.title("👑 ALPHA TERMINAL v4.6")
+st.title("👑 ALPHA TERMINAL v5.0")
 
 st.caption(
-    f"Mode: {strategy} | Binance Live Feed Active"
+    f"Live Binance Scanner | {strategy}"
 )
 
 # =========================================================
-# LIVE DATA CHECK
+# DATA STATUS
 # =========================================================
 
-btc_test = get_crypto_data("BTCUSDT", "5m", 5)
+btc_test = get_crypto_data(
+    "BTCUSDT",
+    "5m",
+    5
+)
 
 if btc_test is not None:
-    st.success("🟢 Binance Live Data Connected Successfully")
+    st.success("🟢 Binance Live Feed Connected")
 else:
-    st.error("🔴 Binance Connection Failed")
+    st.error("🔴 Binance API Offline")
 
 # =========================================================
 # MARKET SCANNER
@@ -473,7 +480,7 @@ st.subheader("📡 LIVE MARKET SCANNER")
 signals = []
 
 with concurrent.futures.ThreadPoolExecutor(
-    max_workers=5
+    max_workers=2
 ) as executor:
 
     results = executor.map(
@@ -490,7 +497,7 @@ with concurrent.futures.ThreadPoolExecutor(
         if result:
             signals.append(result)
 
-        time.sleep(0.25)
+        time.sleep(0.5)
 
 if signals:
 
@@ -504,7 +511,7 @@ if signals:
 else:
 
     st.warning(
-        "⚠️ No active setups currently."
+        "⚠️ No valid setup currently."
     )
 
 # =========================================================
@@ -523,7 +530,7 @@ analysis = analyze_coin(
 
 if analysis:
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1,col2,col3,col4 = st.columns(4)
 
     with col1:
         st.metric(
@@ -598,7 +605,7 @@ else:
     )
 
 # =========================================================
-# TRADINGVIEW CHART
+# TRADINGVIEW
 # =========================================================
 
 st.subheader("📈 LIVE CHART")
@@ -640,6 +647,7 @@ new TradingView.widget({{
 }});
 
 </script>
+
 """
 
 components.html(tv_html, height=520)
