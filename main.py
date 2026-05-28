@@ -76,30 +76,41 @@ def get_all_binance_symbols_with_symbols():
 
 def get_crypto_data(symbol, interval, limit=100):
     coin = symbol.replace("USDT", "")
-    # ... URL තෝරන කොටස මෙතනට...
+    
+    # Default value එකක් දාමු, එතකොට NameError එන්නේ නැහැ
+    agg = 1 
+    
+    if interval in ["1m", "5m", "15m"]:
+        url = "https://min-api.cryptocompare.com/data/v2/histominute"
+        agg = 1 if interval == "1m" else 5 if interval == "5m" else 15
+    elif interval in ["1h", "4h"]:
+        url = "https://min-api.cryptocompare.com/data/v2/histohour"
+        agg = 1 if interval == "1h" else 4
+    else:
+        url = "https://min-api.cryptocompare.com/data/v2/histoday"
+        agg = 1
+
     headers = {"Authorization": f"Apikey {CRYPTOCOMPARE_API_KEY}"}
     params = {"fsym": coin, "tsym": "USDT", "limit": limit, "aggregate": agg}
     
     try:
-        # Timeout එක තත්පර 15 දක්වා වැඩි කළා (වැඩි ඉවසීමක් සහිතව)
-        response = requests.get(url, params=params, headers=headers, timeout=15)
-        
+        response = requests.get(url, params=params, headers=headers, timeout=10)
         if response.status_code == 200:
             res_json = response.json()
             raw_list = res_json.get("Data", {}).get("Data", [])
-            # දත්ත ලැබුණේ නැත්නම් දෝෂයක් කියලා හිතනවා
-            if not raw_list: return None
+            if not raw_list: 
+                return None
             
             df = pd.DataFrame(raw_list)
-            # ... දත්ත පිරිසිදු කරන කොටස මෙතනට...
+            df = df.rename(columns={"time": "Time", "open": "Open", "high": "High", "low": "Low", "close": "Close", "volumeto": "Volume"})
+            
+            for col in ["Open", "High", "Low", "Close", "Volume"]:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+                
             return df
-        else:
-            # සර්වර් එකෙන් වෙනත් error එකක් (429, 403 වගේ) ආවොත් මෙතන පේනවා
-            print(f"Error fetching {symbol}: {response.status_code}")
-            return None
     except Exception as e:
-        print(f"Connection error for {symbol}: {e}")
         return None
+    return None
 
 # =====================================================================
 # 🧠 ADVANCED QUANT MATH & HIGH ACCURACY SMC ENGINE
