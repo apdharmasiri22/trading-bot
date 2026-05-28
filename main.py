@@ -1,15 +1,16 @@
-```python
 import streamlit as st
 import requests
 import pandas as pd
 import time
+
+# ================= PAGE CONFIG =================
 
 st.set_page_config(
     page_title="Institutional AI Dashboard",
     layout="wide"
 )
 
-# ===================== CSS =====================
+# ================= CSS =================
 
 st.markdown("""
 
@@ -18,10 +19,12 @@ st.markdown("""
 html, body, [class*="css"]{
     background:#020617;
     color:white;
+    font-family:Arial;
 }
 
 .block-container{
     padding-top:1rem;
+    padding-bottom:1rem;
 }
 
 .card{
@@ -37,7 +40,7 @@ html, body, [class*="css"]{
     border:1px solid #22304d;
     border-radius:14px;
     padding:14px;
-    text-align:center;
+    margin-bottom:12px;
 }
 
 .green{
@@ -55,6 +58,11 @@ html, body, [class*="css"]{
     font-weight:bold;
 }
 
+.yellow{
+    color:#facc15;
+    font-weight:bold;
+}
+
 .title{
     font-size:34px;
     font-weight:bold;
@@ -65,11 +73,27 @@ html, body, [class*="css"]{
     color:#94a3b8;
 }
 
+.buy{
+    background:#14532d;
+    padding:8px;
+    border-radius:10px;
+    text-align:center;
+    font-weight:bold;
+}
+
+.sell{
+    background:#7f1d1d;
+    padding:8px;
+    border-radius:10px;
+    text-align:center;
+    font-weight:bold;
+}
+
 </style>
 
 """, unsafe_allow_html=True)
 
-# ===================== HEADER =====================
+# ================= HEADER =================
 
 st.markdown("""
 
@@ -80,58 +104,61 @@ st.markdown("""
 </div>
 
 <div class="small">
-Live Binance Market Intelligence Dashboard
+Live Binance Institutional Trading Dashboard
 </div>
 
 </div>
 
 """, unsafe_allow_html=True)
 
-# ===================== FETCH DATA =====================
+# ================= FETCH BINANCE DATA =================
 
-@st.cache_data(ttl=20)
+@st.cache_data(ttl=15)
 
 def get_market():
 
     url = "https://api.binance.com/api/v3/ticker/24hr"
 
-    data = requests.get(url).json()
+    response = requests.get(url)
 
-    usdt = []
+    data = response.json()
+
+    coins = []
 
     for coin in data:
 
         if coin["symbol"].endswith("USDT"):
 
-            usdt.append({
+            try:
 
-                "symbol": coin["symbol"],
-                "price": float(coin["lastPrice"]),
-                "change": float(coin["priceChangePercent"]),
-                "volume": float(coin["quoteVolume"])
+                coins.append({
 
-            })
+                    "symbol": coin["symbol"],
+                    "price": float(coin["lastPrice"]),
+                    "change": float(coin["priceChangePercent"]),
+                    "volume": float(coin["quoteVolume"]),
+                    "high": float(coin["highPrice"]),
+                    "low": float(coin["lowPrice"])
 
-    df = pd.DataFrame(usdt)
+                })
+
+            except:
+                pass
+
+    df = pd.DataFrame(coins)
 
     return df
 
 df = get_market()
 
-# ===================== TOP AI PICKS =====================
-
-top_gainers = df.sort_values(
-    by="change",
-    ascending=False
-).head(10)
-
-top_losers = df.sort_values(
-    by="change"
-).head(10)
-
-# ===================== MARKET METRICS =====================
+# ================= TOP METRICS =================
 
 btc = df[df["symbol"] == "BTCUSDT"].iloc[0]
+
+green_count = len(df[df["change"] > 0])
+red_count = len(df[df["change"] < 0])
+
+total_volume = df["volume"].sum()
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -153,8 +180,6 @@ with col1:
 
 with col2:
 
-    green_count = len(df[df["change"] > 0])
-
     st.markdown(f"""
 
     <div class="metric">
@@ -170,8 +195,6 @@ with col2:
     """, unsafe_allow_html=True)
 
 with col3:
-
-    red_count = len(df[df["change"] < 0])
 
     st.markdown(f"""
 
@@ -189,27 +212,25 @@ with col3:
 
 with col4:
 
-    volume = df["volume"].sum()
-
     st.markdown(f"""
 
     <div class="metric">
 
     <h3>24H VOLUME</h3>
 
-    <div class="blue">
-    ${volume/1000000000:.2f}B
+    <div class="yellow">
+    ${total_volume/1000000000:.2f}B
     </div>
 
     </div>
 
     """, unsafe_allow_html=True)
 
-# ===================== MAIN GRID =====================
+# ================= MAIN GRID =================
 
 left, center, right = st.columns([1,1,1])
 
-# ===================== GAINERS =====================
+# ================= LEFT PANEL =================
 
 with left:
 
@@ -223,7 +244,12 @@ with left:
 
     """, unsafe_allow_html=True)
 
-    for _, row in top_gainers.iterrows():
+    gainers = df.sort_values(
+        by="change",
+        ascending=False
+    ).head(10)
+
+    for _, row in gainers.iterrows():
 
         st.markdown(f"""
 
@@ -243,7 +269,7 @@ with left:
 
         """, unsafe_allow_html=True)
 
-# ===================== AI ANALYSIS =====================
+# ================= CENTER PANEL =================
 
 with center:
 
@@ -268,14 +294,19 @@ with center:
 
         coin = selected.iloc[0]
 
-        signal = "LONG" if coin["change"] > 0 else "SHORT"
+        signal = "BUY" if coin["change"] > 0 else "SELL"
 
-        signal_color = "green" if signal == "LONG" else "red"
+        signal_class = "buy" if signal == "BUY" else "sell"
 
-        strength = abs(coin["change"]) * 10
+        ai_score = abs(coin["change"]) * 10
 
-        if strength > 100:
-            strength = 100
+        if ai_score > 100:
+            ai_score = 100
+
+        volatility = (
+            (coin["high"] - coin["low"])
+            / coin["price"]
+        ) * 100
 
         st.markdown(f"""
 
@@ -283,8 +314,8 @@ with center:
 
         <h2>{coin['symbol']}</h2>
 
-        <div class="{signal_color}">
-        SIGNAL : {signal}
+        <div class="{signal_class}">
+        {signal} SIGNAL
         </div>
 
         <br>
@@ -298,26 +329,67 @@ with center:
         </div>
 
         <div>
-        AI SCORE : {strength:.0f}/100
+        VOLATILITY : {volatility:.2f}%
+        </div>
+
+        <div>
+        AI SCORE : {ai_score:.0f}/100
         </div>
 
         </div>
 
         """, unsafe_allow_html=True)
 
-        if signal == "LONG":
+        # ===== WHALE DETECTION =====
 
-            st.success(
-                "AI DETECTED BULLISH MOMENTUM"
-            )
+        whale_status = "NO WHALE"
 
-        else:
+        if coin["volume"] > 500000000:
+            whale_status = "WHALE ACTIVE 🐋"
 
-            st.error(
-                "AI DETECTED BEARISH MOMENTUM"
-            )
+        st.markdown(f"""
 
-# ===================== LOSERS =====================
+        <div class="metric">
+
+        <h3>WHALE DETECTOR</h3>
+
+        <div class="yellow">
+        {whale_status}
+        </div>
+
+        </div>
+
+        """, unsafe_allow_html=True)
+
+        # ===== ENTRY ANALYSIS =====
+
+        entry = coin["price"] * 0.995
+        tp = coin["price"] * 1.02
+        sl = coin["price"] * 0.98
+
+        st.markdown(f"""
+
+        <div class="metric">
+
+        <h3>TRADE SETUP</h3>
+
+        <div class="green">
+        ENTRY : ${entry:,.4f}
+        </div>
+
+        <div class="blue">
+        TAKE PROFIT : ${tp:,.4f}
+        </div>
+
+        <div class="red">
+        STOP LOSS : ${sl:,.4f}
+        </div>
+
+        </div>
+
+        """, unsafe_allow_html=True)
+
+# ================= RIGHT PANEL =================
 
 with right:
 
@@ -331,7 +403,11 @@ with right:
 
     """, unsafe_allow_html=True)
 
-    for _, row in top_losers.iterrows():
+    losers = df.sort_values(
+        by="change"
+    ).head(10)
+
+    for _, row in losers.iterrows():
 
         st.markdown(f"""
 
@@ -351,31 +427,78 @@ with right:
 
         """, unsafe_allow_html=True)
 
-# ===================== LIVE TABLE =====================
+# ================= LIVE CHART =================
 
 st.markdown("""
 
 <div class="card">
 
-<h2>📊 LIVE MARKET TABLE</h2>
+<h2>📊 LIVE TRADINGVIEW CHART</h2>
 
 </div>
 
 """, unsafe_allow_html=True)
 
-table = df.sort_values(
+chart = """
+<iframe
+src="https://s.tradingview.com/widgetembed/?symbol=BINANCE:BTCUSDT&interval=15&theme=dark"
+width="100%"
+height="600"
+frameborder="0">
+</iframe>
+"""
+
+st.components.v1.html(
+    chart,
+    height=620
+)
+
+# ================= MARKET TABLE =================
+
+st.markdown("""
+
+<div class="card">
+
+<h2>📋 LIVE MARKET TABLE</h2>
+
+</div>
+
+""", unsafe_allow_html=True)
+
+market_table = df.sort_values(
     by="volume",
     ascending=False
-)[["symbol","price","change","volume"]]
+)[[
+    "symbol",
+    "price",
+    "change",
+    "volume"
+]]
 
 st.dataframe(
-    table,
+    market_table,
     use_container_width=True,
     height=500
 )
 
-# ===================== AUTO REFRESH =====================
+# ================= FOOTER =================
 
-time.sleep(1)
+st.markdown("""
+
+<div class="card">
+
+<h3>⚡ SYSTEM STATUS</h3>
+
+<div class="green">
+LIVE • AI ACTIVE • BINANCE CONNECTED • WHALE MONITORING ENABLED
+</div>
+
+</div>
+
+""", unsafe_allow_html=True)
+
+# ================= AUTO REFRESH =================
+
+time.sleep(2)
+
 st.rerun()
-```
