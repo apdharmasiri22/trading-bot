@@ -1,254 +1,419 @@
-# =========================================================
-# 👑 ALPHA TERMINAL v5.1 STABLE (SMOOTH REFRESH FIX)
-# =========================================================
+<!-- ================= CLEAN RESPONSIVE UPGRADE PATCH ================= -->
 
-import numpy as np
-import pandas as pd
-import requests
-import streamlit as st
-import concurrent.futures
-import streamlit.components.v1 as components
-import datetime
-import time
-
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-
-# =========================================================
-# PAGE CONFIG
-# =========================================================
-
-st.set_page_config(
-    page_title="ALPHA TERMINAL v5.1",
-    page_icon="👑",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# =========================================================
-# SMOOTH AUTO REFRESH (NO FLASH / NO EXTRA LIB)
-# =========================================================
-
-if "last_refresh" not in st.session_state:
-    st.session_state.last_refresh = time.time()
-
-REFRESH_SECONDS = 15
-
-if time.time() - st.session_state.last_refresh > REFRESH_SECONDS:
-    st.session_state.last_refresh = time.time()
-    st.rerun()
-
-# =========================================================
-# UI STYLE
-# =========================================================
-
-st.markdown("""
 <style>
 
-.stApp{
-    background:#0d1117;
-    color:white;
+/* ===== GLOBAL RESET ===== */
+
+*{
+    box-sizing:border-box;
 }
 
-h1,h2,h3,h4{
-    color:white !important;
+html,
+body{
+    margin:0;
+    padding:0;
+    width:100%;
+    min-height:100vh;
+    overflow-x:hidden;
+    background:#020617;
+    font-family:'Inter',sans-serif;
 }
 
-[data-testid="stMetricValue"]{
-    color:#ffb703;
-    font-size:28px;
+/* ===== BODY FIX ===== */
+
+body{
+    background:#020617 !important;
+    color:#f8fafc;
 }
 
-section[data-testid="stSidebar"]{
-    background:#111827;
+/* ===== MAIN WRAPPER ===== */
+
+.dashboard-wrapper{
+    width:100%;
+    min-height:100vh;
+    padding:16px;
+}
+
+.dashboard-container{
+    width:100%;
+    min-height:100vh;
+    background:#0f172a;
+    border:1px solid #22304d;
+    border-radius:24px;
+    padding:20px;
+    overflow:hidden;
+}
+
+/* ===== TOP BAR ===== */
+
+.topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:20px;
+}
+
+/* ===== MAIN GRID ===== */
+
+.main-grid{
+    display:grid;
+    grid-template-columns:repeat(12,minmax(0,1fr));
+    gap:20px;
+    align-items:start;
+}
+
+/* ===== LEFT ===== */
+
+.left-panel{
+    grid-column:span 4;
+}
+
+/* ===== CENTER ===== */
+
+.center-panel{
+    grid-column:span 4;
+}
+
+/* ===== RIGHT ===== */
+
+.right-panel{
+    grid-column:span 4;
+}
+
+/* ===== PANEL STYLE ===== */
+
+.pro-panel{
+    background:linear-gradient(
+        145deg,
+        rgba(15,23,42,0.95),
+        rgba(2,6,23,0.98)
+    );
+    border:1px solid #22304d;
+    border-radius:18px;
+    padding:16px;
+    overflow:hidden;
+    backdrop-filter:blur(12px);
+    box-shadow:0 0 25px rgba(56,189,248,0.05);
+}
+
+/* ===== RESPONSIVE ===== */
+
+@media(max-width:1200px){
+
+    .main-grid{
+        grid-template-columns:1fr;
+    }
+
+    .left-panel,
+    .center-panel,
+    .right-panel{
+        grid-column:span 12;
+    }
+
+}
+
+/* ===== MOBILE ===== */
+
+@media(max-width:768px){
+
+    .dashboard-wrapper{
+        padding:10px;
+    }
+
+    .dashboard-container{
+        border-radius:14px;
+        padding:12px;
+    }
+
+    .orbitron{
+        font-size:90% !important;
+        letter-spacing:0 !important;
+    }
+
+    .copy-target{
+        font-size:11px !important;
+    }
+
+    .pro-panel{
+        padding:12px;
+    }
+
+}
+
+/* ===== COPY TARGET ===== */
+
+.copy-target{
+    cursor:pointer;
+    transition:0.25s;
+    user-select:all;
+    padding:4px 8px;
+    border-radius:8px;
+}
+
+.copy-target:hover{
+    background:rgba(56,189,248,0.12);
+}
+
+/* ===== SCROLLBAR ===== */
+
+::-webkit-scrollbar{
+    width:6px;
+}
+
+::-webkit-scrollbar-track{
+    background:#0f172a;
+}
+
+::-webkit-scrollbar-thumb{
+    background:#22304d;
+    border-radius:10px;
+}
+
+::-webkit-scrollbar-thumb:hover{
+    background:#38bdf8;
 }
 
 </style>
-""", unsafe_allow_html=True)
 
-# =========================================================
-# SAFE SESSION
-# =========================================================
+<!-- ================= END CLEAN UPGRADE ================= -->
 
-session = requests.Session()
 
-retry = Retry(
-    total=5,
-    backoff_factor=1,
-    status_forcelist=[429,500,502,503,504]
-)
 
-adapter = HTTPAdapter(max_retries=retry)
-session.mount("https://", adapter)
+<!-- ================= BODY REPLACE ================= -->
 
-# =========================================================
-# COINS
-# =========================================================
+<body>
 
-COIN_SYMBOLS = {
-    "BTCUSDT":"₿ BTCUSDT",
-    "ETHUSDT":"♦️ ETHUSDT",
-    "SOLUSDT":"☀️ SOLUSDT",
-    "BNBUSDT":"🔶 BNBUSDT",
-    "XRPUSDT":"💧 XRPUSDT",
-    "ADAUSDT":"₳ ADAUSDT",
-    "DOGEUSDT":"🐕 DOGEUSDT",
-    "AVAXUSDT":"🔺 AVAXUSDT",
-    "DOTUSDT":"● DOTUSDT",
-    "LINKUSDT":"🔗 LINKUSDT",
-    "MATICUSDT":"💜 MATICUSDT",
-    "LTCUSDT":"Ł LTCUSDT",
-    "UNIUSDT":"🦄 UNIUSDT",
-    "ATOMUSDT":"⚛️ ATOMUSDT",
-    "TRXUSDT":"🔴 TRXUSDT"
+<div class="dashboard-wrapper">
+
+<div class="dashboard-container">
+
+<!-- TOP BAR -->
+<div class="topbar">
+
+    <div>
+        <h1 class="orbitron text-xl lg:text-2xl font-bold text-accentBlue tracking-wider flex items-center gap-3">
+            <i class="fa-solid fa-tower-broadcast text-accentGreen"></i>
+            INSTITUTIONAL
+            <span class="text-white">UNIVERSAL SCANNER</span>
+        </h1>
+
+        <p class="text-xs text-textSecondary mt-1">
+            Sifting 300+ Binance Coins instantly to find trades with Setup Scores above 75%
+        </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3">
+
+        <span id="scanLoader"
+        class="text-accentBlue orbitron text-xs flex items-center gap-2 bg-accentBlue/10 border border-accentBlue/30 px-3 py-1.5 rounded-full">
+
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            DISCOVERING GOLDEN SETUPS...
+
+        </span>
+
+        <div class="bg-accentGreen/10 border border-accentGreen/30 text-accentGreen px-3 py-1.5 rounded-full text-xs orbitron flex items-center gap-2 font-semibold">
+
+            <i class="fa-solid fa-circle pulse-indicator"></i>
+            WEBSOCKET LIVE
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- MAIN GRID -->
+<div class="main-grid">
+
+    <!-- LEFT -->
+    <div class="left-panel">
+
+        <div class="pro-panel">
+
+            <!-- YOUR LEFT PANEL CONTENT HERE -->
+
+        </div>
+
+    </div>
+
+    <!-- CENTER -->
+    <div class="center-panel">
+
+        <div class="pro-panel">
+
+            <!-- YOUR CENTER PANEL CONTENT HERE -->
+
+        </div>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right-panel">
+
+        <div class="pro-panel">
+
+            <!-- YOUR RIGHT PANEL CONTENT HERE -->
+
+        </div>
+
+    </div>
+
+</div>
+
+</div>
+</div>
+
+</body>
+
+<!-- ================= END BODY REPLACE ================= -->
+
+
+
+<!-- ================= REMOVE THESE OLD CSS BLOCKS ================= -->
+
+<!-- REMOVE:
+FINAL TOP ADJUST
+RIGHT PANEL TOP FIX
+GAP REDUCTION FIX
+INLINE STATUS POSITION FIX
+TOP SPACING FIX
+REAL FULLSCREEN FIX
+FULLSCREEN PROFESSIONAL MODE
+-->
+
+
+
+<!-- ================= ADD LIVE TRADINGVIEW CHART ================= -->
+
+<div class="pro-panel mt-5">
+
+    <div class="orbitron text-sm font-bold mb-4 text-textPrimary">
+        LIVE TRADINGVIEW CHART
+    </div>
+
+    <div class="rounded-xl overflow-hidden border border-borderCol">
+
+        <iframe
+        src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BINANCE:BTCUSDT&interval=15&theme=dark&style=1&locale=en"
+        width="100%"
+        height="500"
+        frameborder="0"
+        allowtransparency="true"
+        scrolling="no">
+        </iframe>
+
+    </div>
+
+</div>
+
+<!-- ================= END TRADINGVIEW ================= -->
+
+
+
+<!-- ================= ULTRA PERFORMANCE FIX ================= -->
+
+<script>
+
+/* ===== PERFORMANCE BOOST ===== */
+
+document.addEventListener('DOMContentLoaded',()=>{
+
+    console.log('Institutional Dashboard Loaded');
+
+    // REMOVE DUPLICATE INTERVALS
+    if(window.scannerLoop){
+        clearInterval(window.scannerLoop);
+    }
+
+    if(window.activeAssetLoop){
+        clearInterval(window.activeAssetLoop);
+    }
+
+    // START CLEAN LOOPS
+    window.scannerLoop = setInterval(()=>{
+
+        if(typeof runMarketScanner === 'function'){
+            runMarketScanner();
+        }
+
+    },15000);
+
+    window.activeAssetLoop = setInterval(()=>{
+
+        if(typeof fetchLiveSymbol === 'function'){
+            fetchLiveSymbol();
+        }
+
+    },12000);
+
+});
+
+/* ===== AUTO RESIZE ===== */
+
+window.addEventListener('resize',()=>{
+
+    document.body.style.overflowX='hidden';
+
+});
+
+</script>
+
+<!-- ================= END PERFORMANCE FIX ================= -->
+
+
+
+<!-- ================= OPTIONAL GLASS EFFECT ================= -->
+
+<style>
+
+.glass-effect{
+
+    background:rgba(15,23,42,0.72);
+
+    backdrop-filter:blur(16px);
+
+    border:1px solid rgba(255,255,255,0.06);
+
+    box-shadow:
+        0 8px 32px rgba(0,0,0,0.35),
+        inset 0 1px 0 rgba(255,255,255,0.04);
+
 }
 
-SCAN_COINS = list(COIN_SYMBOLS.keys())[:15]
+</style>
 
-# =========================================================
-# BINANCE DATA
-# =========================================================
+<!-- ================= END GLASS EFFECT ================= -->
 
-@st.cache_data(ttl=20)
-def get_crypto_data(symbol, interval, limit=100):
 
-    url = "https://data-api.binance.vision/api/v3/klines"
 
-    params = {
-        "symbol": symbol,
-        "interval": interval,
-        "limit": limit
+<!-- ================= MOBILE OPTIMIZATION ================= -->
+
+<style>
+
+@media(max-width:640px){
+
+    input,
+    button{
+        min-height:44px;
     }
 
-    try:
-        response = session.get(url, params=params, timeout=10)
-
-        if response.status_code != 200:
-            return None
-
-        data = response.json()
-
-        if not isinstance(data, list):
-            return None
-
-        df = pd.DataFrame(data)
-
-        df = df.iloc[:, 0:6]
-        df.columns = ["Time","Open","High","Low","Close","Volume"]
-
-        for col in ["Open","High","Low","Close","Volume"]:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-
-        df.dropna(inplace=True)
-        return df
-
-    except:
-        return None
-
-# =========================================================
-# INDICATORS
-# =========================================================
-
-def ema(series, period):
-    return series.ewm(span=period, adjust=False).mean()
-
-def rsi(series, period=14):
-    delta = series.diff()
-    gain = delta.where(delta > 0, 0)
-    loss = -delta.where(delta < 0, 0)
-
-    avg_gain = gain.rolling(period).mean()
-    avg_loss = loss.rolling(period).mean()
-
-    rs = avg_gain / (avg_loss + 1e-10)
-    return 100 - (100 / (1 + rs))
-
-# =========================================================
-# ANALYSIS
-# =========================================================
-
-def analyze_coin(symbol, htf, ltf):
-
-    df = get_crypto_data(symbol, ltf, 120)
-    df_htf = get_crypto_data(symbol, htf, 120)
-
-    if df is None or df_htf is None:
-        return None
-
-    if len(df) < 50:
-        return None
-
-    df["EMA50"] = ema(df["Close"], 50)
-    trend = "BULLISH" if df["Close"].iloc[-1] > df["EMA50"].iloc[-1] else "BEARISH"
-
-    df["RSI"] = rsi(df["Close"])
-    rsi_val = df["RSI"].iloc[-1]
-
-    price = df["Close"].iloc[-1]
-
-    score = 0
-    signal = None
-
-    if trend == "BULLISH":
-        score += 30
-    else:
-        score += 30
-
-    if rsi_val < 45:
-        score += 25
-        signal = "🟩 BUY"
-
-    if rsi_val > 55:
-        score += 25
-        signal = "🟥 SELL"
-
-    if score < 40:
-        return None
-
-    return {
-        "Coin": symbol,
-        "Signal": signal or "WAIT",
-        "Score": score,
-        "Price": price
+    .orbitron{
+        font-size:12px !important;
     }
 
-# =========================================================
-# UI
-# =========================================================
+    .text-xs{
+        font-size:11px !important;
+    }
 
-st.title("👑 ALPHA TERMINAL v5.1")
-st.caption("Stable Smooth Refresh Edition")
+    .text-sm{
+        font-size:12px !important;
+    }
 
-btc = get_crypto_data("BTCUSDT","5m",5)
+}
 
-if btc is not None:
-    st.success("🟢 Live Feed OK")
-else:
-    st.error("🔴 API Issue")
+</style>
 
-st.subheader("📡 MARKET SCANNER")
-
-signals = []
-
-with concurrent.futures.ThreadPoolExecutor(max_workers=3) as ex:
-    results = ex.map(lambda c: analyze_coin(c,"1h","5m"), SCAN_COINS)
-
-    for r in results:
-        if r:
-            signals.append(r)
-
-if signals:
-    st.dataframe(pd.DataFrame(signals), use_container_width=True)
-else:
-    st.warning("⚠️ No valid setup currently")
-
-st.subheader("🎯 BTC ANALYSIS")
-
-btc_signal = analyze_coin("BTCUSDT","1h","5m")
-
-if btc_signal:
-    st.write(btc_signal)
-else:
-    st.info("No setup")
-
-st.caption(f"Last Update: {datetime.datetime.utcnow()} UTC")
+<!-- ================= END MOBILE OPTIMIZATION ================= -->
