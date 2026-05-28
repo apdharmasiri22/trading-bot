@@ -70,55 +70,167 @@ st.markdown("""
 
 html, body, [class*="css"] {
 
-    background:
-    linear-gradient(
-        135deg,
-        #020617 0%,
-        #0f172a 40%,
-        #111827 100%
+    background: linear-gradient(
+        -45deg,
+        #020617,
+        #0f172a,
+        #111827,
+        #1e293b
     );
 
-    color:white;
-    font-family:Arial;
+    background-size: 400% 400%;
+
+    animation: gradientMove 15s ease infinite;
+
+    color: white;
+
+    font-family: 'Arial';
+
 }
 
-.block-container{
-    padding-top:1rem;
+/* ===================================================== */
+/* ANIMATED BACKGROUND */
+/* ===================================================== */
+
+@keyframes gradientMove {
+
+    0%{
+        background-position:0% 50%;
+    }
+
+    50%{
+        background-position:100% 50%;
+    }
+
+    100%{
+        background-position:0% 50%;
+    }
+
 }
+
+/* ===================================================== */
+/* FLOAT ANIMATION */
+/* ===================================================== */
+
+@keyframes floating {
+
+    0%{
+        transform: translateY(0px);
+    }
+
+    50%{
+        transform: translateY(-6px);
+    }
+
+    100%{
+        transform: translateY(0px);
+    }
+
+}
+
+/* ===================================================== */
+/* GLOW ANIMATION */
+/* ===================================================== */
+
+@keyframes glow {
+
+    0%{
+        box-shadow:0 0 10px #38bdf8;
+    }
+
+    50%{
+        box-shadow:0 0 30px #818cf8;
+    }
+
+    100%{
+        box-shadow:0 0 10px #22c55e;
+    }
+
+}
+
+/* ===================================================== */
+/* MAIN CONTAINER */
+/* ===================================================== */
+
+.block-container{
+
+    padding-top:1rem;
+
+}
+
+/* ===================================================== */
+/* PREMIUM CARD */
+/* ===================================================== */
 
 .card{
 
-    background:rgba(15,23,42,0.90);
+    background: rgba(15,23,42,0.70);
 
-    border:1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(18px);
 
-    border-radius:22px;
+    border: 1px solid rgba(255,255,255,0.08);
 
-    padding:20px;
+    border-radius: 24px;
 
-    margin-bottom:20px;
+    padding: 22px;
+
+    margin-bottom: 22px;
+
+    animation: floating 5s ease-in-out infinite;
+
+    transition: 0.3s;
+
 }
+
+.card:hover{
+
+    transform: scale(1.01);
+
+    animation: glow 2s infinite;
+
+}
+
+/* ===================================================== */
+/* METRIC CARD */
+/* ===================================================== */
 
 .metric{
 
-    background:rgba(17,24,39,0.88);
+    background: rgba(17,24,39,0.82);
 
-    border:1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(14px);
 
-    border-radius:18px;
+    border-radius: 20px;
 
-    padding:16px;
+    padding: 18px;
 
-    margin-bottom:14px;
+    border: 1px solid rgba(255,255,255,0.08);
+
+    margin-bottom: 16px;
+
+    transition: 0.3s;
+
 }
+
+.metric:hover{
+
+    transform: translateY(-4px);
+
+    animation: glow 2s infinite;
+
+}
+
+/* ===================================================== */
+/* TITLE */
+/* ===================================================== */
 
 .title{
 
-    font-size:46px;
+    font-size: 52px;
 
-    font-weight:900;
+    font-weight: 900;
 
-    background:linear-gradient(
+    background: linear-gradient(
         90deg,
         #38bdf8,
         #818cf8,
@@ -128,39 +240,209 @@ html, body, [class*="css"] {
     -webkit-background-clip:text;
 
     -webkit-text-fill-color:transparent;
+
+    animation: floating 4s ease-in-out infinite;
+
 }
+
+/* ===================================================== */
+/* BUY */
+/* ===================================================== */
 
 .buy{
-    background:#14532d;
+
+    background: linear-gradient(
+        90deg,
+        #14532d,
+        #22c55e
+    );
+
     padding:14px;
-    border-radius:12px;
+
+    border-radius:14px;
+
     text-align:center;
+
     font-weight:bold;
+
     font-size:20px;
+
+    animation: glow 2s infinite;
+
 }
+
+/* ===================================================== */
+/* SELL */
+/* ===================================================== */
 
 .sell{
-    background:#7f1d1d;
+
+    background: linear-gradient(
+        90deg,
+        #7f1d1d,
+        #ef4444
+    );
+
     padding:14px;
-    border-radius:12px;
+
+    border-radius:14px;
+
     text-align:center;
+
     font-weight:bold;
+
     font-size:20px;
+
+    animation: glow 2s infinite;
+
 }
 
+/* ===================================================== */
+/* NEUTRAL */
+/* ===================================================== */
+
 .neutral{
+
     background:#334155;
+
     padding:14px;
-    border-radius:12px;
+
+    border-radius:14px;
+
     text-align:center;
+
     font-weight:bold;
+
     font-size:20px;
+
+}
+
+/* ===================================================== */
+/* DATAFRAME */
+/* ===================================================== */
+
+[data-testid="stDataFrame"]{
+
+    border-radius:20px;
+
+    overflow:hidden;
+
+    border:1px solid rgba(255,255,255,0.08);
+
+    animation:floating 6s ease-in-out infinite;
+
+}
+
+/* ===================================================== */
+/* BUTTON */
+/* ===================================================== */
+
+.stButton>button{
+
+    background: linear-gradient(
+        90deg,
+        #0ea5e9,
+        #6366f1
+    );
+
+    color:white;
+
+    border:none;
+
+    border-radius:12px;
+
+    padding:10px 22px;
+
+    font-weight:bold;
+
+    transition:0.3s;
+
+}
+
+.stButton>button:hover{
+
+    transform:scale(1.05);
+
+    animation:glow 2s infinite;
+
+}
+
+/* ===================================================== */
+/* SIDEBAR */
+/* ===================================================== */
+
+section[data-testid="stSidebar"]{
+
+    background: rgba(2,6,23,0.95);
+
+    border-right:1px solid rgba(255,255,255,0.08);
+
+}
+
+/* ===================================================== */
+/* SCROLLBAR */
+/* ===================================================== */
+
+::-webkit-scrollbar{
+
+    width:10px;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+    background:#38bdf8;
+
+    border-radius:20px;
+
+}
+
+/* ===================================================== */
+/* PARTICLE EFFECT */
+/* ===================================================== */
+
+body::before{
+
+    content:"";
+
+    position:fixed;
+
+    width:200%;
+
+    height:200%;
+
+    top:-50%;
+
+    left:-50%;
+
+    background:
+    radial-gradient(
+        circle,
+        rgba(56,189,248,0.08) 0%,
+        transparent 70%
+    );
+
+    animation: rotateBg 25s linear infinite;
+
+    z-index:-1;
+
+}
+
+@keyframes rotateBg{
+
+    from{
+        transform: rotate(0deg);
+    }
+
+    to{
+        transform: rotate(360deg);
+    }
+
 }
 
 </style>
 
 """, unsafe_allow_html=True)
-
 # =========================================================
 # HEADER
 # =========================================================
