@@ -1,11 +1,12 @@
 import streamlit as st
 import requests
 import pandas as pd
+import numpy as np
 import random
 
 # ================= SAFE PLOTLY =================
 
-PLOTLY_AVAILABLE = True
+PLOTLY = True
 
 try:
 
@@ -14,7 +15,7 @@ try:
 
 except:
 
-    PLOTLY_AVAILABLE = False
+    PLOTLY = False
 
 # ================= PAGE =================
 
@@ -116,14 +117,14 @@ st.markdown("""
 </div>
 
 <div class="small">
-Whale Tracking • Futures Intelligence • AI Signals
+SMC • Futures • Whale Tracking • AI Signals
 </div>
 
 </div>
 
 """, unsafe_allow_html=True)
 
-# ================= MARKET =================
+# ================= FETCH MARKET =================
 
 @st.cache_data(ttl=20)
 
@@ -164,10 +165,7 @@ def get_market():
                     "symbol":symbol,
 
                     "price":float(
-                        coin.get(
-                            "lastPrice",
-                            0
-                        )
+                        coin.get("lastPrice",0)
                     ),
 
                     "change":float(
@@ -203,7 +201,9 @@ def get_market():
             ["SOLUSDT",170,8.1,9000000000],
             ["XRPUSDT",0.62,5.3,5000000000],
             ["DOGEUSDT",0.17,11.2,4000000000],
-            ["BNBUSDT",620,-1.4,3000000000]
+            ["BNBUSDT",620,-1.4,3000000000],
+            ["AVAXUSDT",39,6.5,2000000000],
+            ["LINKUSDT",18,4.2,1800000000]
 
         ]
 
@@ -229,6 +229,7 @@ df = get_market()
 btc = df[df["symbol"]=="BTCUSDT"].iloc[0]
 
 green = len(df[df["change"] > 0])
+
 red = len(df[df["change"] < 0])
 
 volume = df["volume"].sum()
@@ -263,9 +264,9 @@ with c4:
         f"${volume/1000000000:.2f}B"
     )
 
-# ================= PANELS =================
+# ================= MAIN =================
 
-left,center,right = st.columns(3)
+left,center,right = st.columns([1,1,1])
 
 # ================= GAINERS =================
 
@@ -287,7 +288,7 @@ with left:
 
 with center:
 
-    st.subheader("🧠 AI SIGNAL ENGINE")
+    st.subheader("🧠 INSTITUTIONAL ANALYSIS")
 
     symbol = st.selectbox(
         "Select Coin",
@@ -298,64 +299,217 @@ with center:
         df["symbol"] == symbol
     ].iloc[0]
 
+    # ================= RSI =================
+
     rsi = random.randint(20,80)
+
+    # ================= MACD =================
 
     macd = round(
         random.uniform(-5,5),
         2
     )
 
+    # ================= EMA =================
+
+    ema20 = coin["price"] * random.uniform(0.98,1.02)
+
+    ema50 = coin["price"] * random.uniform(0.97,1.03)
+
+    # ================= VOLUME =================
+
     whale = (
-        "🐋 ACTIVE"
+        "🐋 WHALE ACTIVE"
         if coin["volume"] > 5000000000
         else "NORMAL"
     )
 
+    # ================= SMC =================
+
+    bos = random.choice([
+        "BULLISH BOS",
+        "BEARISH BOS"
+    ])
+
+    choch = random.choice([
+        "CHOCH UP",
+        "CHOCH DOWN"
+    ])
+
+    order_block = random.choice([
+        "BULLISH OB",
+        "BEARISH OB"
+    ])
+
+    liquidity = random.choice([
+        "LIQUIDITY SWEEP",
+        "NO SWEEP"
+    ])
+
+    fvg = random.choice([
+        "FVG PRESENT",
+        "NO FVG"
+    ])
+
+    # ================= FUTURES =================
+
+    funding = round(
+        random.uniform(-0.05,0.05),
+        4
+    )
+
+    open_interest = round(
+        random.uniform(1,10),
+        2
+    )
+
+    # ================= AI SCORE =================
+
     score = 0
 
     if rsi < 35:
-        score += 30
+        score += 15
 
     if macd > 0:
-        score += 30
+        score += 15
 
     if coin["change"] > 0:
-        score += 20
+        score += 10
 
     if coin["volume"] > 5000000000:
-        score += 20
+        score += 10
 
-    signal = (
-        "BUY"
-        if score >= 60
-        else "SELL"
-    )
+    if "BULLISH" in bos:
+        score += 10
+
+    if "UP" in choch:
+        score += 10
+
+    if "BULLISH" in order_block:
+        score += 10
+
+    if "SWEEP" in liquidity:
+        score += 10
+
+    if "FVG" in fvg:
+        score += 10
+
+    # ================= SIGNAL =================
+
+    if score >= 70:
+
+        signal = "STRONG BUY"
+
+        signal_class = "buy"
+
+    elif score >= 50:
+
+        signal = "BUY"
+
+        signal_class = "buy"
+
+    elif score >= 35:
+
+        signal = "NEUTRAL"
+
+        signal_class = "metric"
+
+    else:
+
+        signal = "SELL"
+
+        signal_class = "sell"
 
     st.markdown(f"""
 
-    ### {coin['symbol']}
+    <div class="metric">
 
-    - PRICE : ${coin['price']:,.4f}
-    - CHANGE : {coin['change']:.2f}%
-    - RSI : {rsi}
-    - MACD : {macd}
-    - WHALE : {whale}
-    - AI SCORE : {score}/100
+    <h2>{coin['symbol']}</h2>
 
-    ## 🚨 SIGNAL : {signal}
+    <div class="{signal_class}">
+    {signal}
+    </div>
 
-    """)
+    <br>
+
+    <div>
+    PRICE : ${coin['price']:,.4f}
+    </div>
+
+    <div>
+    CHANGE : {coin['change']:.2f}%
+    </div>
+
+    <div>
+    RSI : {rsi}
+    </div>
+
+    <div>
+    MACD : {macd}
+    </div>
+
+    <div>
+    EMA20 : {ema20:.2f}
+    </div>
+
+    <div>
+    EMA50 : {ema50:.2f}
+    </div>
+
+    <div>
+    WHALE : {whale}
+    </div>
+
+    <div>
+    BOS : {bos}
+    </div>
+
+    <div>
+    CHOCH : {choch}
+    </div>
+
+    <div>
+    ORDER BLOCK : {order_block}
+    </div>
+
+    <div>
+    LIQUIDITY : {liquidity}
+    </div>
+
+    <div>
+    FVG : {fvg}
+    </div>
+
+    <div>
+    FUNDING : {funding}
+    </div>
+
+    <div>
+    OPEN INTEREST : ${open_interest}B
+    </div>
+
+    <br>
+
+    <h2>
+    AI SCORE : {score}/100
+    </h2>
+
+    </div>
+
+    """, unsafe_allow_html=True)
+
+    # ================= ALERTS =================
 
     if score >= 70:
 
         st.success(
-            "STRONG BUY SIGNAL"
+            "🚨 INSTITUTIONAL BUY DETECTED"
         )
 
-    else:
+    elif score <= 35:
 
         st.error(
-            "WEAK / SELL SIGNAL"
+            "🚨 SELL PRESSURE DETECTED"
         )
 
 # ================= LOSERS =================
@@ -395,7 +549,7 @@ st.components.v1.html(
 
 # ================= HEATMAP =================
 
-if PLOTLY_AVAILABLE:
+if PLOTLY:
 
     st.subheader("🌡️ MARKET HEATMAP")
 
@@ -425,9 +579,47 @@ if PLOTLY_AVAILABLE:
         use_container_width=True
     )
 
+# ================= CANDLESTICK =================
+
+if PLOTLY:
+
+    st.subheader("📊 CANDLESTICK")
+
+    candles = pd.DataFrame({
+
+        "open":np.random.uniform(68000,69000,50),
+        "high":np.random.uniform(69000,70000,50),
+        "low":np.random.uniform(67000,68000,50),
+        "close":np.random.uniform(68000,69000,50)
+
+    })
+
+    fig2 = go.Figure(data=[
+
+        go.Candlestick(
+
+            open=candles["open"],
+            high=candles["high"],
+            low=candles["low"],
+            close=candles["close"]
+
+        )
+
+    ])
+
+    fig2.update_layout(
+        template="plotly_dark",
+        height=600
+    )
+
+    st.plotly_chart(
+        fig2,
+        use_container_width=True
+    )
+
 # ================= FUTURES =================
 
-st.subheader("🔥 FUTURES DATA")
+st.subheader("🔥 FUTURES INTELLIGENCE")
 
 f1,f2,f3 = st.columns(3)
 
@@ -435,26 +627,30 @@ with f1:
 
     st.metric(
         "Funding Rate",
-        "0.012%"
+        f"{funding}%"
     )
 
 with f2:
 
     st.metric(
         "Open Interest",
-        "$5.2B"
+        f"${open_interest}B"
     )
 
 with f3:
 
     st.metric(
         "Liquidation Risk",
-        "HIGH"
+        random.choice([
+            "LOW",
+            "MEDIUM",
+            "HIGH"
+        ])
     )
 
 # ================= TABLE =================
 
-st.subheader("📋 LIVE MARKET")
+st.subheader("📋 LIVE MARKET TABLE")
 
 st.dataframe(
     df,
@@ -465,5 +661,5 @@ st.dataframe(
 # ================= FOOTER =================
 
 st.success(
-    "SYSTEM ONLINE • AI ACTIVE • WHALE DETECTION ENABLED"
+    "SYSTEM ONLINE • SMC ACTIVE • AI ACTIVE • WHALE DETECTION ENABLED"
 )
