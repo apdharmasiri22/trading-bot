@@ -1790,10 +1790,15 @@ if len(live_rows) > 0:
 
         return ""
 
-    styled_df = live_df.style.applymap(
-        color_pnl,
-        subset=["STATUS"]
-    )
+st.dataframe(
+
+    live_df,
+
+    use_container_width=True,
+
+    height=600
+
+)
 
     st.dataframe(
 
