@@ -500,6 +500,42 @@ def calculate_rsi(data, period=14):
 
     return rsi
 
+def calculate_rsi(data, period=14):
+
+    delta = data.diff()
+
+    gain = (
+        delta.where(delta > 0, 0)
+    ).rolling(period).mean()
+
+    loss = (
+        -delta.where(delta < 0, 0)
+    ).rolling(period).mean()
+
+    rs = gain / loss
+
+    rsi = 100 - (100 / (1 + rs))
+
+    return rsi
+
+
+def calculate_volume_ratio(df):
+
+    avg_volume = df["volume"].rolling(20).mean()
+
+    current_volume = df["volume"].iloc[-1]
+
+    volume_ratio = current_volume / avg_volume.iloc[-1]
+
+    return volume_ratio
+
+
+def calculate_ema(data, period):
+
+    return data.ewm(
+        span=period,
+        adjust=False
+    ).mean()
 
 def calculate_volume_ratio(df):
 
