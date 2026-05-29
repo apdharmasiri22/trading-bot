@@ -1227,55 +1227,6 @@ with scol:
         st.warning(
             "NO SHORT SIGNALS"
         )
-# =========================================================
-# SIGNAL TABLES
-# =========================================================
-
-lcol, scol = st.columns(2)
-
-with lcol:
-
-    st.subheader("🚀 LONG 80%+")
-
-    if len(scan_long) > 0:
-
-        st.dataframe(
-
-            pd.DataFrame(scan_long),
-
-            use_container_width=True,
-
-            height=500
-
-        )
-
-    else:
-
-        st.warning(
-            "NO LONG SIGNALS"
-        )
-
-with scol:
-
-    st.subheader("🔴 SHORT 80%+")
-
-    if len(scan_short) > 0:
-
-        st.dataframe(
-
-            pd.DataFrame(scan_short),
-
-            use_container_width=True,
-
-            height=500
-
-        )
-
-    else:
-
-        st.warning(
-            "NO SHORT SIGNALS"
-        )
 
 # =========================================================
 # UPDATE SIGNAL STATUS
