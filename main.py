@@ -1544,8 +1544,6 @@ for coin in coins:
     except Exception as e:
 
         print(f"{coin} ERROR : {e}")
-```
-
 
 # =========================================================
 # SIGNAL TABLES
