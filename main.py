@@ -454,9 +454,6 @@ Institutional AI Smart Money Analyzer
 
 </div>
 
-</style>
-
-<style>
 
 [data-testid="stAppViewContainer"] {
 
