@@ -1265,25 +1265,111 @@ else:
 
     timeframe = "1h"
 
+```python
 # =========================================================
-# ELITE AI SIGNAL SCANNER
+# SMART MONEY FUNCTIONS
 # =========================================================
 
-st.subheader("🔥 ELITE AI SIGNAL SCANNER")
+def detect_fvg(df):
+
+    try:
+
+        prev_high = df["high"].iloc[-3]
+
+        next_low = df["low"].iloc[-1]
+
+        return next_low > prev_high
+
+    except:
+        return False
+
+
+def detect_bearish_fvg(df):
+
+    try:
+
+        prev_low = df["low"].iloc[-3]
+
+        next_high = df["high"].iloc[-1]
+
+        return next_high < prev_low
+
+    except:
+        return False
+
+
+def detect_bos(df):
+
+    try:
+
+        last_high = df["high"].rolling(20).max().iloc[-2]
+
+        current_close = df["close"].iloc[-1]
+
+        return current_close > last_high
+
+    except:
+        return False
+
+
+def detect_bearish_bos(df):
+
+    try:
+
+        last_low = df["low"].rolling(20).min().iloc[-2]
+
+        current_close = df["close"].iloc[-1]
+
+        return current_close < last_low
+
+    except:
+        return False
+
+
+def detect_order_block(df):
+
+    try:
+
+        candle = df.iloc[-2]
+
+        body = abs(candle["close"] - candle["open"])
+
+        range_ = candle["high"] - candle["low"]
+
+        return body < (range_ * 0.4)
+
+    except:
+        return False
+
+
+def detect_elliott_wave(df):
+
+    try:
+
+        ema20 = calculate_ema(df["close"],20)
+
+        ema50 = calculate_ema(df["close"],50)
+
+        return ema20.iloc[-1] > ema50.iloc[-1]
+
+    except:
+        return False
+
+
+# =========================================================
+# ELITE SMART MONEY SCANNER
+# =========================================================
+
+st.subheader("🔥 ELITE SMART MONEY SCANNER")
 
 scan_long = []
 scan_short = []
 
-# TAKE TOP 75 COINS
 coins = df["symbol"].tolist()[:75]
 
 for coin in coins:
 
     try:
-
-        # =====================================
-        # GET KLINE DATA
-        # =====================================
 
         kline = get_klines(
             coin,
@@ -1297,50 +1383,31 @@ for coin in coins:
 
         current_price = close.iloc[-1]
 
-        # =====================================
-        # INDICATORS
-        # =====================================
-
         rsi = calculate_rsi(close).iloc[-1]
-
-        macd, signal_line = calculate_macd(close)
-
-        macd_value = macd.iloc[-1]
-
-        ema20 = calculate_ema(close, 20).iloc[-1]
-
-        ema50 = calculate_ema(close, 50).iloc[-1]
-
-        ema200 = calculate_ema(close, 200).iloc[-1]
 
         atr = calculate_atr(kline).iloc[-1]
 
         volume_ratio = calculate_volume_ratio(kline)
 
+        ema20 = calculate_ema(close,20).iloc[-1]
+
+        ema50 = calculate_ema(close,50).iloc[-1]
+
         # =====================================
-        # REMOVE NaN VALUES
+        # SMART MONEY CONDITIONS
         # =====================================
 
-        if pd.isna(rsi):
-            continue
+        bullish_bos = detect_bos(kline)
 
-        if pd.isna(macd_value):
-            continue
+        bearish_bos = detect_bearish_bos(kline)
 
-        if pd.isna(ema20):
-            continue
+        bullish_fvg = detect_fvg(kline)
 
-        if pd.isna(ema50):
-            continue
+        bearish_fvg = detect_bearish_fvg(kline)
 
-        if pd.isna(ema200):
-            continue
+        order_block = detect_order_block(kline)
 
-        if pd.isna(atr):
-            continue
-
-        if pd.isna(volume_ratio):
-            continue
+        elliott = detect_elliott_wave(kline)
 
         # =====================================
         # LONG SCORE
@@ -1348,19 +1415,19 @@ for coin in coins:
 
         long_score = 0
 
-        if 40 <= rsi <= 65:
+        if bullish_bos:
+            long_score += 25
+
+        if bullish_fvg:
             long_score += 20
 
-        if macd_value > 0:
+        if order_block:
+            long_score += 15
+
+        if elliott:
             long_score += 20
 
-        if ema20 > ema50:
-            long_score += 20
-
-        if ema50 > ema200:
-            long_score += 20
-
-        if volume_ratio > 1.2:
+        if volume_ratio > 1.5:
             long_score += 20
 
         # =====================================
@@ -1369,19 +1436,19 @@ for coin in coins:
 
         short_score = 0
 
-        if rsi <= 35:
+        if bearish_bos:
+            short_score += 25
+
+        if bearish_fvg:
             short_score += 20
 
-        if macd_value < 0:
+        if order_block:
+            short_score += 15
+
+        if not elliott:
             short_score += 20
 
-        if ema20 < ema50:
-            short_score += 20
-
-        if ema50 < ema200:
-            short_score += 20
-
-        if volume_ratio > 1.2:
+        if volume_ratio > 1.5:
             short_score += 20
 
         # =====================================
@@ -1392,26 +1459,24 @@ for coin in coins:
 
             entry = current_price
 
-            sl = current_price - (atr * 0.8)
+            sl = current_price - (atr * 1.5)
 
-            tp1 = current_price + (atr * 1)
+            tp1 = current_price + (atr * 2)
 
-            tp2 = current_price + (atr * 2)
+            tp2 = current_price + (atr * 4)
 
-            tp3 = current_price + (atr * 3)
+            tp3 = current_price + (atr * 6)
 
             scan_long.append({
 
                 "COIN": coin,
-                "PRICE": round(current_price, 4),
+                "PRICE": round(current_price,4),
                 "LONG %": long_score,
-                "RSI": round(rsi, 2),
-                "VOL": round(volume_ratio, 2),
-                "ENTRY": round(entry, 4),
-                "TP1": round(tp1, 4),
-                "TP2": round(tp2, 4),
-                "TP3": round(tp3, 4),
-                "SL": round(sl, 4)
+                "ENTRY": round(entry,4),
+                "TP1": round(tp1,4),
+                "TP2": round(tp2,4),
+                "TP3": round(tp3,4),
+                "SL": round(sl,4)
 
             })
 
@@ -1439,26 +1504,24 @@ for coin in coins:
 
             entry = current_price
 
-            sl = current_price + (atr * 0.8)
+            sl = current_price + (atr * 1.5)
 
-            tp1 = current_price - (atr * 1)
+            tp1 = current_price - (atr * 2)
 
-            tp2 = current_price - (atr * 2)
+            tp2 = current_price - (atr * 4)
 
-            tp3 = current_price - (atr * 3)
+            tp3 = current_price - (atr * 6)
 
             scan_short.append({
 
                 "COIN": coin,
-                "PRICE": round(current_price, 4),
+                "PRICE": round(current_price,4),
                 "SHORT %": short_score,
-                "RSI": round(rsi, 2),
-                "VOL": round(volume_ratio, 2),
-                "ENTRY": round(entry, 4),
-                "TP1": round(tp1, 4),
-                "TP2": round(tp2, 4),
-                "TP3": round(tp3, 4),
-                "SL": round(sl, 4)
+                "ENTRY": round(entry,4),
+                "TP1": round(tp1,4),
+                "TP2": round(tp2,4),
+                "TP3": round(tp3,4),
+                "SL": round(sl,4)
 
             })
 
@@ -1481,6 +1544,8 @@ for coin in coins:
     except Exception as e:
 
         print(f"{coin} ERROR : {e}")
+```
+
 
 # =========================================================
 # SIGNAL TABLES
