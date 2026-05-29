@@ -64,415 +64,299 @@ conn.commit()
 # STYLE
 # =========================================================
 
+# =========================================================
+# ULTRA PREMIUM QUANTUM UI
+# =========================================================
+
 st.markdown("""
 
 <style>
 
-/* =====================================================
-MAIN BACKGROUND
-===================================================== */
+/* ===================================================== */
+/* MAIN BACKGROUND */
+/* ===================================================== */
 
 html, body, .stApp {
 
-    background: linear-gradient(
-        -45deg,
-        #020617,
-        #0f172a,
-        #111827,
-        #1e293b
-    );
+    background:
+        linear-gradient(
+            135deg,
+            rgba(2,6,23,0.96),
+            rgba(15,23,42,0.96),
+            rgba(17,24,39,0.97)
+        ),
+        url("https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2070&auto=format&fit=crop");
 
-    background-size: 400% 400%;
+    background-size: cover;
 
-    animation: gradientMove 18s ease infinite;
+    background-attachment: fixed;
 
     color: white;
+
+    overflow-x: hidden;
 
     font-family: Arial;
 
 }
 
-    background: linear-gradient(
-        -45deg,
-        #020617,
-        #0f172a,
-        #111827,
-        #1e293b
-    );
-
-    background-size: 400% 400%;
-
-    animation: gradientMove 18s ease infinite;
-
-    color: white;
-
-    font-family: Arial;
-
-}
-
-/* =====================================================
-ANIMATED GRADIENT
-===================================================== */
-
-@keyframes gradientMove {
-
-    0% {
-        background-position: 0% 50%;
-    }
-
-    50% {
-        background-position: 100% 50%;
-    }
-
-    100% {
-        background-position: 0% 50%;
-    }
-
-}
-
-/* =====================================================
-FLOAT EFFECT
-===================================================== */
-
-@keyframes floating {
-
-    0% {
-        transform: translateY(0px);
-    }
-
-    50% {
-        transform: translateY(-5px);
-    }
-
-    100% {
-        transform: translateY(0px);
-    }
-
-}
-
-/* =====================================================
-GLOW EFFECT
-===================================================== */
-
-@keyframes glow {
-
-    0% {
-        box-shadow: 0 0 10px rgba(56,189,248,0.25);
-    }
-
-    50% {
-        box-shadow: 0 0 25px rgba(99,102,241,0.35);
-    }
-
-    100% {
-        box-shadow: 0 0 10px rgba(34,197,94,0.25);
-    }
-
-}
-
-/* =====================================================
-ROTATING PARTICLES
-===================================================== */
+/* ===================================================== */
+/* ANIMATED LIGHTS */
+/* ===================================================== */
 
 body::before {
 
-    content: "";
+    content:"";
 
-    position: fixed;
+    position:fixed;
 
-    width: 200%;
-
-    height: 200%;
-
-    top: -50%;
-
-    left: -50%;
+    inset:0;
 
     background:
-        radial-gradient(circle,
-        rgba(56,189,248,0.08) 0%,
-        transparent 70%);
+    radial-gradient(circle at 20% 20%,
+    rgba(56,189,248,0.15),
+    transparent 30%),
 
-    animation: rotateBg 30s linear infinite;
+    radial-gradient(circle at 80% 30%,
+    rgba(99,102,241,0.15),
+    transparent 30%),
 
-    z-index: -2;
+    radial-gradient(circle at 50% 80%,
+    rgba(34,197,94,0.12),
+    transparent 30%);
 
-}
+    animation: moveBg 18s infinite alternate ease-in-out;
 
-@keyframes rotateBg {
-
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
+    z-index:-2;
 
 }
 
-/* =====================================================
-CYBER GRID
-===================================================== */
+@keyframes moveBg {
+
+    0%{
+        transform: scale(1) translateY(0px);
+    }
+
+    100%{
+        transform: scale(1.1) translateY(-20px);
+    }
+
+}
+
+/* ===================================================== */
+/* CYBER GRID */
+/* ===================================================== */
 
 body::after {
 
-    content: "";
+    content:"";
 
-    position: fixed;
+    position:fixed;
 
-    inset: 0;
+    inset:0;
 
     background-image:
-        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
 
-    background-size: 40px 40px;
+    background-size:40px 40px;
 
-    animation: gridMove 12s linear infinite;
-
-    z-index: -1;
+    z-index:-1;
 
 }
 
-@keyframes gridMove {
-
-    from {
-        transform: translateY(0px);
-    }
-
-    to {
-        transform: translateY(40px);
-    }
-
-}
-
-/* =====================================================
-MAIN CONTAINER
-===================================================== */
+/* ===================================================== */
+/* MAIN CONTAINER */
+/* ===================================================== */
 
 .block-container {
 
-    padding-top: 1rem;
+    padding-top:1rem;
 
 }
 
-/* =====================================================
-GLASS EFFECT
-===================================================== */
-
-section.main > div {
-
-    background: rgba(2,6,23,0.45);
-
-    backdrop-filter: blur(18px);
-
-}
-
-/* =====================================================
-CARD
-===================================================== */
+/* ===================================================== */
+/* GLASS CARD */
+/* ===================================================== */
 
 .card {
 
-    background: rgba(15,23,42,0.70);
+    background: rgba(15,23,42,0.55);
 
-    backdrop-filter: blur(18px);
+    backdrop-filter: blur(20px);
 
-    border: 1px solid rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.08);
 
-    border-radius: 24px;
+    border-radius:28px;
 
-    padding: 22px;
+    padding:24px;
 
-    margin-bottom: 22px;
+    margin-bottom:24px;
 
-    transition: 0.3s;
+    box-shadow:
+        0 0 30px rgba(56,189,248,0.08);
 
-    animation: floating 6s ease-in-out infinite;
+    transition:0.35s;
 
 }
 
 .card:hover {
 
-    transform: scale(1.01);
+    transform:translateY(-4px);
 
-    animation: glow 2s infinite;
-
-}
-
-/* =====================================================
-METRIC BOX
-===================================================== */
-
-.metric {
-
-    background: rgba(17,24,39,0.82);
-
-    backdrop-filter: blur(14px);
-
-    border-radius: 20px;
-
-    padding: 18px;
-
-    border: 1px solid rgba(255,255,255,0.08);
-
-    margin-bottom: 16px;
-
-    transition: 0.3s;
+    box-shadow:
+        0 0 40px rgba(99,102,241,0.22);
 
 }
 
-.metric:hover {
+/* ===================================================== */
+/* TITLE */
+/* ===================================================== */
 
-    transform: translateY(-4px);
+.title {
 
-    animation: glow 2s infinite;
+    font-size:58px;
+
+    font-weight:900;
+
+    background:linear-gradient(
+        90deg,
+        #38bdf8,
+        #818cf8,
+        #22c55e,
+        #38bdf8
+    );
+
+    background-size:300%;
+
+    animation: titleFlow 8s linear infinite;
+
+    -webkit-background-clip:text;
+
+    -webkit-text-fill-color:transparent;
+
+    text-shadow:
+        0 0 20px rgba(56,189,248,0.35);
 
 }
 
-/* =====================================================
-STREAMLIT METRIC
-===================================================== */
+@keyframes titleFlow {
+
+    0%{
+        background-position:0%;
+    }
+
+    100%{
+        background-position:300%;
+    }
+
+}
+
+/* ===================================================== */
+/* METRIC CARDS */
+/* ===================================================== */
 
 [data-testid="metric-container"] {
 
-    background: linear-gradient(
-        135deg,
-        rgba(15,23,42,0.95),
-        rgba(30,41,59,0.90)
-    );
+    background: rgba(15,23,42,0.72);
 
-    border: 1px solid rgba(56,189,248,0.20);
+    backdrop-filter: blur(16px);
 
-    padding: 18px;
+    border-radius:22px;
 
-    border-radius: 20px;
+    border:1px solid rgba(255,255,255,0.06);
 
-    box-shadow: 0 0 15px rgba(56,189,248,0.10);
+    padding:18px;
 
-    transition: 0.3s;
+    box-shadow:
+        0 0 18px rgba(56,189,248,0.08);
+
+    transition:0.3s;
 
 }
 
 [data-testid="metric-container"]:hover {
 
-    transform: translateY(-5px);
+    transform:translateY(-5px);
 
-    box-shadow: 0 0 25px rgba(99,102,241,0.30);
-
-}
-
-/* =====================================================
-TITLE
-===================================================== */
-
-.title {
-
-    font-size: 52px;
-
-    font-weight: 900;
-
-    background: linear-gradient(
-        90deg,
-        #38bdf8,
-        #818cf8,
-        #22c55e
-    );
-
-    -webkit-background-clip: text;
-
-    -webkit-text-fill-color: transparent;
-
-    text-shadow:
-        0 0 15px rgba(56,189,248,0.4),
-        0 0 25px rgba(99,102,241,0.3);
+    box-shadow:
+        0 0 28px rgba(99,102,241,0.25);
 
 }
 
-/* =====================================================
-BUY / SELL / NEUTRAL
-===================================================== */
+/* ===================================================== */
+/* DATA TABLE */
+/* ===================================================== */
+
+[data-testid="stDataFrame"] {
+
+    border-radius:22px;
+
+    overflow:hidden;
+
+    border:1px solid rgba(255,255,255,0.08);
+
+    box-shadow:
+        0 0 30px rgba(56,189,248,0.10);
+
+}
+
+/* ===================================================== */
+/* BUY BOX */
+/* ===================================================== */
 
 .buy {
 
     background: linear-gradient(
         90deg,
-        #14532d,
-        #22c55e
+        rgba(34,197,94,0.75),
+        rgba(22,163,74,0.92)
     );
 
-    padding: 14px;
+    padding:14px;
 
-    border-radius: 14px;
+    border-radius:16px;
 
-    text-align: center;
+    font-size:20px;
 
-    font-weight: bold;
+    font-weight:bold;
 
-    font-size: 20px;
+    text-align:center;
 
-    animation: glow 2s infinite;
+    box-shadow:
+        0 0 20px rgba(34,197,94,0.25);
 
 }
+
+/* ===================================================== */
+/* SELL BOX */
+/* ===================================================== */
 
 .sell {
 
     background: linear-gradient(
         90deg,
-        #7f1d1d,
-        #ef4444
+        rgba(239,68,68,0.75),
+        rgba(127,29,29,0.95)
     );
 
-    padding: 14px;
+    padding:14px;
 
-    border-radius: 14px;
+    border-radius:16px;
 
-    text-align: center;
+    font-size:20px;
 
-    font-weight: bold;
+    font-weight:bold;
 
-    font-size: 20px;
+    text-align:center;
 
-    animation: glow 2s infinite;
-
-}
-
-.neutral {
-
-    background: #334155;
-
-    padding: 14px;
-
-    border-radius: 14px;
-
-    text-align: center;
-
-    font-weight: bold;
-
-    font-size: 20px;
+    box-shadow:
+        0 0 20px rgba(239,68,68,0.25);
 
 }
 
-/* =====================================================
-DATAFRAME
-===================================================== */
-
-[data-testid="stDataFrame"] {
-
-    border-radius: 20px;
-
-    overflow: hidden;
-
-    border: 1px solid rgba(255,255,255,0.08);
-
-    box-shadow: 0 0 20px rgba(56,189,248,0.10);
-
-}
-
-/* =====================================================
-BUTTON
-===================================================== */
+/* ===================================================== */
+/* BUTTONS */
+/* ===================================================== */
 
 .stButton > button {
 
@@ -482,136 +366,76 @@ BUTTON
         #6366f1
     );
 
-    color: white;
+    border:none;
 
-    border: none;
+    border-radius:14px;
 
-    border-radius: 12px;
+    color:white;
 
-    padding: 10px 22px;
+    font-weight:bold;
 
-    font-weight: bold;
-
-    transition: 0.3s;
+    transition:0.3s;
 
 }
 
 .stButton > button:hover {
 
-    transform: scale(1.05);
+    transform:scale(1.05);
 
-    animation: glow 2s infinite;
+    box-shadow:
+        0 0 22px rgba(56,189,248,0.35);
 
 }
 
-/* =====================================================
-SELECTBOX
-===================================================== */
+/* ===================================================== */
+/* SELECTBOX */
+/* ===================================================== */
 
 .stSelectbox > div > div {
 
     background: rgba(15,23,42,0.90);
 
-    border-radius: 14px;
+    border-radius:14px;
 
-    border: 1px solid rgba(255,255,255,0.08);
-
-}
-
-/* =====================================================
-TEXT INPUT
-===================================================== */
-
-.stTextInput input {
-
-    background: rgba(15,23,42,0.90) !important;
-
-    color: white !important;
-
-    border-radius: 14px !important;
-
-    border: 1px solid rgba(255,255,255,0.08) !important;
+    border:1px solid rgba(255,255,255,0.08);
 
 }
 
-/* =====================================================
-PLOTLY CHART
-===================================================== */
-
-.js-plotly-plot {
-
-    border-radius: 20px;
-
-    overflow: hidden;
-
-    box-shadow: 0 0 25px rgba(56,189,248,0.12);
-
-}
-
-/* =====================================================
-SIDEBAR
-===================================================== */
+/* ===================================================== */
+/* SIDEBAR */
+/* ===================================================== */
 
 section[data-testid="stSidebar"] {
 
-    background: rgba(2,6,23,0.92);
+    background: rgba(2,6,23,0.88);
 
-    border-right: 1px solid rgba(255,255,255,0.08);
+    border-right:1px solid rgba(255,255,255,0.08);
 
-    box-shadow: 0 0 25px rgba(56,189,248,0.10);
+    backdrop-filter: blur(18px);
 
 }
 
-/* =====================================================
-SCROLLBAR
-===================================================== */
+/* ===================================================== */
+/* SCROLLBAR */
+/* ===================================================== */
 
 ::-webkit-scrollbar {
 
-    width: 10px;
+    width:10px;
 
 }
 
 ::-webkit-scrollbar-thumb {
 
-    background: #38bdf8;
+    background:#38bdf8;
 
-    border-radius: 20px;
-
-}
-::-webkit-scrollbar-thumb {
-
-    background: #38bdf8;
-
-    border-radius: 20px;
+    border-radius:20px;
 
 }
 
-/* ME TIKA PASTE KARANNA ME THANATA */
-
-[data-testid="stAppViewContainer"] {
-
-    background: transparent;
-
-}
-
-[data-testid="stHeader"] {
-
-    background: rgba(0,0,0,0);
-
-}
-
-[data-testid="stToolbar"] {
-
-    right: 2rem;
-
-}
-
-</style>
 </style>
 
 """, unsafe_allow_html=True)
-
 # =========================================================
 # HEADER
 # =========================================================
