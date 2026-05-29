@@ -1681,6 +1681,100 @@ st.plotly_chart(
     fig,
     use_container_width=True
 )
+# =========================================================
+# LIVE SIGNAL TRACKER
+# =========================================================
+
+st.subheader("🧠 LIVE SIGNAL TRACKER")
+
+live_signals = pd.read_sql("""
+
+SELECT * FROM signals
+
+ORDER BY id DESC
+
+LIMIT 20
+
+""", conn)
+
+if not live_signals.empty:
+
+    for _, row in live_signals.iterrows():
+
+        coin = row["coin"]
+        signal = row["signal"]
+        entry = row["entry"]
+        tp1 = row["tp1"]
+        tp2 = row["tp2"]
+        tp3 = row["tp3"]
+        sl = row["sl"]
+        status = row["status"]
+
+        try:
+
+            kline_live = get_klines(
+                coin,
+                timeframe
+            )
+
+            current_price = kline_live["close"].iloc[-1]
+
+        except:
+
+            current_price = entry
+
+        pnl = current_price - entry
+
+        # LONG
+        if signal == "LONG":
+
+            profit = pnl > 0
+            color = "#22c55e" if profit else "#ef4444"
+
+        # SHORT
+        else:
+
+            profit = pnl < 0
+            color = "#22c55e" if profit else "#ef4444"
+
+        st.markdown(f"""
+
+        <div style="
+            background: rgba(15,23,42,0.75);
+            border: 1px solid {color};
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 0 20px {color};
+        ">
+
+        <h2 style="color:{color};">
+        {coin} • {signal}
+        </h2>
+
+        <hr>
+
+        <h4>ENTRY : {entry:.4f}</h4>
+
+        <h4>CURRENT : {current_price:.4f}</h4>
+
+        <h4>TP1 : {tp1:.4f}</h4>
+
+        <h4>TP2 : {tp2:.4f}</h4>
+
+        <h4>TP3 : {tp3:.4f}</h4>
+
+        <h4>SL : {sl:.4f}</h4>
+
+        <hr>
+
+        <h3 style="color:{color};">
+        STATUS : {status}
+        </h3>
+
+        </div>
+
+        """, unsafe_allow_html=True)
 
 # =========================================================
 # SIGNAL HISTORY
