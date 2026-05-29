@@ -72,7 +72,25 @@ st.markdown("""
 MAIN BACKGROUND
 ===================================================== */
 
-html, body, [class*="css"] {
+html, body, .stApp {
+
+    background: linear-gradient(
+        -45deg,
+        #020617,
+        #0f172a,
+        #111827,
+        #1e293b
+    );
+
+    background-size: 400% 400%;
+
+    animation: gradientMove 18s ease infinite;
+
+    color: white;
+
+    font-family: Arial;
+
+}
 
     background: linear-gradient(
         -45deg,
