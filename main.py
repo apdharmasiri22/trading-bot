@@ -1770,6 +1770,7 @@ st.plotly_chart(
     fig,
     use_container_width=True
 )
+
 # =========================================================
 # LIVE SIGNAL TABLE
 # =========================================================
@@ -1792,6 +1793,7 @@ for _, row in signals_live.iterrows():
 
         coin = row["coin"]
         signal = row["signal"]
+
         entry = row["entry"]
 
         tp1 = row["tp1"]
@@ -1802,6 +1804,10 @@ for _, row in signals_live.iterrows():
 
         status = row["status"]
 
+        # =====================================
+        # GET LIVE PRICE
+        # =====================================
+
         kline_live = get_klines(
             coin,
             timeframe
@@ -1809,7 +1815,10 @@ for _, row in signals_live.iterrows():
 
         current_price = kline_live["close"].iloc[-1]
 
-        # LONG
+        # =====================================
+        # LONG PNL
+        # =====================================
+
         if signal == "LONG":
 
             pnl = current_price - entry
@@ -1818,7 +1827,10 @@ for _, row in signals_live.iterrows():
                 pnl / entry
             ) * 100
 
-        # SHORT
+        # =====================================
+        # SHORT PNL
+        # =====================================
+
         else:
 
             pnl = entry - current_price
@@ -1827,7 +1839,10 @@ for _, row in signals_live.iterrows():
                 pnl / entry
             ) * 100
 
-        # LIVE COLOR
+        # =====================================
+        # LIVE STATUS
+        # =====================================
+
         if pnl_percent >= 0:
 
             live_status = "🟢 PROFIT"
@@ -1836,12 +1851,21 @@ for _, row in signals_live.iterrows():
 
             live_status = "🔴 LOSS"
 
+        # =====================================
+        # ADD ROW
+        # =====================================
+
         live_rows.append({
 
             "COIN": coin,
             "TYPE": signal,
+
             "ENTRY": round(entry,4),
-            "CURRENT": round(current_price,4),
+
+            "CURRENT": round(
+                current_price,
+                4
+            ),
 
             "TP1": round(tp1,4),
             "TP2": round(tp2,4),
@@ -1863,31 +1887,29 @@ for _, row in signals_live.iterrows():
     except:
         pass
 
+# =========================================================
+# SHOW LIVE TABLE
+# =========================================================
+
 if len(live_rows) > 0:
 
     live_df = pd.DataFrame(live_rows)
 
-    def color_pnl(val):
+    st.dataframe(
 
-        if isinstance(val, str):
+        live_df,
 
-            if "PROFIT" in val:
-                return "color: #22c55e; font-weight:bold"
+        use_container_width=True,
 
-            if "LOSS" in val:
-                return "color: #ef4444; font-weight:bold"
+        height=600
 
-        return ""
+    )
 
-st.dataframe(
+else:
 
-    live_df,
-
-    use_container_width=True,
-
-    height=600
-
-)
+    st.warning(
+        "NO LIVE SIGNALS"
+    )
 
 # =========================================================
 # SIGNAL HISTORY
@@ -1895,12 +1917,17 @@ st.dataframe(
 
 st.subheader("📜 SIGNAL HISTORY")
 
+history_df = signals_df.sort_values(
+
+    by="id",
+
+    ascending=False
+
+)
+
 st.dataframe(
 
-    signals_df.sort_values(
-        by="id",
-        ascending=False
-    ),
+    history_df,
 
     use_container_width=True,
 
@@ -1921,8 +1948,11 @@ sl_hits = len(
 )
 
 st.metric(
+
     "TOTAL SL HITS",
+
     sl_hits
+
 )
 
 # =========================================================
@@ -1930,5 +1960,7 @@ st.metric(
 # =========================================================
 
 st.success(
+
     "SYSTEM ONLINE • AI ACTIVE • SMART MONEY ACTIVE • WHALE DETECTION ENABLED"
+
 )
