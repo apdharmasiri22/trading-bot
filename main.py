@@ -501,10 +501,6 @@ def calculate_rsi(data, period=14):
     return rsi
 
 
-# =========================================
-# ADD THIS HERE
-# =========================================
-
 def calculate_volume_ratio(df):
 
     avg_volume = df["volume"].rolling(20).mean()
@@ -522,6 +518,52 @@ def calculate_ema(data, period):
         span=period,
         adjust=False
     ).mean()
+
+
+def calculate_macd(data):
+
+    ema12 = calculate_ema(data, 12)
+
+    ema26 = calculate_ema(data, 26)
+
+    macd = ema12 - ema26
+
+    signal = calculate_ema(macd, 9)
+
+    return macd, signal
+
+
+def calculate_atr(df, period=14):
+
+    high_low = df["high"] - df["low"]
+
+    high_close = np.abs(
+        df["high"] - df["close"].shift()
+    )
+
+    low_close = np.abs(
+        df["low"] - df["close"].shift()
+    )
+
+    ranges = pd.concat(
+        [
+            high_low,
+            high_close,
+            low_close
+        ],
+        axis=1
+    )
+
+    true_range = np.max(
+        ranges,
+        axis=1
+    )
+
+    atr = pd.Series(
+        true_range
+    ).rolling(period).mean()
+
+    return atr
 # =========================================================
 # MARKET DATA
 # =========================================================
