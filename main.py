@@ -440,7 +440,34 @@ section[data-testid="stSidebar"] {
 # HEADER
 # =========================================================
 
+```python
+# =========================================================
+# HEADER
+# =========================================================
+
 st.markdown("""
+
+<style>
+
+[data-testid="stAppViewContainer"] {
+
+    background: transparent;
+
+}
+
+[data-testid="stHeader"] {
+
+    background: rgba(0,0,0,0);
+
+}
+
+[data-testid="stToolbar"] {
+
+    right: 2rem;
+
+}
+
+</style>
 
 <div class="card">
 
@@ -454,8 +481,9 @@ Institutional AI Smart Money Analyzer
 
 </div>
 
-
 """, unsafe_allow_html=True)
+```
+
 
 
 # =========================================================
