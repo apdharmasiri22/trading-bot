@@ -610,7 +610,29 @@ st.markdown("""
 Institutional AI Smart Money Analyzer
 </div>
 
-</div>
+</style>
+
+<style>
+
+[data-testid="stAppViewContainer"] {
+
+    background: transparent;
+
+}
+
+[data-testid="stHeader"] {
+
+    background: rgba(0,0,0,0);
+
+}
+
+[data-testid="stToolbar"] {
+
+    right: 2rem;
+
+}
+
+</style>
 
 """, unsafe_allow_html=True)
 
