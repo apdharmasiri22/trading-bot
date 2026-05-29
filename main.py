@@ -1800,22 +1800,6 @@ st.dataframe(
 
 )
 
-    st.dataframe(
-
-        styled_df,
-
-        use_container_width=True,
-
-        height=600
-
-    )
-
-else:
-
-    st.warning(
-        "NO LIVE SIGNALS"
-    )
-
 # =========================================================
 # SIGNAL HISTORY
 # =========================================================
