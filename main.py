@@ -68,6 +68,10 @@ st.markdown("""
 
 <style>
 
+/* =====================================================
+MAIN BACKGROUND
+===================================================== */
+
 html, body, [class*="css"] {
 
     background: linear-gradient(
@@ -80,89 +84,178 @@ html, body, [class*="css"] {
 
     background-size: 400% 400%;
 
-    animation: gradientMove 15s ease infinite;
+    animation: gradientMove 18s ease infinite;
 
     color: white;
 
-    font-family: 'Arial';
+    font-family: Arial;
 
 }
 
-/* ===================================================== */
-/* ANIMATED BACKGROUND */
-/* ===================================================== */
+/* =====================================================
+ANIMATED GRADIENT
+===================================================== */
 
 @keyframes gradientMove {
 
-    0%{
-        background-position:0% 50%;
+    0% {
+        background-position: 0% 50%;
     }
 
-    50%{
-        background-position:100% 50%;
+    50% {
+        background-position: 100% 50%;
     }
 
-    100%{
-        background-position:0% 50%;
+    100% {
+        background-position: 0% 50%;
     }
 
 }
 
-/* ===================================================== */
-/* FLOAT ANIMATION */
-/* ===================================================== */
+/* =====================================================
+FLOAT EFFECT
+===================================================== */
 
 @keyframes floating {
 
-    0%{
+    0% {
         transform: translateY(0px);
     }
 
-    50%{
-        transform: translateY(-6px);
+    50% {
+        transform: translateY(-5px);
     }
 
-    100%{
+    100% {
         transform: translateY(0px);
     }
 
 }
 
-/* ===================================================== */
-/* GLOW ANIMATION */
-/* ===================================================== */
+/* =====================================================
+GLOW EFFECT
+===================================================== */
 
 @keyframes glow {
 
-    0%{
-        box-shadow:0 0 10px #38bdf8;
+    0% {
+        box-shadow: 0 0 10px rgba(56,189,248,0.25);
     }
 
-    50%{
-        box-shadow:0 0 30px #818cf8;
+    50% {
+        box-shadow: 0 0 25px rgba(99,102,241,0.35);
     }
 
-    100%{
-        box-shadow:0 0 10px #22c55e;
+    100% {
+        box-shadow: 0 0 10px rgba(34,197,94,0.25);
     }
 
 }
 
-/* ===================================================== */
-/* MAIN CONTAINER */
-/* ===================================================== */
+/* =====================================================
+ROTATING PARTICLES
+===================================================== */
 
-.block-container{
+body::before {
 
-    padding-top:1rem;
+    content: "";
+
+    position: fixed;
+
+    width: 200%;
+
+    height: 200%;
+
+    top: -50%;
+
+    left: -50%;
+
+    background:
+        radial-gradient(circle,
+        rgba(56,189,248,0.08) 0%,
+        transparent 70%);
+
+    animation: rotateBg 30s linear infinite;
+
+    z-index: -2;
 
 }
 
-/* ===================================================== */
-/* PREMIUM CARD */
-/* ===================================================== */
+@keyframes rotateBg {
 
-.card{
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+
+}
+
+/* =====================================================
+CYBER GRID
+===================================================== */
+
+body::after {
+
+    content: "";
+
+    position: fixed;
+
+    inset: 0;
+
+    background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+
+    background-size: 40px 40px;
+
+    animation: gridMove 12s linear infinite;
+
+    z-index: -1;
+
+}
+
+@keyframes gridMove {
+
+    from {
+        transform: translateY(0px);
+    }
+
+    to {
+        transform: translateY(40px);
+    }
+
+}
+
+/* =====================================================
+MAIN CONTAINER
+===================================================== */
+
+.block-container {
+
+    padding-top: 1rem;
+
+}
+
+/* =====================================================
+GLASS EFFECT
+===================================================== */
+
+section.main > div {
+
+    background: rgba(2,6,23,0.45);
+
+    backdrop-filter: blur(18px);
+
+}
+
+/* =====================================================
+CARD
+===================================================== */
+
+.card {
 
     background: rgba(15,23,42,0.70);
 
@@ -176,13 +269,13 @@ html, body, [class*="css"] {
 
     margin-bottom: 22px;
 
-    animation: floating 5s ease-in-out infinite;
-
     transition: 0.3s;
+
+    animation: floating 6s ease-in-out infinite;
 
 }
 
-.card:hover{
+.card:hover {
 
     transform: scale(1.01);
 
@@ -190,11 +283,11 @@ html, body, [class*="css"] {
 
 }
 
-/* ===================================================== */
-/* METRIC CARD */
-/* ===================================================== */
+/* =====================================================
+METRIC BOX
+===================================================== */
 
-.metric{
+.metric {
 
     background: rgba(17,24,39,0.82);
 
@@ -212,7 +305,7 @@ html, body, [class*="css"] {
 
 }
 
-.metric:hover{
+.metric:hover {
 
     transform: translateY(-4px);
 
@@ -220,11 +313,43 @@ html, body, [class*="css"] {
 
 }
 
-/* ===================================================== */
-/* TITLE */
-/* ===================================================== */
+/* =====================================================
+STREAMLIT METRIC
+===================================================== */
 
-.title{
+[data-testid="metric-container"] {
+
+    background: linear-gradient(
+        135deg,
+        rgba(15,23,42,0.95),
+        rgba(30,41,59,0.90)
+    );
+
+    border: 1px solid rgba(56,189,248,0.20);
+
+    padding: 18px;
+
+    border-radius: 20px;
+
+    box-shadow: 0 0 15px rgba(56,189,248,0.10);
+
+    transition: 0.3s;
+
+}
+
+[data-testid="metric-container"]:hover {
+
+    transform: translateY(-5px);
+
+    box-shadow: 0 0 25px rgba(99,102,241,0.30);
+
+}
+
+/* =====================================================
+TITLE
+===================================================== */
+
+.title {
 
     font-size: 52px;
 
@@ -237,19 +362,21 @@ html, body, [class*="css"] {
         #22c55e
     );
 
-    -webkit-background-clip:text;
+    -webkit-background-clip: text;
 
-    -webkit-text-fill-color:transparent;
+    -webkit-text-fill-color: transparent;
 
-    animation: floating 4s ease-in-out infinite;
+    text-shadow:
+        0 0 15px rgba(56,189,248,0.4),
+        0 0 25px rgba(99,102,241,0.3);
 
 }
 
-/* ===================================================== */
-/* BUY */
-/* ===================================================== */
+/* =====================================================
+BUY / SELL / NEUTRAL
+===================================================== */
 
-.buy{
+.buy {
 
     background: linear-gradient(
         90deg,
@@ -257,25 +384,21 @@ html, body, [class*="css"] {
         #22c55e
     );
 
-    padding:14px;
+    padding: 14px;
 
-    border-radius:14px;
+    border-radius: 14px;
 
-    text-align:center;
+    text-align: center;
 
-    font-weight:bold;
+    font-weight: bold;
 
-    font-size:20px;
+    font-size: 20px;
 
     animation: glow 2s infinite;
 
 }
 
-/* ===================================================== */
-/* SELL */
-/* ===================================================== */
-
-.sell{
+.sell {
 
     background: linear-gradient(
         90deg,
@@ -283,61 +406,57 @@ html, body, [class*="css"] {
         #ef4444
     );
 
-    padding:14px;
+    padding: 14px;
 
-    border-radius:14px;
+    border-radius: 14px;
 
-    text-align:center;
+    text-align: center;
 
-    font-weight:bold;
+    font-weight: bold;
 
-    font-size:20px;
+    font-size: 20px;
 
     animation: glow 2s infinite;
 
 }
 
-/* ===================================================== */
-/* NEUTRAL */
-/* ===================================================== */
+.neutral {
 
-.neutral{
+    background: #334155;
 
-    background:#334155;
+    padding: 14px;
 
-    padding:14px;
+    border-radius: 14px;
 
-    border-radius:14px;
+    text-align: center;
 
-    text-align:center;
+    font-weight: bold;
 
-    font-weight:bold;
-
-    font-size:20px;
+    font-size: 20px;
 
 }
 
-/* ===================================================== */
-/* DATAFRAME */
-/* ===================================================== */
+/* =====================================================
+DATAFRAME
+===================================================== */
 
-[data-testid="stDataFrame"]{
+[data-testid="stDataFrame"] {
 
-    border-radius:20px;
+    border-radius: 20px;
 
-    overflow:hidden;
+    overflow: hidden;
 
-    border:1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.08);
 
-    animation:floating 6s ease-in-out infinite;
+    box-shadow: 0 0 20px rgba(56,189,248,0.10);
 
 }
 
-/* ===================================================== */
-/* BUTTON */
-/* ===================================================== */
+/* =====================================================
+BUTTON
+===================================================== */
 
-.stButton>button{
+.stButton > button {
 
     background: linear-gradient(
         90deg,
@@ -345,145 +464,25 @@ html, body, [class*="css"] {
         #6366f1
     );
 
-    color:white;
+    color: white;
 
-    border:none;
+    border: none;
 
-    border-radius:12px;
+    border-radius: 12px;
 
-    padding:10px 22px;
+    padding: 10px 22px;
 
-    font-weight:bold;
-
-    transition:0.3s;
-
-}
-
-.stButton>button:hover{
-
-    transform:scale(1.05);
-
-    animation:glow 2s infinite;
-
-}
-
-/* ===================================================== */
-/* SIDEBAR */
-/* ===================================================== */
-
-section[data-testid="stSidebar"]{
-
-    background: rgba(2,6,23,0.95);
-
-    border-right:1px solid rgba(255,255,255,0.08);
-
-}
-
-/* ===================================================== */
-/* SCROLLBAR */
-/* ===================================================== */
-
-::-webkit-scrollbar{
-
-    width:10px;
-
-}
-
-::-webkit-scrollbar-thumb{
-
-    background:#38bdf8;
-
-    border-radius:20px;
-
-}
-
-/* ===================================================== */
-/* PARTICLE EFFECT */
-/* ===================================================== */
-
-body::before{
-
-    content:"";
-
-    position:fixed;
-
-    width:200%;
-
-    height:200%;
-
-    top:-50%;
-
-    left:-50%;
-
-    background:
-    radial-gradient(
-        circle,
-        rgba(56,189,248,0.08) 0%,
-        transparent 70%
-    );
-
-    animation: rotateBg 25s linear infinite;
-
-    z-index:-1;
-
-}
-
-@keyframes rotateBg{
-
-    from{
-        transform: rotate(0deg);
-    }
-
-    to{
-        transform: rotate(360deg);
-    }
-
-}
-.... old animated css ....
-
-/* =====================================================
-GLASS EFFECT
-===================================================== */
-
-section.main > div {
-
-    background: rgba(2,6,23,0.55);
-
-    backdrop-filter: blur(20px);
-
-}
-
-/* =====================================================
-METRICS
-===================================================== */
-
-[data-testid="metric-container"] {
-
-    background: linear-gradient(
-        135deg,
-        rgba(15,23,42,0.95),
-        rgba(30,41,59,0.90)
-    );
-
-    border: 1px solid rgba(56,189,248,0.25);
-
-    padding: 20px;
-
-    border-radius: 20px;
-
-    box-shadow:
-        0 0 15px rgba(56,189,248,0.12);
+    font-weight: bold;
 
     transition: 0.3s;
 
 }
 
-[data-testid="metric-container"]:hover {
+.stButton > button:hover {
 
-    transform: translateY(-5px);
+    transform: scale(1.05);
 
-    box-shadow:
-        0 0 25px rgba(99,102,241,0.35);
+    animation: glow 2s infinite;
 
 }
 
@@ -505,31 +504,20 @@ SELECTBOX
 TEXT INPUT
 ===================================================== */
 
-.stTextInput > div > div > input {
+.stTextInput input {
 
-    background: rgba(15,23,42,0.90);
+    background: rgba(15,23,42,0.90) !important;
 
-    color: white;
+    color: white !important;
 
-    border-radius: 14px;
+    border-radius: 14px !important;
 
-    border: 1px solid rgba(255,255,255,0.08);
-
-}
-
-/* =====================================================
-DATAFRAME GLOW
-===================================================== */
-
-[data-testid="stDataFrame"] {
-
-    box-shadow:
-        0 0 20px rgba(56,189,248,0.10);
+    border: 1px solid rgba(255,255,255,0.08) !important;
 
 }
 
 /* =====================================================
-PLOTLY CHARTS
+PLOTLY CHART
 ===================================================== */
 
 .js-plotly-plot {
@@ -538,31 +526,39 @@ PLOTLY CHARTS
 
     overflow: hidden;
 
-    box-shadow:
-        0 0 25px rgba(56,189,248,0.12);
+    box-shadow: 0 0 25px rgba(56,189,248,0.12);
 
 }
 
 /* =====================================================
-TITLE GLOW
-===================================================== */
-
-.title {
-
-    text-shadow:
-        0 0 15px rgba(56,189,248,0.5),
-        0 0 25px rgba(99,102,241,0.4);
-
-}
-
-/* =====================================================
-SIDEBAR GLOW
+SIDEBAR
 ===================================================== */
 
 section[data-testid="stSidebar"] {
 
-    box-shadow:
-        0 0 25px rgba(56,189,248,0.15);
+    background: rgba(2,6,23,0.92);
+
+    border-right: 1px solid rgba(255,255,255,0.08);
+
+    box-shadow: 0 0 25px rgba(56,189,248,0.10);
+
+}
+
+/* =====================================================
+SCROLLBAR
+===================================================== */
+
+::-webkit-scrollbar {
+
+    width: 10px;
+
+}
+
+::-webkit-scrollbar-thumb {
+
+    background: #38bdf8;
+
+    border-radius: 20px;
 
 }
 
