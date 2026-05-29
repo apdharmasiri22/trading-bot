@@ -1237,6 +1237,322 @@ timeframe = st.selectbox(
     ]
 
 )
+# =========================================================
+# TRADING TYPE
+# =========================================================
+
+trading_type = st.selectbox(
+
+    "🎯 SELECT TRADING TYPE",
+
+    [
+        "SCALPING",
+        "DAY TRADING",
+        "SWING TRADING"
+    ]
+
+)
+
+if trading_type == "SCALPING":
+
+    timeframe = "5m"
+
+elif trading_type == "DAY TRADING":
+
+    timeframe = "15m"
+
+else:
+
+    timeframe = "1h"
+
+# =========================================================
+# ELITE AI SIGNAL SCANNER
+# =========================================================
+
+st.subheader("🔥 ELITE AI SIGNAL SCANNER")
+
+scan_long = []
+scan_short = []
+
+# TAKE TOP 75 COINS
+coins = df["symbol"].tolist()[:75]
+
+for coin in coins:
+
+    try:
+
+        # =====================================
+        # GET KLINE DATA
+        # =====================================
+
+        kline = get_klines(
+            coin,
+            timeframe
+        )
+
+        if kline.empty:
+            continue
+
+        close = kline["close"]
+
+        current_price = close.iloc[-1]
+
+        # =====================================
+        # INDICATORS
+        # =====================================
+
+        rsi = calculate_rsi(close).iloc[-1]
+
+        macd, signal_line = calculate_macd(close)
+
+        macd_value = macd.iloc[-1]
+
+        ema20 = calculate_ema(close, 20).iloc[-1]
+
+        ema50 = calculate_ema(close, 50).iloc[-1]
+
+        ema200 = calculate_ema(close, 200).iloc[-1]
+
+        atr = calculate_atr(kline).iloc[-1]
+
+        volume_ratio = calculate_volume_ratio(kline)
+
+        # =====================================
+        # REMOVE NaN VALUES
+        # =====================================
+
+        if pd.isna(rsi):
+            continue
+
+        if pd.isna(macd_value):
+            continue
+
+        if pd.isna(ema20):
+            continue
+
+        if pd.isna(ema50):
+            continue
+
+        if pd.isna(ema200):
+            continue
+
+        if pd.isna(atr):
+            continue
+
+        if pd.isna(volume_ratio):
+            continue
+
+        # =====================================
+        # LONG SCORE
+        # =====================================
+
+        long_score = 0
+
+        if 40 <= rsi <= 65:
+            long_score += 20
+
+        if macd_value > 0:
+            long_score += 20
+
+        if ema20 > ema50:
+            long_score += 20
+
+        if ema50 > ema200:
+            long_score += 20
+
+        if volume_ratio > 1.2:
+            long_score += 20
+
+        # =====================================
+        # SHORT SCORE
+        # =====================================
+
+        short_score = 0
+
+        if rsi <= 35:
+            short_score += 20
+
+        if macd_value < 0:
+            short_score += 20
+
+        if ema20 < ema50:
+            short_score += 20
+
+        if ema50 < ema200:
+            short_score += 20
+
+        if volume_ratio > 1.2:
+            short_score += 20
+
+        # =====================================
+        # LONG SIGNAL
+        # =====================================
+
+        if long_score >= 80:
+
+            entry = current_price
+
+            sl = current_price - (atr * 0.8)
+
+            tp1 = current_price + (atr * 1)
+
+            tp2 = current_price + (atr * 2)
+
+            tp3 = current_price + (atr * 3)
+
+            scan_long.append({
+
+                "COIN": coin,
+                "PRICE": round(current_price, 4),
+                "LONG %": long_score,
+                "RSI": round(rsi, 2),
+                "VOL": round(volume_ratio, 2),
+                "ENTRY": round(entry, 4),
+                "TP1": round(tp1, 4),
+                "TP2": round(tp2, 4),
+                "TP3": round(tp3, 4),
+                "SL": round(sl, 4)
+
+            })
+
+            save_signal(
+
+                coin,
+                "LONG",
+                timeframe,
+
+                entry,
+                tp1,
+                tp2,
+                tp3,
+                sl,
+
+                long_score
+
+            )
+
+        # =====================================
+        # SHORT SIGNAL
+        # =====================================
+
+        if short_score >= 80:
+
+            entry = current_price
+
+            sl = current_price + (atr * 0.8)
+
+            tp1 = current_price - (atr * 1)
+
+            tp2 = current_price - (atr * 2)
+
+            tp3 = current_price - (atr * 3)
+
+            scan_short.append({
+
+                "COIN": coin,
+                "PRICE": round(current_price, 4),
+                "SHORT %": short_score,
+                "RSI": round(rsi, 2),
+                "VOL": round(volume_ratio, 2),
+                "ENTRY": round(entry, 4),
+                "TP1": round(tp1, 4),
+                "TP2": round(tp2, 4),
+                "TP3": round(tp3, 4),
+                "SL": round(sl, 4)
+
+            })
+
+            save_signal(
+
+                coin,
+                "SHORT",
+                timeframe,
+
+                entry,
+                tp1,
+                tp2,
+                tp3,
+                sl,
+
+                short_score
+
+            )
+
+    except Exception as e:
+
+        print(f"{coin} ERROR : {e}")
+
+# =========================================================
+# SIGNAL TABLES
+# =========================================================
+
+lcol, scol = st.columns(2)
+
+# =========================================================
+# LONG TABLE
+# =========================================================
+
+with lcol:
+
+    st.subheader("🚀 LONG SIGNALS")
+
+    if len(scan_long) > 0:
+
+        long_df = pd.DataFrame(scan_long)
+
+        long_df = long_df.sort_values(
+            by="LONG %",
+            ascending=False
+        )
+
+        st.dataframe(
+
+            long_df,
+
+            use_container_width=True,
+
+            height=500
+
+        )
+
+    else:
+
+        st.warning(
+            "NO LONG SIGNALS"
+        )
+
+# =========================================================
+# SHORT TABLE
+# =========================================================
+
+with scol:
+
+    st.subheader("🔴 SHORT SIGNALS")
+
+    if len(scan_short) > 0:
+
+        short_df = pd.DataFrame(scan_short)
+
+        short_df = short_df.sort_values(
+            by="SHORT %",
+            ascending=False
+        )
+
+        st.dataframe(
+
+            short_df,
+
+            use_container_width=True,
+
+            height=500
+
+        )
+
+    else:
+
+        st.warning(
+            "NO SHORT SIGNALS"
+        )
 
 # =========================================================
 # COIN FILTER
