@@ -439,7 +439,136 @@ body::before{
     }
 
 }
+.... old animated css ....
 
+/* =====================================================
+GLASS EFFECT
+===================================================== */
+
+section.main > div {
+
+    background: rgba(2,6,23,0.55);
+
+    backdrop-filter: blur(20px);
+
+}
+
+/* =====================================================
+METRICS
+===================================================== */
+
+[data-testid="metric-container"] {
+
+    background: linear-gradient(
+        135deg,
+        rgba(15,23,42,0.95),
+        rgba(30,41,59,0.90)
+    );
+
+    border: 1px solid rgba(56,189,248,0.25);
+
+    padding: 20px;
+
+    border-radius: 20px;
+
+    box-shadow:
+        0 0 15px rgba(56,189,248,0.12);
+
+    transition: 0.3s;
+
+}
+
+[data-testid="metric-container"]:hover {
+
+    transform: translateY(-5px);
+
+    box-shadow:
+        0 0 25px rgba(99,102,241,0.35);
+
+}
+
+/* =====================================================
+SELECTBOX
+===================================================== */
+
+.stSelectbox > div > div {
+
+    background: rgba(15,23,42,0.90);
+
+    border-radius: 14px;
+
+    border: 1px solid rgba(255,255,255,0.08);
+
+}
+
+/* =====================================================
+TEXT INPUT
+===================================================== */
+
+.stTextInput > div > div > input {
+
+    background: rgba(15,23,42,0.90);
+
+    color: white;
+
+    border-radius: 14px;
+
+    border: 1px solid rgba(255,255,255,0.08);
+
+}
+
+/* =====================================================
+DATAFRAME GLOW
+===================================================== */
+
+[data-testid="stDataFrame"] {
+
+    box-shadow:
+        0 0 20px rgba(56,189,248,0.10);
+
+}
+
+/* =====================================================
+PLOTLY CHARTS
+===================================================== */
+
+.js-plotly-plot {
+
+    border-radius: 20px;
+
+    overflow: hidden;
+
+    box-shadow:
+        0 0 25px rgba(56,189,248,0.12);
+
+}
+
+/* =====================================================
+TITLE GLOW
+===================================================== */
+
+.title {
+
+    text-shadow:
+        0 0 15px rgba(56,189,248,0.5),
+        0 0 25px rgba(99,102,241,0.4);
+
+}
+
+/* =====================================================
+SIDEBAR GLOW
+===================================================== */
+
+section[data-testid="stSidebar"] {
+
+    box-shadow:
+        0 0 25px rgba(56,189,248,0.15);
+
+}
+
+</style>
+
+""", unsafe_allow_html=True)
 </style>
 
 """, unsafe_allow_html=True)
