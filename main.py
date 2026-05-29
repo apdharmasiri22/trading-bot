@@ -814,6 +814,26 @@ def get_klines(symbol, interval="15m"):
         return fake
 
 # =========================================================
+# DELETE OLD RUNNING SIGNALS
+# =========================================================
+
+cursor.execute("""
+
+DELETE FROM signals
+WHERE status='RUNNING'
+AND id NOT IN (
+
+    SELECT id FROM signals
+    ORDER BY id DESC
+    LIMIT 50
+
+)
+
+""")
+
+conn.commit()
+
+# =========================================================
 # SAVE SIGNAL
 # =========================================================
 
@@ -830,6 +850,10 @@ def save_signal(
 ):
 
     try:
+
+        # =====================================
+        # PREVENT DUPLICATES
+        # =====================================
 
         existing = pd.read_sql(f"""
 
@@ -890,343 +914,9 @@ def save_signal(
 
             conn.commit()
 
-    except:
-        pass
-        # =========================================================
-# LOAD MARKET
-# =========================================================
+    except Exception as e:
 
-df = get_market()
-
-if df.empty or "symbol" not in df.columns:
-
-    st.error("MARKET DATA FAILED")
-
-    st.stop()
-
-# =========================================================
-# BTC METRICS
-# =========================================================
-
-btc_data = df[
-    df["symbol"] == "BTCUSDT"
-]
-
-if not btc_data.empty:
-
-    btc_price = btc_data.iloc[0]["price"]
-
-else:
-
-    btc_price = 0
-
-c1,c2,c3,c4 = st.columns(4)
-
-with c1:
-
-    st.metric(
-        "BTC PRICE",
-        f"${btc_price:,.2f}"
-    )
-
-with c2:
-
-    st.metric(
-        "TOTAL COINS",
-        len(df)
-    )
-
-with c3:
-
-    st.metric(
-        "GREEN COINS",
-        len(df[df["change"] > 0])
-    )
-
-with c4:
-
-    st.metric(
-        "RED COINS",
-        len(df[df["change"] < 0])
-    )
-
-# =========================================================
-# TRADING TYPE
-# =========================================================
-
-trading_type = st.selectbox(
-
-    "🎯 SELECT TRADING TYPE",
-
-    [
-        "SCALPING",
-        "DAY TRADING",
-        "SWING TRADING"
-    ]
-
-)
-
-if trading_type == "SCALPING":
-
-    timeframe = "5m"
-
-elif trading_type == "DAY TRADING":
-
-    timeframe = "15m"
-
-else:
-
-    timeframe = "1h"
-
-# =========================================================
-# ELITE AI SIGNAL SCANNER
-# =========================================================
-
-st.subheader("🔥 ELITE AI SIGNAL SCANNER")
-
-scan_long = []
-scan_short = []
-
-coins = df["symbol"].tolist()[:75]
-
-for coin in coins:
-
-    try:
-
-        kline = get_klines(
-            coin,
-            timeframe
-        )
-
-        close = kline["close"]
-
-        current_price = close.iloc[-1]
-
-        # =====================================
-        # INDICATORS
-        # =====================================
-
-        rsi = calculate_rsi(close).iloc[-1]
-
-        macd, signal_line = calculate_macd(close)
-
-        macd_value = macd.iloc[-1]
-
-        ema20 = calculate_ema(close,20).iloc[-1]
-
-        ema50 = calculate_ema(close,50).iloc[-1]
-
-        ema200 = calculate_ema(close,200).iloc[-1]
-
-        atr = calculate_atr(kline).iloc[-1]
-
-        volume_ratio = calculate_volume_ratio(kline)
-
-        # =====================================
-        # LONG SCORE
-        # =====================================
-
-        long_score = 0
-
-        if 40 <= rsi <= 65:
-            long_score += 20
-
-        if macd_value > 0:
-            long_score += 20
-
-        if ema20 > ema50:
-            long_score += 20
-
-        if ema50 > ema200:
-            long_score += 20
-
-        if volume_ratio > 1.2:
-            long_score += 20
-
-        # =====================================
-        # SHORT SCORE
-        # =====================================
-
-        short_score = 0
-
-        if rsi <= 35:
-            short_score += 20
-
-        if macd_value < 0:
-            short_score += 20
-
-        if ema20 < ema50:
-            short_score += 20
-
-        if ema50 < ema200:
-            short_score += 20
-
-        if volume_ratio > 1.2:
-            short_score += 20
-
-        # =====================================
-        # LONG SIGNAL
-        # =====================================
-
-        if long_score >= 60:
-
-            entry = current_price
-
-            sl = current_price - (
-                atr * 1.5
-            )
-
-            tp1 = current_price + (
-                atr * 2
-            )
-
-            tp2 = current_price + (
-                atr * 4
-            )
-
-            tp3 = current_price + (
-                atr * 6
-            )
-
-            scan_long.append({
-
-                "COIN": coin,
-                "PRICE": round(current_price,4),
-                "LONG %": long_score,
-                "RSI": round(rsi,2),
-                "VOL": round(volume_ratio,2),
-                "ENTRY": round(entry,4),
-                "TP1": round(tp1,4),
-                "TP2": round(tp2,4),
-                "TP3": round(tp3,4),
-                "SL": round(sl,4)
-
-            })
-
-            save_signal(
-
-                coin,
-                "LONG",
-                timeframe,
-
-                entry,
-                tp1,
-                tp2,
-                tp3,
-                sl,
-
-                long_score
-
-            )
-
-        # =====================================
-        # SHORT SIGNAL
-        # =====================================
-
-        if short_score >= 60:
-
-            entry = current_price
-
-            sl = current_price + (
-                atr * 1.5
-            )
-
-            tp1 = current_price - (
-                atr * 2
-            )
-
-            tp2 = current_price - (
-                atr * 4
-            )
-
-            tp3 = current_price - (
-                atr * 6
-            )
-
-            scan_short.append({
-
-                "COIN": coin,
-                "PRICE": round(current_price,4),
-                "SHORT %": short_score,
-                "RSI": round(rsi,2),
-                "VOL": round(volume_ratio,2),
-                "ENTRY": round(entry,4),
-                "TP1": round(tp1,4),
-                "TP2": round(tp2,4),
-                "TP3": round(tp3,4),
-                "SL": round(sl,4)
-
-            })
-
-            save_signal(
-
-                coin,
-                "SHORT",
-                timeframe,
-
-                entry,
-                tp1,
-                tp2,
-                tp3,
-                sl,
-
-                short_score
-
-            )
-
-    except:
-        pass
-
-        
-# =========================================================
-# SIGNAL TABLES
-# =========================================================
-
-lcol, scol = st.columns(2)
-
-with lcol:
-
-    st.subheader("🚀 LONG SIGNALS")
-
-    if len(scan_long) > 0:
-
-        st.dataframe(
-
-            pd.DataFrame(scan_long),
-
-            use_container_width=True,
-
-            height=500
-
-        )
-
-    else:
-
-        st.warning(
-            "NO LONG SIGNALS"
-        )
-
-with scol:
-
-    st.subheader("🔴 SHORT SIGNALS")
-
-    if len(scan_short) > 0:
-
-        st.dataframe(
-
-            pd.DataFrame(scan_short),
-
-            use_container_width=True,
-
-            height=500
-
-        )
-
-    else:
-
-        st.warning(
-            "NO SHORT SIGNALS"
-        )
+        print(e)
 
 # =========================================================
 # UPDATE SIGNAL STATUS
@@ -1236,7 +926,14 @@ try:
 
     signals = pd.read_sql(
 
-        "SELECT * FROM signals WHERE status='RUNNING'",
+        """
+
+        SELECT * FROM signals
+        WHERE status='RUNNING'
+        ORDER BY id DESC
+        LIMIT 50
+
+        """,
 
         conn
 
@@ -1253,91 +950,125 @@ try:
             signal_id = row["id"]
 
             tp1 = row["tp1"]
-
             tp2 = row["tp2"]
-
             tp3 = row["tp3"]
 
             sl = row["sl"]
 
+            # =====================================
+            # IMPORTANT FIX
+            # =====================================
+
+            signal_timeframe = row["timeframe"]
+
             kline = get_klines(
                 coin,
-                timeframe
+                signal_timeframe
             )
 
             current_price = kline["close"].iloc[-1]
 
+            # =====================================
             # LONG
+            # =====================================
 
             if signal_type == "LONG":
 
                 if current_price >= tp3:
 
                     cursor.execute(
+
                         "UPDATE signals SET status='TP3 HIT' WHERE id=?",
+
                         (signal_id,)
+
                     )
 
                 elif current_price >= tp2:
 
                     cursor.execute(
+
                         "UPDATE signals SET status='TP2 HIT' WHERE id=?",
+
                         (signal_id,)
+
                     )
 
                 elif current_price >= tp1:
 
                     cursor.execute(
+
                         "UPDATE signals SET status='TP1 HIT' WHERE id=?",
+
                         (signal_id,)
+
                     )
 
                 elif current_price <= sl:
 
                     cursor.execute(
+
                         "UPDATE signals SET status='SL HIT' WHERE id=?",
+
                         (signal_id,)
+
                     )
 
+            # =====================================
             # SHORT
+            # =====================================
 
             else:
 
                 if current_price <= tp3:
 
                     cursor.execute(
+
                         "UPDATE signals SET status='TP3 HIT' WHERE id=?",
+
                         (signal_id,)
+
                     )
 
                 elif current_price <= tp2:
 
                     cursor.execute(
+
                         "UPDATE signals SET status='TP2 HIT' WHERE id=?",
+
                         (signal_id,)
+
                     )
 
                 elif current_price <= tp1:
 
                     cursor.execute(
+
                         "UPDATE signals SET status='TP1 HIT' WHERE id=?",
+
                         (signal_id,)
+
                     )
 
                 elif current_price >= sl:
 
                     cursor.execute(
+
                         "UPDATE signals SET status='SL HIT' WHERE id=?",
+
                         (signal_id,)
+
                     )
 
             conn.commit()
 
-        except:
-            pass
+        except Exception as e:
 
-except:
-    pass
+            print(e)
+
+except Exception as e:
+
+    print(e)
 
 # =========================================================
 # ACCURACY DASHBOARD
