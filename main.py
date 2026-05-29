@@ -561,7 +561,35 @@ SCROLLBAR
     border-radius: 20px;
 
 }
+::-webkit-scrollbar-thumb {
 
+    background: #38bdf8;
+
+    border-radius: 20px;
+
+}
+
+/* ME TIKA PASTE KARANNA ME THANATA */
+
+[data-testid="stAppViewContainer"] {
+
+    background: transparent;
+
+}
+
+[data-testid="stHeader"] {
+
+    background: rgba(0,0,0,0);
+
+}
+
+[data-testid="stToolbar"] {
+
+    right: 2rem;
+
+}
+
+</style>
 </style>
 
 """, unsafe_allow_html=True)
