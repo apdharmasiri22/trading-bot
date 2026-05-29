@@ -1208,6 +1208,18 @@ if not signals_df.empty:
         fig_acc,
         use_container_width=True
     )
+    
+# =========================================================
+# LOAD MARKET DATA
+# =========================================================
+
+df = get_market()
+
+if df.empty:
+
+    st.error("MARKET DATA FAILED")
+
+    st.stop()
 
 # =========================================================
 # COIN FILTER
