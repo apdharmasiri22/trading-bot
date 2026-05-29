@@ -943,13 +943,12 @@ else:
     timeframe = "1h"
 
 # =========================================================
-# AI SCANNER
+# ELITE AI SIGNAL SCANNER
 # =========================================================
 
 st.subheader("🔥 ELITE AI SIGNAL SCANNER")
 
 scan_long = []
-
 scan_short = []
 
 coins = df["symbol"].tolist()[:75]
@@ -967,6 +966,10 @@ for coin in coins:
 
         current_price = close.iloc[-1]
 
+        # =====================================
+        # INDICATORS
+        # =====================================
+
         rsi = calculate_rsi(close).iloc[-1]
 
         macd, signal_line = calculate_macd(close)
@@ -981,25 +984,55 @@ for coin in coins:
 
         atr = calculate_atr(kline).iloc[-1]
 
+        volume_ratio = calculate_volume_ratio(kline)
+
+        # =====================================
+        # LONG SCORE
+        # =====================================
+
         long_score = 0
 
-        if rsi < 35:
-            long_score += 25
+        if 40 <= rsi <= 65:
+            long_score += 20
 
         if macd_value > 0:
-            long_score += 25
+            long_score += 20
 
         if ema20 > ema50:
-            long_score += 25
+            long_score += 20
 
         if ema50 > ema200:
-            long_score += 25
+            long_score += 20
 
-        short_score = 100 - long_score
+        if volume_ratio > 1.2:
+            long_score += 20
 
-        # LONG
+        # =====================================
+        # SHORT SCORE
+        # =====================================
 
-        if long_score >= 80:
+        short_score = 0
+
+        if rsi <= 35:
+            short_score += 20
+
+        if macd_value < 0:
+            short_score += 20
+
+        if ema20 < ema50:
+            short_score += 20
+
+        if ema50 < ema200:
+            short_score += 20
+
+        if volume_ratio > 1.2:
+            short_score += 20
+
+        # =====================================
+        # LONG SIGNAL
+        # =====================================
+
+        if long_score >= 60:
 
             entry = current_price
 
@@ -1021,14 +1054,16 @@ for coin in coins:
 
             scan_long.append({
 
-                "COIN":coin,
-                "PRICE":round(current_price,4),
-                "LONG %":long_score,
-                "ENTRY":round(entry,4),
-                "TP1":round(tp1,4),
-                "TP2":round(tp2,4),
-                "TP3":round(tp3,4),
-                "SL":round(sl,4)
+                "COIN": coin,
+                "PRICE": round(current_price,4),
+                "LONG %": long_score,
+                "RSI": round(rsi,2),
+                "VOL": round(volume_ratio,2),
+                "ENTRY": round(entry,4),
+                "TP1": round(tp1,4),
+                "TP2": round(tp2,4),
+                "TP3": round(tp3,4),
+                "SL": round(sl,4)
 
             })
 
@@ -1048,9 +1083,11 @@ for coin in coins:
 
             )
 
-        # SHORT
+        # =====================================
+        # SHORT SIGNAL
+        # =====================================
 
-        if short_score >= 80:
+        if short_score >= 60:
 
             entry = current_price
 
@@ -1072,14 +1109,16 @@ for coin in coins:
 
             scan_short.append({
 
-                "COIN":coin,
-                "PRICE":round(current_price,4),
-                "SHORT %":short_score,
-                "ENTRY":round(entry,4),
-                "TP1":round(tp1,4),
-                "TP2":round(tp2,4),
-                "TP3":round(tp3,4),
-                "SL":round(sl,4)
+                "COIN": coin,
+                "PRICE": round(current_price,4),
+                "SHORT %": short_score,
+                "RSI": round(rsi,2),
+                "VOL": round(volume_ratio,2),
+                "ENTRY": round(entry,4),
+                "TP1": round(tp1,4),
+                "TP2": round(tp2,4),
+                "TP3": round(tp3,4),
+                "SL": round(sl,4)
 
             })
 
@@ -1102,6 +1141,55 @@ for coin in coins:
     except:
         pass
 
+# =========================================================
+# SIGNAL TABLES
+# =========================================================
+
+lcol, scol = st.columns(2)
+
+with lcol:
+
+    st.subheader("🚀 LONG SIGNALS")
+
+    if len(scan_long) > 0:
+
+        st.dataframe(
+
+            pd.DataFrame(scan_long),
+
+            use_container_width=True,
+
+            height=500
+
+        )
+
+    else:
+
+        st.warning(
+            "NO LONG SIGNALS"
+        )
+
+with scol:
+
+    st.subheader("🔴 SHORT SIGNALS")
+
+    if len(scan_short) > 0:
+
+        st.dataframe(
+
+            pd.DataFrame(scan_short),
+
+            use_container_width=True,
+
+            height=500
+
+        )
+
+    else:
+
+        st.warning(
+            "NO SHORT SIGNALS"
+        )
 # =========================================================
 # SIGNAL TABLES
 # =========================================================
