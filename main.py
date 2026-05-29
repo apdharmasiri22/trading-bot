@@ -455,6 +455,8 @@ Institutional AI Smart Money Analyzer
 </div>
 
 
+""", unsafe_allow_html=True)
+
 [data-testid="stAppViewContainer"] {
 
     background: transparent;
