@@ -1682,99 +1682,134 @@ st.plotly_chart(
     use_container_width=True
 )
 # =========================================================
-# LIVE SIGNAL TRACKER
+# LIVE SIGNAL TABLE
 # =========================================================
 
-st.subheader("🧠 LIVE SIGNAL TRACKER")
+st.subheader("📡 LIVE SIGNAL MONITOR")
 
-live_signals = pd.read_sql("""
+live_rows = []
+
+signals_live = pd.read_sql("""
 
 SELECT * FROM signals
-
 ORDER BY id DESC
-
-LIMIT 20
+LIMIT 50
 
 """, conn)
 
-if not live_signals.empty:
+for _, row in signals_live.iterrows():
 
-    for _, row in live_signals.iterrows():
+    try:
 
         coin = row["coin"]
         signal = row["signal"]
         entry = row["entry"]
+
         tp1 = row["tp1"]
         tp2 = row["tp2"]
         tp3 = row["tp3"]
+
         sl = row["sl"]
+
         status = row["status"]
 
-        try:
+        kline_live = get_klines(
+            coin,
+            timeframe
+        )
 
-            kline_live = get_klines(
-                coin,
-                timeframe
-            )
-
-            current_price = kline_live["close"].iloc[-1]
-
-        except:
-
-            current_price = entry
-
-        pnl = current_price - entry
+        current_price = kline_live["close"].iloc[-1]
 
         # LONG
         if signal == "LONG":
 
-            profit = pnl > 0
-            color = "#22c55e" if profit else "#ef4444"
+            pnl = current_price - entry
+
+            pnl_percent = (
+                pnl / entry
+            ) * 100
 
         # SHORT
         else:
 
-            profit = pnl < 0
-            color = "#22c55e" if profit else "#ef4444"
+            pnl = entry - current_price
 
-        st.markdown(f"""
+            pnl_percent = (
+                pnl / entry
+            ) * 100
 
-        <div style="
-            background: rgba(15,23,42,0.75);
-            border: 1px solid {color};
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 0 20px {color};
-        ">
+        # LIVE COLOR
+        if pnl_percent >= 0:
 
-        <h2 style="color:{color};">
-        {coin} • {signal}
-        </h2>
+            live_status = "🟢 PROFIT"
 
-        <hr>
+        else:
 
-        <h4>ENTRY : {entry:.4f}</h4>
+            live_status = "🔴 LOSS"
 
-        <h4>CURRENT : {current_price:.4f}</h4>
+        live_rows.append({
 
-        <h4>TP1 : {tp1:.4f}</h4>
+            "COIN": coin,
+            "TYPE": signal,
+            "ENTRY": round(entry,4),
+            "CURRENT": round(current_price,4),
 
-        <h4>TP2 : {tp2:.4f}</h4>
+            "TP1": round(tp1,4),
+            "TP2": round(tp2,4),
+            "TP3": round(tp3,4),
 
-        <h4>TP3 : {tp3:.4f}</h4>
+            "SL": round(sl,4),
 
-        <h4>SL : {sl:.4f}</h4>
+            "PNL %": round(
+                pnl_percent,
+                2
+            ),
 
-        <hr>
+            "STATUS": live_status,
 
-        <h3 style="color:{color};">
-        STATUS : {status}
-        </h3>
+            "RESULT": status
 
-        </div>
+        })
 
-        """, unsafe_allow_html=True)
+    except:
+        pass
+
+if len(live_rows) > 0:
+
+    live_df = pd.DataFrame(live_rows)
+
+    def color_pnl(val):
+
+        if isinstance(val, str):
+
+            if "PROFIT" in val:
+                return "color: #22c55e; font-weight:bold"
+
+            if "LOSS" in val:
+                return "color: #ef4444; font-weight:bold"
+
+        return ""
+
+    styled_df = live_df.style.applymap(
+        color_pnl,
+        subset=["STATUS"]
+    )
+
+    st.dataframe(
+
+        styled_df,
+
+        use_container_width=True,
+
+        height=600
+
+    )
+
+else:
+
+    st.warning(
+        "NO LIVE SIGNALS"
+    )
 
 # =========================================================
 # SIGNAL HISTORY
