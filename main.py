@@ -1531,24 +1531,24 @@ SHORT POSSIBILITY :
 # TRADINGVIEW
 # =========================================================
 
+import streamlit.components.v1 as components
+
 st.subheader("📈 TRADINGVIEW LIVE CHART")
 
+# "BINANCE:" කියන Prefix එක හරියටම තියෙනවද බලන්න.
+# සමහර වෙලාවට කොයින් එකේ නම වෙනස් වෙන්න පුළුවන්. 
+# උදා: BINANCE:BTCUSDT
+chart_symbol = f"BINANCE:{selected_coin}"
+
 tradingview_html = f"""
-
-<div class="tradingview-widget-container">
-
-<div id="tradingview_chart"></div>
-
-<script type="text/javascript"
-src="https://s3.tradingview.com/tv.js"></script>
-
+<div id="tv_chart_container" style="height:700px; width:100%;"></div>
+<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 <script type="text/javascript">
-
 new TradingView.widget({{
-
+    "container_id": "tv_chart_container",
     "width": "100%",
     "height": 700,
-    "symbol": "BINANCE:{selected_coin}",
+    "symbol": "{chart_symbol}",
     "interval": "{timeframe}",
     "timezone": "Etc/UTC",
     "theme": "dark",
@@ -1556,20 +1556,12 @@ new TradingView.widget({{
     "locale": "en",
     "toolbar_bg": "#0f172a",
     "enable_publishing": false,
-    "container_id": "tradingview_chart"
-
+    "allow_symbol_change": true
 }});
-
 </script>
-
-</div>
-
 """
 
-st.components.v1.html(
-    tradingview_html,
-    height=720
-)
+components.html(tradingview_html, height=720)
 
 # =========================================================
 # TOP GAINERS / LOSERS
