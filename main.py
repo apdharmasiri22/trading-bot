@@ -452,6 +452,8 @@ st.markdown("""
 Institutional AI Smart Money Analyzer
 </div>
 
+</div>
+
 </style>
 
 <style>
