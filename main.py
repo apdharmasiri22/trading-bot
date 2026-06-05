@@ -110,3 +110,47 @@ st.markdown("---")
 # 📌 FOOTER
 # =========================
 st.caption("SMC Quantum Trading Dashboard v1.0 - Complete Base UI (Part 1)")
+
+import streamlit as st
+from streamlit_autorefresh import st_autorefresh
+from data.binance_feed import get_top_coins, get_price
+
+st.set_page_config(layout="wide")
+
+st.title("📊 SMC Quantum Dashboard - Part 2")
+
+# 🔁 refresh safe
+st_autorefresh(interval=30000, key="refresh")
+
+# =========================
+# 🪙 LIVE COINS (BINANCE)
+# =========================
+coins = get_top_coins(20)
+
+coin = st.selectbox("🔍 Select Coin (Live Binance)", coins)
+
+st.markdown(f"### Selected: {coin}")
+
+# =========================
+# 💰 LIVE PRICE
+# =========================
+price = get_price(coin)
+
+if price:
+    st.success(f"💰 Live Price: {price}")
+else:
+    st.error("Price loading failed")
+
+st.markdown("---")
+
+# =========================
+# 🧠 PLACEHOLDERS (Next Parts)
+# =========================
+st.subheader("🧠 SMC Engine")
+st.info("Coming in Part 3")
+
+st.subheader("🎯 Signal Engine")
+st.info("Coming in Part 4")
+
+st.subheader("📊 Accuracy System")
+st.info("Coming in Part 6")
