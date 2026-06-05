@@ -2,13 +2,24 @@ import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
 from binance_feed import get_top_coins, get_price, get_candles
-from smc_engine import SMCEngine
-from score_engine import ScoreEngine
+
+# dummy engines (ඔයාගේ ඒවා use කරන්න පුළුවන්)
+class SMCEngine:
+    def update(self, candles):
+        return {
+            "structure": "Bullish",
+            "structure_score": 20
+        }
+
+class ScoreEngine:
+    def update_scores(self, a):
+        total = sum(a.values())
+        return {
+            "total_score": total,
+            "decision": "BUY" if total > 40 else "WAIT"
+        }
 
 
-# =========================
-# INIT
-# =========================
 smc = SMCEngine()
 score_engine = ScoreEngine()
 
@@ -16,37 +27,26 @@ st.set_page_config(page_title="SMC Dashboard", layout="wide")
 st_autorefresh(interval=30000, key="refresh")
 
 st.title("📊 SMC Quantum Dashboard")
-st.caption("Smart Money Concepts System")
 
-st.markdown("---")
-
-
-# =========================
-# COINS (200)
-# =========================
+# ================= COINS =================
 coins = get_top_coins(200)
 
 if not coins:
-    st.error("Market data not loaded.")
+    st.error("No market data")
     st.stop()
 
-
-# =========================
-# SELECT 10 COINS
-# =========================
-selected_coins = st.multiselect(
-    "🔍 Select coins (max 10)",
+selected = st.multiselect(
+    "Select coins (max 10)",
     coins,
     max_selections=10
 )
 
-st.markdown("---")
+if not selected:
+    st.info("Select coins")
+    st.stop()
 
-
-# =========================
-# ANALYSIS
-# =========================
-for coin in selected_coins:
+# ================= ANALYSIS =================
+for coin in selected:
 
     price = get_price(coin)
     candles = get_candles(coin)
@@ -57,7 +57,7 @@ for coin in selected_coins:
     smc_result = smc.update(candles)
 
     analysis = {
-        "structure_score": smc_result.get("structure_score", 0),
+        "structure_score": smc_result["structure_score"],
         "liquidity_score": 10,
         "entry_score": 10,
         "pattern_score": 10,
@@ -65,18 +65,18 @@ for coin in selected_coins:
         "timing_score": 5
     }
 
-    final_result = score_engine.update_scores(analysis)
+    final = score_engine.update_scores(analysis)
 
-    st.subheader(f"🪙 {coin}")
+    st.subheader(coin)
 
     if price:
-        st.write("💰 Price:", price)
+        st.write("Price:", price)
 
-    st.write("📊 Structure:", smc_result.get("structure"))
+    st.write("Structure:", smc_result["structure"])
 
     st.success(f"""
-Score: {final_result['total_score']}
-Decision: {final_result['decision']}
+Score: {final['total_score']}
+Decision: {final['decision']}
 """)
 
     st.markdown("---")
