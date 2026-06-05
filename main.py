@@ -1,5 +1,5 @@
 # =========================================================
-# QUANTUM X TERMINAL - ULTRA PREMIUM TABBED TRADING ENGINE
+# QUANTUM X TERMINAL - ULTIMATE LIVE TRACKING & ACCURACY ENGINE
 # =========================================================
 
 import streamlit as st
@@ -8,7 +8,6 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import sqlite3
-import time
 from datetime import datetime
 
 # =========================================================
@@ -80,10 +79,7 @@ html, body, .stApp {
 .neutral { background: linear-gradient(90deg, rgba(148, 163, 184, 0.5), rgba(71, 85, 105, 0.7)); padding:14px; border-radius:16px; font-size:20px; font-weight:bold; text-align:center; }
 [data-testid="metric-container"] { background: rgba(15,23,42,0.72); backdrop-filter: blur(16px); border-radius:22px; border:1px solid rgba(255,255,255,0.06); padding:18px; }
 
-/* Tabs Styling to match Quantum theme */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 12px;
-}
+.stTabs [data-baseweb="tab-list"] { gap: 12px; }
 .stTabs [data-baseweb="tab"] {
     background: rgba(15,23,42,0.4) !important;
     border: 1px solid rgba(255,255,255,0.08) !important;
@@ -103,7 +99,7 @@ html, body, .stApp {
 st.markdown('<div class="card"><div class="title">⚡ QUANTUM X TERMINAL</div><div>Institutional Smart Money Concepts Terminal Engine</div></div>', unsafe_allow_html=True)
 
 # =========================================================
-# INDICATORS & ORIGINAL SMC ANALYSIS METHODS
+# INDICATORS & SMC ANALYSIS METHODS
 # =========================================================
 def calculate_rsi(data, period=14):
     delta = data.diff()
@@ -145,14 +141,13 @@ def detect_smc_features(df):
     return bos_bullish, bos_bearish, fvg_bullish, fvg_bearish, order_block_bullish, order_block_bearish
 
 # =========================================================
-# LIVE APIS DATA NODES (BINANCE + CRYPTOCOMPARE)
+# LIVE APIS DATA NODES
 # =========================================================
 @st.cache_data(ttl=2)
 def get_market():
     endpoints = [
         "https://api.binance.com/api/v3/ticker/24hr",
-        "https://fapi.binance.com/fapi/v1/ticker/24hr",
-        "https://api1.binance.com/api/v3/ticker/24hr"
+        "https://fapi.binance.com/fapi/v1/ticker/24hr"
     ]
     headers = {"User-Agent": "Mozilla/5.0"}
     for url in endpoints:
@@ -172,29 +167,8 @@ def get_market():
                         })
                 if rows:
                     df = pd.DataFrame(rows)
-                    return df.sort_values(by="volume", ascending=False).head(35)
-        except:
-            continue
-            
-    try:
-        fallback_url = "https://min-api.cryptocompare.com/data/top/mktcapfull?limit=35&tsym=USDT"
-        res = requests.get(fallback_url, timeout=3)
-        if res.status_code == 200:
-            data = res.json().get("Data", [])
-            rows = []
-            for coin in data:
-                raw = coin.get("RAW", {}).get("USDT", {})
-                info = coin.get("CoinInfo", {})
-                symbol = f"{info.get('Name', '')}USDT"
-                if raw:
-                    rows.append({
-                        "symbol": symbol,
-                        "price": float(raw.get("PRICE", 0)),
-                        "change": float(raw.get("CHANGEPCT24HOUR", 0)),
-                        "volume": float(raw.get("VOLUME24HOURTO", 0))
-                    })
-            if rows: return pd.DataFrame(rows)
-    except: pass
+                    return df.sort_values(by="volume", ascending=False).head(30)
+        except: continue
     return pd.DataFrame()
 
 @st.cache_data(ttl=2)
@@ -214,25 +188,12 @@ def get_klines(symbol, interval="15m"):
                 for col in ["open", "high", "low", "close", "volume"]:
                     frame[col] = frame[col].astype(float)
                 return frame
-        except:
-            continue
-            
-    try:
-        base_asset = symbol.replace("USDT", "")
-        histo_type = "histohour" if "1h" in interval else "histominute"
-        agg = 15 if "15m" in interval else 5 if "5m" in interval else 1
-        url = f"https://min-api.cryptocompare.com/data/v2/{histo_type}?fsym={base_asset}&tsym=USDT&limit=100&aggregate={agg}"
-        res = requests.get(url, timeout=3).json()
-        data = res.get("Data", {}).get("Data", [])
-        if data:
-            frame = pd.DataFrame(data)
-            frame = frame[['time', 'open', 'high', 'low', 'close', 'volumeto']]
-            frame.columns = ["time", "open", "high", "low", "close", "volume"]
-            frame["time"] = pd.to_datetime(frame["time"], unit='s')
-            return frame
-    except: pass
+        except: continue
     return pd.DataFrame()
 
+# =========================================================
+# SIGNAL MANAGEMENT & LIVE ACCURACY TRACKING
+# =========================================================
 def save_signal(coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability):
     try:
         existing = pd.read_sql(f"SELECT * FROM signals WHERE coin='{coin}' AND signal='{signal}' AND timeframe='{timeframe}' AND status='RUNNING'", conn)
@@ -240,62 +201,95 @@ def save_signal(coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability):
             cursor.execute("""
             INSERT INTO signals (coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability, status, created_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,?)
-            """, (coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability, "RUNNING", str(datetime.now())))
+            """, (coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability, "RUNNING", datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             conn.commit()
     except: pass
 
-# =========================================================
-# SYSTEM ACCURACY RENDERING LOGIC (REUSABLE FOR TABS)
-# =========================================================
-def render_accuracy_for_timeframe(tf_val):
-    signals_df = pd.read_sql(f"SELECT * FROM signals WHERE timeframe='{tf_val}'", conn)
-    
-    # Fallback to general if specific timeframe has no signals yet
-    if signals_df.empty:
-        signals_df = pd.read_sql("SELECT * FROM signals", conn)
-        
-    if not signals_df.empty:
-        total_signals = len(signals_df)
-        tp1_hits = len(signals_df[signals_df["status"] == "TP1 HIT"])
-        tp2_hits = len(signals_df[signals_df["status"] == "TP2 HIT"])
-        tp3_hits = len(signals_df[signals_df["status"] == "TP3 HIT"])
-        running = len(signals_df[signals_df["status"] == "RUNNING"])
-        win_rate = round(((tp1_hits+tp2_hits+tp3_hits) / total_signals) * 100, 2) if total_signals > 0 else 0
-        
-        a, b, c, d, e = st.columns(5)
-        a.metric(f"TOTAL {tf_val} SIGNALS", total_signals)
-        b.metric("RUNNING", running)
-        c.metric("TP1 HITS", tp1_hits)
-        d.metric("TP2 HITS", tp2_hits)
-        e.metric("WIN RATE", f"{win_rate}%")
-    else:
-        st.info(f"📊 Accuracy stats for {tf_val} will render once signals generate.")
+def update_live_signals_status(market_df):
+    """ සේව් වුණු සිග්නල් වල ප්‍රයිස් එක චෙක් කරලා TP/SL වැදුණද කියලා බලන සිස්ටම් එක """
+    try:
+        running_signals = pd.read_sql("SELECT * FROM signals WHERE status='RUNNING'", conn)
+        if running_signals.empty: return
 
-# =========================================================
-# GLOBAL MARKET DATA CHECK
-# =========================================================
-df = get_market()
-if df.empty:
+        for _, row in running_signals.iterrows():
+            sig_id = row['id']
+            coin = row['coin']
+            direction = row['signal']
+            
+            # Get current live price from market dataframe
+            match = market_df[market_df['symbol'] == coin]
+            if match.empty: continue
+            current_price = float(match.iloc[0]['price'])
+
+            new_status = "RUNNING"
+            if direction == "LONG":
+                if current_price >= row['tp3']: new_status = "TP3 HIT"
+                elif current_price >= row['tp2']: new_status = "TP2 HIT"
+                elif current_price >= row['tp1']: new_status = "TP1 HIT"
+                elif current_price <= row['sl']: new_status = "SL HIT"
+            else: # SHORT
+                if current_price <= row['tp3']: new_status = "TP3 HIT"
+                elif current_price <= row['tp2']: new_status = "TP2 HIT"
+                elif current_price <= row['tp1']: new_status = "TP1 HIT"
+                elif current_price >= row['sl']: new_status = "SL HIT"
+
+            if new_status != "RUNNING":
+                cursor.execute("UPDATE signals SET status=? WHERE id=?", (new_status, sig_id))
+                conn.commit()
+    except: pass
+
+def render_accuracy_dashboard(tf_val):
+    """ එක් එක් Timeframe එකට අදාළව නිවැරදිව Accuracy Metric හදන ක්‍රමය """
+    df_sig = pd.read_sql(f"SELECT * FROM signals WHERE timeframe='{tf_val}'", conn)
+    
+    total = len(df_sig)
+    tp1 = len(df_sig[df_sig['status'] == "TP1 HIT"])
+    tp2 = len(df_sig[df_sig['status'] == "TP2 HIT"])
+    tp3 = len(df_sig[df_sig['status'] == "TP3 HIT"])
+    sl = len(df_sig[df_sig['status'] == "SL HIT"])
+    running = len(df_sig[df_sig['status'] == "RUNNING"])
+    
+    total_hits = tp1 + tp2 + tp3
+    win_rate = round((total_hits / (total_hits + sl)) * 100, 1) if (total_hits + sl) > 0 else 0.0
+
+    a, b, c, d, e = st.columns(5)
+    a.metric("TOTAL SCANNED", total)
+    b.metric("🔥 LIVE RUNNING", running, delta_color="off")
+    c.metric("🟢 TARGETS HIT (TP)", total_hits)
+    d.metric("🔴 LOSSES (SL)", sl)
+    e.metric("🎯 WIN RATE", f"{win_rate}%")
+
+# Fetch Global Market Data
+df_market = get_market()
+if df_market.empty:
     st.error("🚨 Connecting to data nodes. Please standby...")
     st.stop()
 
+# Update running signals based on latest prices
+update_live_signals_status(df_market)
+
 # =========================================================
-# ⚡ THE PREMIUM TRADING TABS SYSTEM
+# ⚡ CORE TABS CHANNELS
 # =========================================================
-tab1, tab2, tab3 = st.tabs(["🎯 SCALPING MODE (5m)", "⚡ DAY TRADING MODE (15m)", "🔮 SWING TRADING MODE (1h)"])
+tab1, tab2, tab3, tab4 = st.tabs([
+    "🎯 SCALPING MODE (5m)", 
+    "⚡ DAY TRADING MODE (15m)", 
+    "🔮 SWING TRADING MODE (1h)",
+    "📜 ALL SIGNALS HISTORY"
+])
 
 # ---------------------------------------------------------
-# TAB 1: SCALPING (5m)
+# TAB 1: SCALPING MODE (5m)
 # ---------------------------------------------------------
 with tab1:
-    st.markdown("### 📊 SYSTEM ACCURACY DASHBOARD (5m)")
-    render_accuracy_for_timeframe("5m")
+    st.markdown("### 📊 INDEPENDENT ACCURACY DASHBOARD (5m)")
+    render_accuracy_dashboard("5m")
     
     @st.fragment(run_every=30)
-    def render_scalping_scanner(market_df):
-        st.subheader("🔥 INSTITUTIONAL SMC SCANNER (5m) - Live Updating (30s)")
+    def run_5m_scanner(market_df):
+        st.subheader("🔥 REAL-TIME 5m SMC SCANNER (Auto-Updates)")
         scan_long, scan_short = [], []
-        for coin in market_df["symbol"].tolist()[:25]: # Scans top 25 high vol coins
+        for coin in market_df["symbol"].tolist():
             try:
                 kline = get_klines(coin, "5m")
                 if kline.empty or len(kline) < 30: continue
@@ -320,23 +314,23 @@ with tab1:
                     save_signal(coin, "SHORT", "5m", current_price, current_price - (atr * 1.5), current_price - (atr * 3.0), current_price - (atr * 4.5), sl, short_score)
             except: pass
         l, s = st.columns(2)
-        with l: st.dataframe(pd.DataFrame(scan_long) if scan_long else pd.DataFrame(columns=["No Active Long Setup"]), use_container_width=True)
-        with s: st.dataframe(pd.DataFrame(scan_short) if scan_short else pd.DataFrame(columns=["No Active Short Setup"]), use_container_width=True)
+        with l: st.dataframe(pd.DataFrame(scan_long) if scan_long else pd.DataFrame(columns=["No Active 5m Long"]), use_container_width=True)
+        with s: st.dataframe(pd.DataFrame(scan_short) if scan_short else pd.DataFrame(columns=["No Active 5m Short"]), use_container_width=True)
 
-    render_scalping_scanner(df)
+    run_5m_scanner(df_market)
 
 # ---------------------------------------------------------
-# TAB 2: DAY TRADING (15m)
+# TAB 2: DAY TRADING MODE (15m)
 # ---------------------------------------------------------
 with tab2:
-    st.markdown("### 📊 SYSTEM ACCURACY DASHBOARD (15m)")
-    render_accuracy_for_timeframe("15m")
+    st.markdown("### 📊 INDEPENDENT ACCURACY DASHBOARD (15m)")
+    render_accuracy_dashboard("15m")
     
     @st.fragment(run_every=30)
-    def render_day_scanner(market_df):
-        st.subheader("🔥 INSTITUTIONAL SMC SCANNER (15m) - Live Updating (30s)")
+    def run_15m_scanner(market_df):
+        st.subheader("🔥 REAL-TIME 15m SMC SCANNER (Auto-Updates)")
         scan_long, scan_short = [], []
-        for coin in market_df["symbol"].tolist()[:25]:
+        for coin in market_df["symbol"].tolist():
             try:
                 kline = get_klines(coin, "15m")
                 if kline.empty or len(kline) < 30: continue
@@ -361,23 +355,23 @@ with tab2:
                     save_signal(coin, "SHORT", "15m", current_price, current_price - (atr * 1.5), current_price - (atr * 3.0), current_price - (atr * 4.5), sl, short_score)
             except: pass
         l, s = st.columns(2)
-        with l: st.dataframe(pd.DataFrame(scan_long) if scan_long else pd.DataFrame(columns=["No Active Long Setup"]), use_container_width=True)
-        with s: st.dataframe(pd.DataFrame(scan_short) if scan_short else pd.DataFrame(columns=["No Active Short Setup"]), use_container_width=True)
+        with l: st.dataframe(pd.DataFrame(scan_long) if scan_long else pd.DataFrame(columns=["No Active 15m Long"]), use_container_width=True)
+        with s: st.dataframe(pd.DataFrame(scan_short) if scan_short else pd.DataFrame(columns=["No Active 15m Short"]), use_container_width=True)
 
-    render_day_scanner(df)
+    run_15m_scanner(df_market)
 
 # ---------------------------------------------------------
-# TAB 3: SWING TRADING (1h)
+# TAB 3: SWING TRADING MODE (1h)
 # ---------------------------------------------------------
 with tab3:
-    st.markdown("### 📊 SYSTEM ACCURACY DASHBOARD (1h)")
-    render_accuracy_for_timeframe("1h")
+    st.markdown("### 📊 INDEPENDENT ACCURACY DASHBOARD (1h)")
+    render_accuracy_dashboard("1h")
     
     @st.fragment(run_every=30)
-    def render_swing_scanner(market_df):
-        st.subheader("🔥 INSTITUTIONAL SMC SCANNER (1h) - Live Updating (30s)")
+    def run_1h_scanner(market_df):
+        st.subheader("🔥 REAL-TIME 1h SMC SCANNER (Auto-Updates)")
         scan_long, scan_short = [], []
-        for coin in market_df["symbol"].tolist()[:25]:
+        for coin in market_df["symbol"].tolist():
             try:
                 kline = get_klines(coin, "1h")
                 if kline.empty or len(kline) < 30: continue
@@ -402,10 +396,25 @@ with tab3:
                     save_signal(coin, "SHORT", "1h", current_price, current_price - (atr * 1.5), current_price - (atr * 3.0), current_price - (atr * 4.5), sl, short_score)
             except: pass
         l, s = st.columns(2)
-        with l: st.dataframe(pd.DataFrame(scan_long) if scan_long else pd.DataFrame(columns=["No Active Long Setup"]), use_container_width=True)
-        with s: st.dataframe(pd.DataFrame(scan_short) if scan_short else pd.DataFrame(columns=["No Active Short Setup"]), use_container_width=True)
+        with l: st.dataframe(pd.DataFrame(scan_long) if scan_long else pd.DataFrame(columns=["No Active 1h Long"]), use_container_width=True)
+        with s: st.dataframe(pd.DataFrame(scan_short) if scan_short else pd.DataFrame(columns=["No Active 1h Short"]), use_container_width=True)
 
-    render_swing_scanner(df)
+    run_1h_scanner(df_market)
+
+# ---------------------------------------------------------
+# TAB 4: ALL SIGNALS HISTORY (මකන්නේ නැතුව සේව් වෙන තැන)
+# ---------------------------------------------------------
+with tab4:
+    st.subheader("📜 QUANTUM CENTRAL SIGNAL DATABASE")
+    st.markdown("මෙතන ඔයාගේ සේව් වුණු සියලුම සිග්නල් සහ ඒවා ලයිව් මාකට් එකේ **TP/SL වැදුණද නැද්ද** කියන ලොග් එක බලාගන්න පුළුවන් මචං.")
+    
+    # Fetch data directly from SQLite database
+    all_signals = pd.read_sql("SELECT id, coin, signal, timeframe, entry, tp1, tp2, sl, status, created_at FROM signals ORDER BY id DESC", conn)
+    
+    if not all_signals.empty:
+        st.dataframe(all_signals, use_container_width=True)
+    else:
+        st.info("No signals stored inside the database yet. Let the scanner run for a moment!")
 
 # =========================================================
 # COIN SPECIFIC INDEPENDENT INTERACTION PORTAL
@@ -415,7 +424,6 @@ st.subheader("🔍 COIN SPECIFIC SMC DEEP INTERACTION")
 
 @st.fragment(run_every=30)
 def render_deep_portal():
-    # User selects the portal timeframe manually inside here to prevent fragmentation conflicts
     p_col1, p_col2 = st.columns([3, 1])
     with p_col1:
         search_coin = st.text_input("Enter Coin Asset Name (e.g., BTC, ETH, SOL)", "BTC", key="stable_search")
@@ -433,7 +441,6 @@ def render_deep_portal():
         ema50_val = calculate_ema(close, 50).iloc[-1]
         
         bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
-        
         long_score = sum([20 if current_price > ema50_val else 0, 20 if 40 < rsi_val < 70 else 0, 20 if bos_bull else 0, 20 if fvg_bull else 0, 20 if ob_bull else 0])
         short_score = sum([20 if current_price < ema50_val else 0, 20 if 30 < rsi_val < 60 else 0, 20 if bos_bear else 0, 20 if fvg_bear else 0, 20 if ob_bear else 0])
         
@@ -469,10 +476,7 @@ def render_deep_portal():
         ))
         
         kline['EMA50'] = calculate_ema(close, 50)
-        fig.add_trace(go.Scatter(
-            x=kline['time'], y=kline['EMA50'], 
-            line=dict(color='#6366f1', width=2), name="EMA 50 Line"
-        ))
+        fig.add_trace(go.Scatter(x=kline['time'], y=kline['EMA50'], line=dict(color='#6366f1', width=2), name="EMA 50 Line"))
         
         fig.update_layout(
             template="plotly_dark", xaxis_rangeslider_visible=False, height=500,
