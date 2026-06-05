@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS signals (
 conn.commit()
 
 # =========================================================
-# ADVANCED MASTER SNIPER ENGINE V2
+# MASTER SNIPER ENGINE
 # =========================================================
 
 def get_structure_data(df):
@@ -61,28 +61,26 @@ def get_structure_data(df):
     lows = df["low"].values
     closes = df["close"].values
 
-    bos_bull = closes[-1] > max(highs[-8:-1])
-    bos_bear = closes[-1] < min(lows[-8:-1])
+    bos_bull = closes[-1] > max(highs[-6:-1])
+    bos_bear = closes[-1] < min(lows[-6:-1])
 
     qm_bull = (
         highs[-3] > highs[-6]
         and lows[-1] < lows[-3]
-        and closes[-1] > highs[-2]
     )
 
     qm_bear = (
         lows[-3] < lows[-6]
         and highs[-1] > highs[-3]
-        and closes[-1] < lows[-2]
     )
 
     liquidity_bull = (
-        lows[-2] < min(lows[-10:-3])
+        lows[-2] < min(lows[-8:-3])
         and closes[-1] > closes[-2]
     )
 
     liquidity_bear = (
-        highs[-2] > max(highs[-10:-3])
+        highs[-2] > max(highs[-8:-3])
         and closes[-1] < closes[-2]
     )
 
@@ -98,14 +96,16 @@ def get_structure_data(df):
 
 def get_validation_data(df):
 
-    price = df["close"].iloc[-1]
+    volume = df["volume"]
 
     volume_ma = (
-        df["volume"]
+        volume
         .rolling(20)
         .mean()
         .iloc[-1]
     )
+
+    price = df["close"].iloc[-1]
 
     atr = calculate_atr(df).iloc[-1]
 
@@ -121,11 +121,10 @@ def get_validation_data(df):
     return {
 
         "high_vol":
-        df["volume"].iloc[-1]
-        > volume_ma * 1.2,
+        volume.iloc[-1] > volume_ma * 1.1,
 
         "atr_ok":
-        (atr / price) > 0.001,
+        (atr / price) > 0.0005,
 
         "price": price,
 
@@ -145,57 +144,37 @@ def master_sniper_engine(df):
 
     reasons = []
 
-    # =====================
-    # BULLISH
-    # =====================
-
     if struct["bos_bull"]:
-        bull_score += 25
+        bull_score += 20
         reasons.append("BOS")
 
     if struct["qm_bull"]:
-        bull_score += 25
+        bull_score += 15
         reasons.append("QM")
 
     if struct["liquidity_bull"]:
-        bull_score += 20
+        bull_score += 15
         reasons.append("LIQ")
 
-    # =====================
-    # BEARISH
-    # =====================
-
     if struct["bos_bear"]:
-        bear_score += 25
-
-    if struct["qm_bear"]:
-        bear_score += 25
-
-    if struct["liquidity_bear"]:
         bear_score += 20
 
-    # =====================
-    # VOLUME
-    # =====================
+    if struct["qm_bear"]:
+        bear_score += 15
+
+    if struct["liquidity_bear"]:
+        bear_score += 15
 
     if valid["high_vol"]:
-        bull_score += 15
-        bear_score += 15
+        bull_score += 10
+        bear_score += 10
         reasons.append("VOL")
 
-    # =====================
-    # EMA TREND
-    # =====================
-
     if valid["price"] > valid["ema50"]:
-        bull_score += 15
+        bull_score += 10
 
     if valid["price"] < valid["ema50"]:
-        bear_score += 15
-
-    # =====================
-    # RSI
-    # =====================
+        bear_score += 10
 
     if valid["rsi"] < 35:
         bull_score += 10
@@ -203,30 +182,14 @@ def master_sniper_engine(df):
     if valid["rsi"] > 65:
         bear_score += 10
 
-    # =====================
-    # VOLATILITY FILTER
-    # =====================
-
     if not valid["atr_ok"]:
         return None, "LOW_VOL"
 
-    # =====================
-    # FINAL DECISION
-    # =====================
+    if bull_score >= 20 and bull_score > bear_score:
+        return "LONG", " | ".join(reasons)
 
-    if bull_score >= 35 and bull_score > bear_score:
-
-        return (
-            "LONG",
-            " | ".join(reasons)
-        )
-
-    if bear_score >= 35 and bear_score > bull_score:
-
-        return (
-            "SHORT",
-            "BEARISH_SETUP"
-        )
+    if bear_score >= 20 and bear_score > bull_score:
+        return "SHORT", "BEARISH_SETUP"
 
     return None, "NO_CONFLUENCE"
 
