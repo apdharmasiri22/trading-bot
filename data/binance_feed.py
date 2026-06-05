@@ -1,33 +1,47 @@
-import ccxt
+import requests
 import pandas as pd
 import streamlit as st
 
 
-exchange = ccxt.binance({
-    "enableRateLimit": True
-})
+COINGECKO_URL = "https://api.coingecko.com/api/v3/coins/markets"
 
 
 @st.cache_data(ttl=30)
 def get_top_coins(limit=200):
 
     try:
-        markets = exchange.load_markets()
+
+        params = {
+            "vs_currency": "usd",
+            "order": "volume_desc",
+            "per_page": limit,
+            "page": 1
+        }
+
+        r = requests.get(
+            COINGECKO_URL,
+            params=params,
+            timeout=10
+        )
+
+        data = r.json()
 
         coins = []
 
-        for symbol, info in markets.items():
+        for item in data:
 
-            if symbol.endswith("/USDT") and info.get("active"):
+            symbol = item["symbol"].upper()
 
-                coins.append(
-                    symbol.replace("/", "")
-                )
+            coins.append(
+                symbol + "USDT"
+            )
 
-        return coins[:limit]
+        return coins
+
 
     except Exception as e:
-        st.error(f"CCXT Error: {e}")
+
+        st.error(f"Data Error: {e}")
         return []
 
 
@@ -37,11 +51,21 @@ def get_price(symbol):
 
     try:
 
-        pair = symbol.replace("USDT", "/USDT")
+        coin = symbol.replace("USDT","").lower()
 
-        ticker = exchange.fetch_ticker(pair)
+        url = (
+        f"https://api.coingecko.com/api/v3/simple/price"
+        f"?ids={coin}&vs_currencies=usd"
+        )
 
-        return ticker["last"]
+        data = requests.get(
+            url,
+            timeout=10
+        ).json()
+
+
+        return data[coin]["usd"]
+
 
     except:
 
