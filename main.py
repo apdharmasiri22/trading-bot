@@ -5,77 +5,55 @@ from data.binance_feed import get_top_coins, get_price
 # =========================
 # 🏆 APP CONFIG
 # =========================
-APP_NAME = "SMC Quantum Trading Dashboard"
-st.set_page_config(page_title=APP_NAME, layout="wide")
-
-# 🔁 Auto refresh (30 sec)
+st.set_page_config(layout="wide")
+st.title("📊 SMC Quantum Trading Dashboard")
 st_autorefresh(interval=30000, key="refresh")
-
-# =========================
-# HEADER
-# =========================
-st.title(f"📊 {APP_NAME}")
-st.markdown("Smart Money Concepts + Liquidity Based Trading System")
-st.markdown("---")
 
 # =========================
 # 🪙 LIVE BINANCE COIN SELECTOR
 # =========================
-# Binance එකෙන් data අරගෙන "/" අයින් කරලා list එක හදනවා
-raw_coins = get_top_coins(20)
-coins = [c.replace('/', '') for c in raw_coins]
+# මෙතනින් කෙලින්ම BTCUSDT වගේ එන නිසා වෙනස් කරන්න ඕනේ නැහැ
+coins = get_top_coins(20)
 
-coin = st.selectbox("🔍 Select Coin (Live from Binance)", coins)
+if coins:
+    coin = st.selectbox("🔍 Select Coin", coins)
+    st.markdown(f"### 📌 Selected Coin: `{coin}`")
 
-st.markdown(f"### 📌 Selected Coin: `{coin}`")
-
-# =========================
-# 💰 LIVE PRICE
-# =========================
-if coin:  # coin එකක් තෝරලා තියෙනවා නම් විතරක් price එක ගන්න
-    # සරලව format එක හදමු
-    formatted_coin = f"{coin[:3]}/{coin[3:]}" if len(coin) > 6 else coin
-    price = get_price(formatted_coin)
+    # =========================
+    # 💰 LIVE PRICE
+    # =========================
+    price = get_price(coin)
     
     if price:
         st.success(f"💰 Live Price: {price}")
     else:
-        st.warning("Price could not be fetched for this coin.")
+        st.error("Price loading failed")
+
+    # =========================
+    # 📈 TRADINGVIEW CHART
+    # =========================
+    st.subheader("📈 TradingView Chart")
+    symbol = f"BINANCE:{coin}"
+
+    html_code = f"""
+    <div class="tradingview-widget-container">
+      <div id="tradingview_chart"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+      <script type="text/javascript">
+      new TradingView.widget({{
+        "width": "100%", "height": 500,
+        "symbol": "{symbol}",
+        "interval": "15",
+        "theme": "dark",
+        "style": "1",
+        "container_id": "tradingview_chart"
+      }});
+      </script>
+    </div>
+    """
+    st.components.v1.html(html_code, height=550)
 else:
-    st.info("Please select a coin to view the price.")
-
-# =========================
-# 📈 TRADINGVIEW CHART
-# =========================
-st.subheader("📈 TradingView Chart")
-
-symbol = f"BINANCE:{coin}"
-
-html_code = f"""
-<div class="tradingview-widget-container">
-  <div id="tradingview_chart"></div>
-  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-  <script type="text/javascript">
-  new TradingView.widget({{
-    "width": "100%",
-    "height": 500,
-    "symbol": "{symbol}",
-    "interval": "15",
-    "timezone": "Etc/UTC",
-    "theme": "dark",
-    "style": "1",
-    "locale": "en",
-    "toolbar_bg": "#f1f3f6",
-    "enable_publishing": false,
-    "allow_symbol_change": true,
-    "container_id": "tradingview_chart"
-  }});
-  </script>
-</div>
-"""
-st.components.v1.html(html_code, height=550)
-
-st.markdown("---")
+    st.error("Could not fetch coin list. Check your internet or API connection.")
 
 # =========================
 # 🧠 ANALYSIS PANEL (Engine ready)
