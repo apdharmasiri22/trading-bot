@@ -17,7 +17,7 @@ def get_top_coins(limit=200):
     try:
         url = "https://api.binance.com/api/v3/exchangeInfo"
 
-       r = requests.get(
+r = requests.get(
     url,
     timeout=10,
     headers={"User-Agent": "Mozilla/5.0"}
