@@ -1,30 +1,17 @@
 import requests
 import streamlit as st
 
-# =========================
-# API ENDPOINTS
-# =========================
-TOP_URL = "https://min-api.cryptocompare.com/data/top/mktcapfull"
-PRICE_URL = "https://min-api.cryptocompare.com/data/price"
+
+TOP_URL = "https://api.binance.com/api/v3/exchangeInfo"
 
 
-# =========================
-# GET TOP COINS
-# =========================
 @st.cache_data(ttl=600)
 def get_top_coins(limit=200):
 
     try:
-        url = "https://api.binance.com/api/v3/exchangeInfo"
-
-r = requests.get(
-    url,
-    timeout=10,
-    headers={"User-Agent": "Mozilla/5.0"}
-)
+        r = requests.get(TOP_URL, timeout=10)
         data = r.json()
 
-        # 🧠 SAFETY CHECK
         if "symbols" not in data:
             return []
 
@@ -46,42 +33,31 @@ r = requests.get(
         return []
 
 
-# =========================
-# GET PRICE
-# =========================
-@st.cache_data(ttl=15)
+@st.cache_data(ttl=60)
 def get_price(symbol):
 
     try:
-
         coin = symbol.replace("USDT", "")
+
+        url = "https://min-api.cryptocompare.com/data/price"
 
         params = {
             "fsym": coin,
             "tsyms": "USD"
         }
 
-        r = requests.get(
-            PRICE_URL,
-            params=params,
-            timeout=10
-        )
-
+        r = requests.get(url, params=params, timeout=10)
         data = r.json()
 
         return data.get("USD")
 
-    except Exception as e:
+    except:
         return None
 
 
-# =========================
-# GET CANDLES (IMPORTANT FIX)
-# =========================
 def get_candles(symbol, limit=50):
 
     try:
-
         coin = symbol.replace("USDT", "")
 
         url = "https://min-api.cryptocompare.com/data/v2/histominute"
@@ -93,13 +69,11 @@ def get_candles(symbol, limit=50):
         }
 
         r = requests.get(url, params=params, timeout=10)
-
         data = r.json().get("Data", {}).get("Data", [])
 
         candles = []
 
         for c in data:
-
             candles.append({
                 "open": float(c["open"]),
                 "high": float(c["high"]),
@@ -109,5 +83,5 @@ def get_candles(symbol, limit=50):
 
         return candles
 
-    except Exception as e:
+    except:
         return []
