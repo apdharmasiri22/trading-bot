@@ -1,5 +1,5 @@
 # =========================================================
-# QUANTUM X TERMINAL - ULTIMATE LIVE TRACKING & ACCURACY ENGINE
+# QUANTUM X TERMINAL - HIGH VOLATILITY & OPTIMIZED PROFIT ENGINE
 # =========================================================
 
 import streamlit as st
@@ -331,20 +331,23 @@ with tab1:
                 ema50 = calculate_ema(close, 50).iloc[-1]
                 rsi = calculate_rsi(close).iloc[-1]
                 atr = calculate_atr(kline).iloc[-1]
-                if atr == 0 or np.isnan(atr): continue
+                
+                # Volatility Filter: Skip low volume consolidation phases
+                if atr == 0 or np.isnan(atr) or (atr / current_price) < 0.0005: continue
 
                 bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
                 long_score = sum([20 if current_price > ema50 else 0, 20 if 40 < rsi < 70 else 0, 20 if bos_bull else 0, 20 if fvg_bull else 0, 20 if ob_bull else 0])
                 short_score = sum([20 if current_price < ema50 else 0, 20 if 30 < rsi < 60 else 0, 20 if bos_bear else 0, 20 if fvg_bear else 0, 20 if ob_bear else 0])
 
+                # ADVANCED MULTIPLIERS MATRIX
                 if long_score >= 60:
-                    sl = current_price - (atr * 1.5)
-                    scan_long.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{long_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price + (atr * 1.5), 4), "SL": round(sl, 4)})
-                    save_signal(coin, "LONG", "5m", current_price, current_price + (atr * 1.5), current_price + (atr * 3.0), current_price + (atr * 4.5), sl, long_score)
+                    sl = current_price - (atr * 2.0)
+                    scan_long.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{long_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price + (atr * 2.0), 4), "SL": round(sl, 4)})
+                    save_signal(coin, "LONG", "5m", current_price, current_price + (atr * 2.0), current_price + (atr * 4.5), current_price + (atr * 7.0), sl, long_score)
                 if short_score >= 60:
-                    sl = current_price + (atr * 1.5)
-                    scan_short.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{short_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price - (atr * 1.5), 4), "SL": round(sl, 4)})
-                    save_signal(coin, "SHORT", "5m", current_price, current_price - (atr * 1.5), current_price - (atr * 3.0), current_price - (atr * 4.5), sl, short_score)
+                    sl = current_price + (atr * 2.0)
+                    scan_short.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{short_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price - (atr * 2.0), 4), "SL": round(sl, 4)})
+                    save_signal(coin, "SHORT", "5m", current_price, current_price - (atr * 2.0), current_price - (atr * 4.5), current_price - (atr * 7.0), sl, short_score)
             except: pass
         l, s = st.columns(2)
         with l: st.dataframe(pd.DataFrame(scan_long) if scan_long else pd.DataFrame(columns=["No Active 5m Long"]), use_container_width=True)
@@ -372,20 +375,21 @@ with tab2:
                 ema50 = calculate_ema(close, 50).iloc[-1]
                 rsi = calculate_rsi(close).iloc[-1]
                 atr = calculate_atr(kline).iloc[-1]
-                if atr == 0 or np.isnan(atr): continue
+                
+                if atr == 0 or np.isnan(atr) or (atr / current_price) < 0.0005: continue
 
                 bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
                 long_score = sum([20 if current_price > ema50 else 0, 20 if 40 < rsi < 70 else 0, 20 if bos_bull else 0, 20 if fvg_bull else 0, 20 if ob_bull else 0])
                 short_score = sum([20 if current_price < ema50 else 0, 20 if 30 < rsi < 60 else 0, 20 if bos_bear else 0, 20 if fvg_bear else 0, 20 if ob_bear else 0])
 
                 if long_score >= 60:
-                    sl = current_price - (atr * 1.5)
-                    scan_long.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{long_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price + (atr * 1.5), 4), "SL": round(sl, 4)})
-                    save_signal(coin, "LONG", "15m", current_price, current_price + (atr * 1.5), current_price + (atr * 3.0), current_price + (atr * 4.5), sl, long_score)
+                    sl = current_price - (atr * 2.0)
+                    scan_long.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{long_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price + (atr * 2.0), 4), "SL": round(sl, 4)})
+                    save_signal(coin, "LONG", "15m", current_price, current_price + (atr * 2.0), current_price + (atr * 4.5), current_price + (atr * 7.0), sl, long_score)
                 if short_score >= 60:
-                    sl = current_price + (atr * 1.5)
-                    scan_short.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{short_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price - (atr * 1.5), 4), "SL": round(sl, 4)})
-                    save_signal(coin, "SHORT", "15m", current_price, current_price - (atr * 1.5), current_price - (atr * 3.0), current_price - (atr * 4.5), sl, short_score)
+                    sl = current_price + (atr * 2.0)
+                    scan_short.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{short_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price - (atr * 2.0), 4), "SL": round(sl, 4)})
+                    save_signal(coin, "SHORT", "15m", current_price, current_price - (atr * 2.0), current_price - (atr * 4.5), current_price - (atr * 7.0), sl, short_score)
             except: pass
         l, s = st.columns(2)
         with l: st.dataframe(pd.DataFrame(scan_long) if scan_long else pd.DataFrame(columns=["No Active 15m Long"]), use_container_width=True)
@@ -413,20 +417,21 @@ with tab3:
                 ema50 = calculate_ema(close, 50).iloc[-1]
                 rsi = calculate_rsi(close).iloc[-1]
                 atr = calculate_atr(kline).iloc[-1]
-                if atr == 0 or np.isnan(atr): continue
+                
+                if atr == 0 or np.isnan(atr) or (atr / current_price) < 0.0005: continue
 
                 bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
                 long_score = sum([20 if current_price > ema50 else 0, 20 if 40 < rsi < 70 else 0, 20 if bos_bull else 0, 20 if fvg_bull else 0, 20 if ob_bull else 0])
                 short_score = sum([20 if current_price < ema50 else 0, 20 if 30 < rsi < 60 else 0, 20 if bos_bear else 0, 20 if fvg_bear else 0, 20 if ob_bear else 0])
 
                 if long_score >= 60:
-                    sl = current_price - (atr * 1.5)
-                    scan_long.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{long_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price + (atr * 1.5), 4), "SL": round(sl, 4)})
-                    save_signal(coin, "LONG", "1h", current_price, current_price + (atr * 1.5), current_price + (atr * 3.0), current_price + (atr * 4.5), sl, long_score)
+                    sl = current_price - (atr * 2.0)
+                    scan_long.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{long_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price + (atr * 2.0), 4), "SL": round(sl, 4)})
+                    save_signal(coin, "LONG", "1h", current_price, current_price + (atr * 2.0), current_price + (atr * 4.5), current_price + (atr * 7.0), sl, long_score)
                 if short_score >= 60:
-                    sl = current_price + (atr * 1.5)
-                    scan_short.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{short_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price - (atr * 1.5), 4), "SL": round(sl, 4)})
-                    save_signal(coin, "SHORT", "1h", current_price, current_price - (atr * 1.5), current_price - (atr * 3.0), current_price - (atr * 4.5), sl, short_score)
+                    sl = current_price + (atr * 2.0)
+                    scan_short.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{short_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price - (atr * 2.0), 4), "SL": round(sl, 4)})
+                    save_signal(coin, "SHORT", "1h", current_price, current_price - (atr * 2.0), current_price - (atr * 4.5), current_price - (atr * 7.0), sl, short_score)
             except: pass
         l, s = st.columns(2)
         with l: st.dataframe(pd.DataFrame(scan_long) if scan_long else pd.DataFrame(columns=["No Active 1h Long"]), use_container_width=True)
@@ -440,7 +445,6 @@ with tab3:
 with tab4:
     st.subheader("📜 QUANTUM CENTRAL SIGNAL DATABASE")
     
-    # 1. Fetch raw rows from Database for math analytics
     raw_history = pd.read_sql("SELECT coin, signal, timeframe, entry, tp1, tp2, tp3, sl, status, created_at FROM signals", conn)
     
     if not raw_history.empty:
@@ -451,11 +455,8 @@ with tab4:
             status = row['status']
             entry = float(row['entry'])
             direction = row['signal']
-            
-            # Default fallback percentage values
             p_l_val = "0.00%"
             
-            # Math engine to calculate exact structural percentage change
             if "HIT" in status:
                 completed_trades += 1
                 if "TP" in status:
@@ -480,7 +481,6 @@ with tab4:
                 "PROFIT / LOSS %": p_l_val
             })
             
-        # 2. Render Final Cumulative Database Analytics Header Metrics
         final_accuracy = round((total_profits / completed_trades) * 100, 1) if completed_trades > 0 else 0.0
         
         m_col1, m_col2, m_col3 = st.columns(3)
@@ -490,13 +490,12 @@ with tab4:
         
         st.markdown("---")
         
-        # 3. Apply Premium Custom CSS Color-Coding Framework to the Streamlit DataFrame Object
         df_display = pd.DataFrame(processed_rows).sort_index(ascending=False)
         
         def highlight_status_cells(val):
-            if "TP" in str(val) or "+" in str(val): return 'color: #22c55e; font-weight: bold;' # Emerald Green
-            elif "SL" in str(val) or "-" in str(val): return 'color: #ef4444; font-weight: bold;' # Crimson Red
-            elif "RUNNING" in str(val): return 'color: #f59e0b; font-weight: bold;' # Amber Yellow
+            if "TP" in str(val) or "+" in str(val): return 'color: #22c55e; font-weight: bold;'
+            elif "SL" in str(val) or "-" in str(val): return 'color: #ef4444; font-weight: bold;'
+            elif "RUNNING" in str(val): return 'color: #f59e0b; font-weight: bold;'
             return ''
             
         st.dataframe(
@@ -576,9 +575,9 @@ def render_deep_portal():
         
         t1, t2 = st.columns(2)
         with t1:
-            st.success(f"🟢 INSTITUTIONAL LONG MATRIX\n\n🔹 entry point: {current_price:,.4f}\n\n🎯 target 1: {current_price+(atr_val*1.5):,.4f}\n🎯 target 2: {current_price+(atr_val*3.0):,.4f}\n\n🛑 stop trigger: {current_price-(atr_val*1.5):,.4f}")
+            st.success(f"🟢 INSTITUTIONAL LONG MATRIX\n\n🔹 entry point: {current_price:,.4f}\n\n🎯 target 1 (TP1): {current_price+(atr_val*2.0):,.4f}\n🎯 target 2 (TP2): {current_price+(atr_val*4.5):,.4f}\n🎯 target 3 (TP3): {current_price+(atr_val*7.0):,.4f}\n\n🛑 stop trigger (SL): {current_price-(atr_val*2.0):,.4f}")
         with t2:
-            st.error(f"🔴 INSTITUTIONAL SHORT MATRIX\n\n🔹 entry point: {current_price:,.4f}\n\n🎯 target 1: {current_price-(atr_val*1.5):,.4f}\n🎯 target 2: {current_price-(atr_val*3.0):,.4f}\n\n🛑 stop trigger: {current_price+(atr_val*1.5):,.4f}")
+            st.error(f"🔴 INSTITUTIONAL SHORT MATRIX\n\n🔹 entry point: {current_price:,.4f}\n\n🎯 target 1 (TP1): {current_price-(atr_val*2.0):,.4f}\n🎯 target 2 (TP2): {current_price-(atr_val*4.5):,.4f}\n🎯 target 3 (TP3): {current_price-(atr_val*7.0):,.4f}\n\n🛑 stop trigger (SL): {current_price+(atr_val*2.0):,.4f}")
     else:
         st.warning("Please type a valid asset name or wait for data synchronization...")
 
