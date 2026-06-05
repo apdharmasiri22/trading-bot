@@ -8,15 +8,18 @@ APP_NAME = "SMC Quantum Trading Dashboard"
 
 st.set_page_config(page_title=APP_NAME, layout="wide")
 
-# 🔁 Auto refresh (30 sec safe)
+# 🔁 Auto refresh (safe 30 sec)
 st_autorefresh(interval=30000, key="refresh")
 
+# =========================
+# HEADER
+# =========================
 st.title(f"📊 {APP_NAME}")
-
+st.markdown("Smart Money Concepts + Liquidity Based Trading System")
 st.markdown("---")
 
 # =========================
-# 🪙 COIN LIST (TEMP - Binance will come in Part 2)
+# 🪙 COIN LIST (TEMP - Part 2 will make this dynamic)
 # =========================
 coins = [
     "BTCUSDT",
@@ -24,48 +27,86 @@ coins = [
     "BNBUSDT",
     "SOLUSDT",
     "XRPUSDT",
-    "DOGEUSDT"
+    "DOGEUSDT",
+    "ADAUSDT",
+    "AVAXUSDT"
 ]
 
-# 🔍 Coin selector (filter/search)
+# =========================
+# 🔍 COIN SELECTOR
+# =========================
 coin = st.selectbox("🔍 Select Coin", coins)
 
-st.markdown(f"### Selected Coin: `{coin}`")
-
-# =========================
-# 📊 TRADINGVIEW CHART
-# =========================
-st.subheader("📈 TradingView Chart")
-
-tradingview_symbol = f"BINANCE:{coin}"
-
-st.components.v1.iframe(
-    f"https://www.tradingview.com/chart/?symbol={tradingview_symbol}",
-    height=600,
-    width=1000
-)
+st.markdown(f"### 📌 Selected Coin: `{coin}`")
 
 st.markdown("---")
 
 # =========================
-# 🧠 ANALYSIS PANEL (PLACEHOLDER)
+# 📈 TRADINGVIEW CHART (FIXED WORKING)
+# =========================
+st.subheader("📈 TradingView Chart")
+
+symbol = f"BINANCE:{coin}"
+
+html_code = f"""
+<div class="tradingview-widget-container">
+  <div id="tradingview_chart"></div>
+
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+
+  <script type="text/javascript">
+  new TradingView.widget({{
+    "width": 1000,
+    "height": 600,
+    "symbol": "{symbol}",
+    "interval": "15",
+    "timezone": "Etc/UTC",
+    "theme": "dark",
+    "style": "1",
+    "locale": "en",
+    "toolbar_bg": "#f1f3f6",
+    "enable_publishing": false,
+    "allow_symbol_change": true,
+    "container_id": "tradingview_chart"
+  }});
+  </script>
+</div>
+"""
+
+st.components.v1.html(html_code, height=650)
+
+st.markdown("---")
+
+# =========================
+# 🧠 ANALYSIS PANEL (PLACEHOLDER ENGINE READY)
 # =========================
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.subheader("📊 Bias")
-    st.info("Waiting for SMC engine...")
+    st.subheader("📊 Market Bias")
+    st.info("⏳ Waiting for SMC Engine (Part 3)")
 
 with col2:
-    st.subheader("🎯 Entry")
-    st.warning("FVG / OB zone will appear here")
+    st.subheader("🎯 Entry Zone")
+    st.warning("FVG / Order Block will appear here")
 
 with col3:
-    st.subheader("⚠️ Risk")
-    st.error("SL / TP pending engine")
+    st.subheader("⚠️ Risk (SL / TP)")
+    st.error("TP1 / TP2 / SL pending engine")
+
+st.markdown("---")
+
+# =========================
+# 📊 SIGNAL SUMMARY BOX
+# =========================
+st.subheader("🧠 Signal Summary")
+
+st.write("Status: ⏳ Not Connected Yet")
+st.write("Next Step: Binance Data Engine (Part 2)")
+
+st.markdown("---")
 
 # =========================
 # 📌 FOOTER
 # =========================
-st.markdown("---")
-st.caption("SMC Quantum Dashboard v1.1 - UI Upgrade")
+st.caption("SMC Quantum Trading Dashboard v1.0 - Complete Base UI (Part 1)")
