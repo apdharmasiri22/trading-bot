@@ -35,7 +35,7 @@ st.markdown("---")
 # GET LIVE BINANCE COINS
 # =========================
 
-coins = get_top_coins(30)
+coins = get_top_coins(200)
 
 
 if not coins:
