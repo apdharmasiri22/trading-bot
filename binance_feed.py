@@ -1,93 +1,66 @@
 import requests
 import streamlit as st
 
+BASE = "https://api.binance.com/api/v3"
 
-TOP_URL = "https://api.binance.com/api/v3/exchangeInfo"
-
-
+# =========================
+# COINS
+# =========================
 @st.cache_data(ttl=3600)
-def get_top_coins(limit=200):
-
+def get_top_coins(limit=100):
     try:
-        url = "https://api.binance.com/api/v3/ticker/24hr"
-        r = requests.get(url, timeout=10)
+        r = requests.get(f"{BASE}/ticker/24hr", timeout=10)
         data = r.json()
 
-        coins = []
+        if not isinstance(data, list):
+            return []
 
-        if isinstance(data, list):
-            for item in data:
-                if isinstance(item, dict):
-                    symbol = item.get("symbol")
-                    if symbol and symbol.endswith("USDT"):
-                        coins.append(symbol)
+        coins = [
+            x["symbol"]
+            for x in data
+            if isinstance(x, dict)
+            and x.get("symbol", "").endswith("USDT")
+        ]
 
-        # sort (important)
-        coins = sorted(coins)
-
-        # if API works, return full list
-        if len(coins) > 20:
-            return coins[:limit]
+        return coins[:limit]
 
     except:
-        pass
+        return ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"]
 
-    # 🔥 BIG FALLBACK (expanded list)
-    return [
-        "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT",
-        "XRPUSDT", "ADAUSDT", "DOGEUSDT", "TRXUSDT",
-        "AVAXUSDT", "MATICUSDT", "DOTUSDT", "LTCUSDT",
-        "BCHUSDT", "LINKUSDT", "ATOMUSDT",
-        "NEARUSDT", "ALGOUSDT", "FTMUSDT", "SANDUSDT",
-        "APEUSDT", "APTUSDT", "OPUSDT", "ARBUsdt".upper()
-    ][:limit]
 
-@st.cache_data(ttl=60)
+# =========================
+# PRICE (FIXED)
+# =========================
+@st.cache_data(ttl=10)
 def get_price(symbol):
-
     try:
-        coin = symbol.replace("USDT", "")
-
-        url = "https://min-api.cryptocompare.com/data/price"
-
-        params = {
-            "fsym": coin,
-            "tsyms": "USD"
-        }
-
-        r = requests.get(url, params=params, timeout=10)
+        r = requests.get(f"{BASE}/ticker/price", params={"symbol": symbol}, timeout=10)
         data = r.json()
-
-        return data.get("USD")
-
+        return float(data["price"])
     except:
         return None
 
 
+# =========================
+# CANDLES (FIXED)
+# =========================
+@st.cache_data(ttl=10)
 def get_candles(symbol, limit=50):
-
     try:
-        coin = symbol.replace("USDT", "")
-
-        url = "https://min-api.cryptocompare.com/data/v2/histominute"
-
-        params = {
-            "fsym": coin,
-            "tsym": "USD",
-            "limit": limit
-        }
-
-        r = requests.get(url, params=params, timeout=10)
-        data = r.json().get("Data", {}).get("Data", [])
+        r = requests.get(
+            f"{BASE}/klines",
+            params={"symbol": symbol, "interval": "1m", "limit": limit},
+            timeout=10
+        )
+        data = r.json()
 
         candles = []
-
         for c in data:
             candles.append({
-                "open": float(c["open"]),
-                "high": float(c["high"]),
-                "low": float(c["low"]),
-                "close": float(c["close"])
+                "open": float(c[1]),
+                "high": float(c[2]),
+                "low": float(c[3]),
+                "close": float(c[4])
             })
 
         return candles
