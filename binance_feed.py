@@ -9,29 +9,25 @@ TOP_URL = "https://api.binance.com/api/v3/exchangeInfo"
 def get_top_coins(limit=200):
 
     try:
-        r = requests.get(TOP_URL, timeout=10)
-        data = r.json()
+        url = "https://api.binance.com/api/v3/ticker/24hr"
 
-        if "symbols" not in data:
-            return []
+        r = requests.get(url, timeout=10)
+        data = r.json()
 
         coins = []
 
-        for symbol in data["symbols"]:
+        for item in data:
 
-            if (
-                isinstance(symbol, dict)
-                and symbol.get("status") == "TRADING"
-                and symbol.get("symbol", "").endswith("USDT")
-            ):
-                coins.append(symbol["symbol"])
+            symbol = item.get("symbol")
+
+            if symbol and symbol.endswith("USDT"):
+                coins.append(symbol)
 
         return coins[:limit]
 
     except Exception as e:
         st.error(f"Binance Error: {e}")
         return []
-
 
 @st.cache_data(ttl=60)
 def get_price(symbol):
