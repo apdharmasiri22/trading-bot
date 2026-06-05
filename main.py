@@ -83,21 +83,48 @@ def get_price(symbol):
 # =========================
 # CANDLES + SMC ENGINE
 # =========================
-candles = get_candles(coin)
+def get_candles(symbol, limit=50):
 
-if candles:
-    smc_result = smc.update(candles)
+    try:
+        coin = symbol.replace("USDT", "")
 
-    analysis = {
-        "structure_score": smc_result.get("structure_score", 0),
-        "liquidity_score": 15,
-        "entry_score": 15,
-        "pattern_score": 10,
-        "wave_score": 5,
-        "timing_score": 5
-    }
+        url = "https://min-api.cryptocompare.com/data/v2/histominute"
 
-    final_result = score_engine.update_scores(analysis)
+        params = {
+            "fsym": coin,
+            "tsym": "USD",
+            "limit": limit
+        }
+
+        r = requests.get(url, params=params, timeout=10)
+        data = r.json()
+
+        # 🧠 SAFE CHECK
+        if "Data" not in data:
+            return []
+
+        inner = data["Data"]
+
+        if "Data" not in inner:
+            return []
+
+        raw = inner["Data"]
+
+        candles = []
+
+        for c in raw:
+            if isinstance(c, dict):
+                candles.append({
+                    "open": float(c.get("open", 0)),
+                    "high": float(c.get("high", 0)),
+                    "low": float(c.get("low", 0)),
+                    "close": float(c.get("close", 0))
+                })
+
+        return candles
+
+    except Exception as e:
+        return []
 
     # =========================
     # SMC OUTPUT
