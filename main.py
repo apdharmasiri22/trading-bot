@@ -58,14 +58,27 @@ st.markdown(f"### 🪙 Selected Coin : {coin}")
 # =========================
 # PRICE
 # =========================
-price = get_price(coin)
+@st.cache_data(ttl=15)
+def get_price(symbol):
 
-if price:
-    st.success(f"💰 Live Price : {price}")
-else:
-    st.error("Price loading failed")
+    try:
+        # 🧠 FIX: remove USDT properly
+        coin = symbol.replace("USDT", "")
 
-st.markdown("---")
+        url = "https://min-api.cryptocompare.com/data/price"
+
+        params = {
+            "fsym": coin,
+            "tsyms": "USD"
+        }
+
+        r = requests.get(url, params=params, timeout=10)
+        data = r.json()
+
+        return data.get("USD")
+
+    except Exception as e:
+        return None
 
 # =========================
 # CANDLES + SMC ENGINE
