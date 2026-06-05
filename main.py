@@ -11,6 +11,91 @@ import sqlite3
 from datetime import datetime
 
 # =========================================================
+# 1. MASTER ENGINE: STRUCTURE & PATTERN ENGINE (A, B, C)
+# =========================================================
+def get_structure_data(df):
+    highs, lows, closes = df["high"].values, df["low"].values, df["close"].values
+    bos_bull = (closes[-1] > highs[-4])
+    is_bullish_qm = (highs[-3] > highs[-5]) and (lows[-3] > lows[-5]) and (lows[-1] < lows[-3])
+    return {"bos_bull": bos_bull, "qm_bull": is_bullish_qm}
+
+def get_validation_data(df):
+    is_high_volume = df['volume'].iloc[-1] > df['volume'].rolling(20).mean().iloc[-1] * 1.5
+    return {"high_vol": is_high_volume}
+
+def master_sniper_engine(df):
+    struct = get_structure_data(df)
+    valid = get_validation_data(df)
+    reasons = []
+    if struct['bos_bull']: reasons.append("BOS")
+    if struct['qm_bull']: reasons.append("QM_TRAP")
+    if valid['high_vol']: reasons.append("HIGH_VOL")
+    signal = "LONG" if len(reasons) >= 2 else None
+    return signal, " + ".join(reasons)
+
+# =========================================================
+# 2. DATABASE SETUP
+# =========================================================
+conn = sqlite3.connect("signals.db", check_same_thread=False)
+cursor = conn.cursor()
+cursor.execute("DROP TABLE IF EXISTS signals")
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS signals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    coin TEXT, signal TEXT, timeframe TEXT, entry REAL,
+    tp1 REAL, tp2 REAL, tp3 REAL, sl REAL, probability REAL,
+    status TEXT, created_at TEXT, reason TEXT
+)
+""")
+conn.commit()
+
+def save_signal(coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability, reason):
+    cursor.execute("""
+    INSERT INTO signals (coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability, status, created_at, reason)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability, "RUNNING", datetime.now().strftime('%Y-%m-%d %H:%M:%S'), reason))
+    conn.commit()
+
+# =========================================================
+# 3. UTILITIES & UI LOGIC (ඔයාගේ පරණ කෝඩ් එකේ කොටස්)
+# =========================================================
+def calculate_atr(df, period=14):
+    high_low = df["high"] - df["low"]
+    high_close = np.abs(df["high"] - df["close"].shift())
+    low_close = np.abs(df["low"] - df["close"].shift())
+    return pd.concat([high_low, high_close, low_close], axis=1).max(axis=1).rolling(period).mean()
+
+def calculate_ema(data, period):
+    return data.ewm(span=period, adjust=False).mean()
+
+def get_klines(symbol, interval):
+    try:
+        url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit=100"
+        data = requests.get(url, timeout=5).json()
+        df = pd.DataFrame(data).iloc[:, :6]
+        df.columns = ["time", "open", "high", "low", "close", "volume"]
+        return df.astype({"open": float, "high": float, "low": float, "close": float, "volume": float})
+    except: return pd.DataFrame()
+
+# =========================================================
+# 4. SCANNER LOOP (Updated with Master Engine)
+# =========================================================
+def run_scanner_logic(market_df, tf):
+    for coin in market_df["symbol"].tolist()[:15]:
+        kline = get_klines(coin, tf)
+        if kline.empty: continue
+        
+        # මෙතන තමයි අලුත් Engine එක වැඩ කරන්නේ
+        signal, reason = master_sniper_engine(kline)
+        
+        if signal:
+            atr = calculate_atr(kline).iloc[-1]
+            entry = kline["close"].iloc[-1]
+            sl = entry - (atr * 1.8)
+            save_signal(coin, signal, tf, entry, entry+(atr*2), entry+(atr*4.5), entry+(atr*7), sl, 90, reason)
+
+# (මෙතැනින් පහළට ඔයාගේ ඉතිරි UI Tabs සහ Render logic ටික දාගන්න)
+# =========================================================
 # PAGE CONFIG
 # =========================================================
 st.set_page_config(
