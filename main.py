@@ -1,6 +1,10 @@
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
+
 from data.binance_feed import get_top_coins, get_price
+from data.binance_feed import get_candles
+from smc_engine import SMCEngine
+from score_engine import ScoreEngine
 
 
 # =========================
@@ -81,6 +85,47 @@ else:
 
 
 st.markdown("---")
+
+# =========================
+# GET CANDLES
+# =========================
+candles = get_candles(coin)
+
+# =========================
+# ENGINE 1 - SMC STRUCTURE
+# =========================
+smc_result = smc.update(candles)
+
+# =========================
+# ENGINE 2 - BUILD ANALYSIS DICT
+# =========================
+analysis = {
+    "structure_score": smc_result["structure_score"],
+    "liquidity_score": 15,   # placeholder (next step)
+    "entry_score": 15,       # placeholder
+    "pattern_score": 10,     # placeholder
+    "wave_score": 5,         # placeholder
+    "timing_score": 5        # placeholder
+}
+
+# =========================
+# SCORE ENGINE
+# =========================
+final_result = score_engine.update_scores(analysis)
+
+# =========================
+# UI DISPLAY
+# =========================
+st.markdown("### 🧠 SMC ANALYSIS")
+
+st.write("📊 Structure:", smc_result["structure"])
+
+st.markdown("### 🎯 FINAL DECISION")
+st.success(f"""
+Score: {final_result['total_score']}
+
+{final_result['decision']}
+""")
 
 
 # =========================
