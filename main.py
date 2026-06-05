@@ -1,5 +1,5 @@
 # =========================================================
-# QUANTUM X TERMINAL - DUAL FRAGMENT HIGH-STABILITY ENGINE
+# QUANTUM X TERMINAL - ULTRA PREMIUM TABBED TRADING ENGINE
 # =========================================================
 
 import streamlit as st
@@ -79,6 +79,24 @@ html, body, .stApp {
 .sell { background: linear-gradient(90deg, rgba(239,68,68,0.75), rgba(127,29,29,0.95)); padding:14px; border-radius:16px; font-size:20px; font-weight:bold; text-align:center; }
 .neutral { background: linear-gradient(90deg, rgba(148, 163, 184, 0.5), rgba(71, 85, 105, 0.7)); padding:14px; border-radius:16px; font-size:20px; font-weight:bold; text-align:center; }
 [data-testid="metric-container"] { background: rgba(15,23,42,0.72); backdrop-filter: blur(16px); border-radius:22px; border:1px solid rgba(255,255,255,0.06); padding:18px; }
+
+/* Tabs Styling to match Quantum theme */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 12px;
+}
+.stTabs [data-baseweb="tab"] {
+    background: rgba(15,23,42,0.4) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    padding: 12px 28px !important;
+    color: #94a3b8 !important;
+    border-radius: 14px 14px 0px 0px !important;
+    font-weight: bold !important;
+}
+.stTabs [aria-selected="true"] {
+    background: rgba(56,189,248,0.15) !important;
+    border-color: #38bdf8 !important;
+    color: #38bdf8 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -227,120 +245,185 @@ def save_signal(coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability):
     except: pass
 
 # =========================================================
-# STATIC ACCURACY DASHBOARD
+# SYSTEM ACCURACY RENDERING LOGIC (REUSABLE FOR TABS)
 # =========================================================
-st.subheader("📊 SYSTEM ACCURACY DASHBOARD")
-accuracy_container = st.empty()
-
-signals_df = pd.read_sql("SELECT * FROM signals", conn)
-if not signals_df.empty:
-    with accuracy_container.container():
+def render_accuracy_for_timeframe(tf_val):
+    signals_df = pd.read_sql(f"SELECT * FROM signals WHERE timeframe='{tf_val}'", conn)
+    
+    # Fallback to general if specific timeframe has no signals yet
+    if signals_df.empty:
+        signals_df = pd.read_sql("SELECT * FROM signals", conn)
+        
+    if not signals_df.empty:
         total_signals = len(signals_df)
         tp1_hits = len(signals_df[signals_df["status"] == "TP1 HIT"])
         tp2_hits = len(signals_df[signals_df["status"] == "TP2 HIT"])
         tp3_hits = len(signals_df[signals_df["status"] == "TP3 HIT"])
         running = len(signals_df[signals_df["status"] == "RUNNING"])
         win_rate = round(((tp1_hits+tp2_hits+tp3_hits) / total_signals) * 100, 2) if total_signals > 0 else 0
-        a, b, c, d, e, f = st.columns(6)
-        a.metric("TOTAL SIGNALS", total_signals)
+        
+        a, b, c, d, e = st.columns(5)
+        a.metric(f"TOTAL {tf_val} SIGNALS", total_signals)
         b.metric("RUNNING", running)
         c.metric("TP1 HITS", tp1_hits)
         d.metric("TP2 HITS", tp2_hits)
-        f.metric("WIN RATE", f"{win_rate}%")
+        e.metric("WIN RATE", f"{win_rate}%")
+    else:
+        st.info(f"📊 Accuracy stats for {tf_val} will render once signals generate.")
 
+# =========================================================
+# GLOBAL MARKET DATA CHECK
+# =========================================================
 df = get_market()
 if df.empty:
     st.error("🚨 Connecting to data nodes. Please standby...")
     st.stop()
 
-# STABLE INPUT CONTROLS
-trading_type = st.selectbox("🎯 SELECT TRADING TYPE", ["SCALPING", "DAY TRADING", "SWING TRADING"])
-if trading_type == "SCALPING": timeframe = "5m"
-elif trading_type == "DAY TRADING": timeframe = "15m"
-else: timeframe = "1h"
+# =========================================================
+# ⚡ THE PREMIUM TRADING TABS SYSTEM
+# =========================================================
+tab1, tab2, tab3 = st.tabs(["🎯 SCALPING MODE (5m)", "⚡ DAY TRADING MODE (15m)", "🔮 SWING TRADING MODE (1h)"])
 
-# =========================================================
-# ⚡ FRAGMENT 1: LIVE SMC SCANNER (REFRESHES EVERY 30s)
-# =========================================================
-@st.fragment(run_every=30)
-def render_live_scanner(market_df, tf_val):
-    st.subheader(f"🔥 INSTITUTIONAL SMC SCANNER ({tf_val}) - Live Updating (30s)")
+# ---------------------------------------------------------
+# TAB 1: SCALPING (5m)
+# ---------------------------------------------------------
+with tab1:
+    st.markdown("### 📊 SYSTEM ACCURACY DASHBOARD (5m)")
+    render_accuracy_for_timeframe("5m")
     
-    scan_long, scan_short = [], []
-    coins = market_df["symbol"].tolist()
+    @st.fragment(run_every=30)
+    def render_scalping_scanner(market_df):
+        st.subheader("🔥 INSTITUTIONAL SMC SCANNER (5m) - Live Updating (30s)")
+        scan_long, scan_short = [], []
+        for coin in market_df["symbol"].tolist()[:25]: # Scans top 25 high vol coins
+            try:
+                kline = get_klines(coin, "5m")
+                if kline.empty or len(kline) < 30: continue
+                close = kline["close"]
+                current_price = close.iloc[-1]
+                ema50 = calculate_ema(close, 50).iloc[-1]
+                rsi = calculate_rsi(close).iloc[-1]
+                atr = calculate_atr(kline).iloc[-1]
+                if atr == 0 or np.isnan(atr): continue
 
-    for coin in coins:
-        try:
-            kline = get_klines(coin, tf_val)
-            if kline.empty or len(kline) < 30: continue
+                bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
+                long_score = sum([20 if current_price > ema50 else 0, 20 if 40 < rsi < 70 else 0, 20 if bos_bull else 0, 20 if fvg_bull else 0, 20 if ob_bull else 0])
+                short_score = sum([20 if current_price < ema50 else 0, 20 if 30 < rsi < 60 else 0, 20 if bos_bear else 0, 20 if fvg_bear else 0, 20 if ob_bear else 0])
 
-            close = kline["close"]
-            current_price = close.iloc[-1]
-            ema50 = calculate_ema(close, 50).iloc[-1]
-            rsi = calculate_rsi(close).iloc[-1]
-            atr = calculate_atr(kline).iloc[-1]
-            if atr == 0 or np.isnan(atr): continue
+                if long_score >= 60:
+                    sl = current_price - (atr * 1.5)
+                    scan_long.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{long_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price + (atr * 1.5), 4), "SL": round(sl, 4)})
+                    save_signal(coin, "LONG", "5m", current_price, current_price + (atr * 1.5), current_price + (atr * 3.0), current_price + (atr * 4.5), sl, long_score)
+                if short_score >= 60:
+                    sl = current_price + (atr * 1.5)
+                    scan_short.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{short_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price - (atr * 1.5), 4), "SL": round(sl, 4)})
+                    save_signal(coin, "SHORT", "5m", current_price, current_price - (atr * 1.5), current_price - (atr * 3.0), current_price - (atr * 4.5), sl, short_score)
+            except: pass
+        l, s = st.columns(2)
+        with l: st.dataframe(pd.DataFrame(scan_long) if scan_long else pd.DataFrame(columns=["No Active Long Setup"]), use_container_width=True)
+        with s: st.dataframe(pd.DataFrame(scan_short) if scan_short else pd.DataFrame(columns=["No Active Short Setup"]), use_container_width=True)
 
-            bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
+    render_scalping_scanner(df)
 
-            long_score, short_score = 0, 0
-            if current_price > ema50: long_score += 20
-            if 40 < rsi < 70: long_score += 20
-            if bos_bull: long_score += 20
-            if fvg_bull: long_score += 20
-            if ob_bull: long_score += 20
-            
-            if current_price < ema50: short_score += 20
-            if 30 < rsi < 60: short_score += 20
-            if bos_bear: short_score += 20
-            if fvg_bear: short_score += 20
-            if ob_bear: short_score += 20
+# ---------------------------------------------------------
+# TAB 2: DAY TRADING (15m)
+# ---------------------------------------------------------
+with tab2:
+    st.markdown("### 📊 SYSTEM ACCURACY DASHBOARD (15m)")
+    render_accuracy_for_timeframe("15m")
+    
+    @st.fragment(run_every=30)
+    def render_day_scanner(market_df):
+        st.subheader("🔥 INSTITUTIONAL SMC SCANNER (15m) - Live Updating (30s)")
+        scan_long, scan_short = [], []
+        for coin in market_df["symbol"].tolist()[:25]:
+            try:
+                kline = get_klines(coin, "15m")
+                if kline.empty or len(kline) < 30: continue
+                close = kline["close"]
+                current_price = close.iloc[-1]
+                ema50 = calculate_ema(close, 50).iloc[-1]
+                rsi = calculate_rsi(close).iloc[-1]
+                atr = calculate_atr(kline).iloc[-1]
+                if atr == 0 or np.isnan(atr): continue
 
-            if long_score >= 60:
-                sl = current_price - (atr * 1.5)
-                scan_long.append({
-                    "COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{long_score}%",
-                    "ENTRY": round(current_price, 4), "TP1": round(current_price + (atr * 1.5), 4),
-                    "TP2": round(current_price + (atr * 3.0), 4), "SL": round(sl, 4)
-                })
-                save_signal(coin, "LONG", tf_val, current_price, current_price + (atr * 1.5), current_price + (atr * 3.0), current_price + (atr * 4.5), sl, long_score)
+                bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
+                long_score = sum([20 if current_price > ema50 else 0, 20 if 40 < rsi < 70 else 0, 20 if bos_bull else 0, 20 if fvg_bull else 0, 20 if ob_bull else 0])
+                short_score = sum([20 if current_price < ema50 else 0, 20 if 30 < rsi < 60 else 0, 20 if bos_bear else 0, 20 if fvg_bear else 0, 20 if ob_bear else 0])
 
-            if short_score >= 60:
-                sl = current_price + (atr * 1.5)
-                scan_short.append({
-                    "COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{short_score}%",
-                    "ENTRY": round(current_price, 4), "TP1": round(current_price - (atr * 1.5), 4),
-                    "TP2": round(current_price - (atr * 3.0), 4), "SL": round(sl, 4)
-                })
-                save_signal(coin, "SHORT", tf_val, current_price, current_price - (atr * 1.5), current_price - (atr * 3.0), current_price - (atr * 4.5), sl, short_score)
-        except: pass
+                if long_score >= 60:
+                    sl = current_price - (atr * 1.5)
+                    scan_long.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{long_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price + (atr * 1.5), 4), "SL": round(sl, 4)})
+                    save_signal(coin, "LONG", "15m", current_price, current_price + (atr * 1.5), current_price + (atr * 3.0), current_price + (atr * 4.5), sl, long_score)
+                if short_score >= 60:
+                    sl = current_price + (atr * 1.5)
+                    scan_short.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{short_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price - (atr * 1.5), 4), "SL": round(sl, 4)})
+                    save_signal(coin, "SHORT", "15m", current_price, current_price - (atr * 1.5), current_price - (atr * 3.0), current_price - (atr * 4.5), sl, short_score)
+            except: pass
+        l, s = st.columns(2)
+        with l: st.dataframe(pd.DataFrame(scan_long) if scan_long else pd.DataFrame(columns=["No Active Long Setup"]), use_container_width=True)
+        with s: st.dataframe(pd.DataFrame(scan_short) if scan_short else pd.DataFrame(columns=["No Active Short Setup"]), use_container_width=True)
 
-    lcol, scol = st.columns(2)
-    with lcol:
-        st.markdown("**🚀 LONG SIGNALS (BULLISH SMC)**")
-        if scan_long: st.dataframe(pd.DataFrame(scan_long), use_container_width=True)
-        else: st.info("Scanning Market for Order Blocks Long setups...")
-    with scol:
-        st.markdown("**🔴 SHORT SIGNALS (BEARISH SMC)**")
-        if scan_short: st.dataframe(pd.DataFrame(scan_short), use_container_width=True)
-        else: st.info("Scanning Market for Order Blocks Short setups...")
+    render_day_scanner(df)
 
-# Run Scanner Fragment
-render_live_scanner(df, timeframe)
+# ---------------------------------------------------------
+# TAB 3: SWING TRADING (1h)
+# ---------------------------------------------------------
+with tab3:
+    st.markdown("### 📊 SYSTEM ACCURACY DASHBOARD (1h)")
+    render_accuracy_for_timeframe("1h")
+    
+    @st.fragment(run_every=30)
+    def render_swing_scanner(market_df):
+        st.subheader("🔥 INSTITUTIONAL SMC SCANNER (1h) - Live Updating (30s)")
+        scan_long, scan_short = [], []
+        for coin in market_df["symbol"].tolist()[:25]:
+            try:
+                kline = get_klines(coin, "1h")
+                if kline.empty or len(kline) < 30: continue
+                close = kline["close"]
+                current_price = close.iloc[-1]
+                ema50 = calculate_ema(close, 50).iloc[-1]
+                rsi = calculate_rsi(close).iloc[-1]
+                atr = calculate_atr(kline).iloc[-1]
+                if atr == 0 or np.isnan(atr): continue
+
+                bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
+                long_score = sum([20 if current_price > ema50 else 0, 20 if 40 < rsi < 70 else 0, 20 if bos_bull else 0, 20 if fvg_bull else 0, 20 if ob_bull else 0])
+                short_score = sum([20 if current_price < ema50 else 0, 20 if 30 < rsi < 60 else 0, 20 if bos_bear else 0, 20 if fvg_bear else 0, 20 if ob_bear else 0])
+
+                if long_score >= 60:
+                    sl = current_price - (atr * 1.5)
+                    scan_long.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{long_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price + (atr * 1.5), 4), "SL": round(sl, 4)})
+                    save_signal(coin, "LONG", "1h", current_price, current_price + (atr * 1.5), current_price + (atr * 3.0), current_price + (atr * 4.5), sl, long_score)
+                if short_score >= 60:
+                    sl = current_price + (atr * 1.5)
+                    scan_short.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "SMC SCORE": f"{short_score}%", "ENTRY": round(current_price, 4), "TP1": round(current_price - (atr * 1.5), 4), "SL": round(sl, 4)})
+                    save_signal(coin, "SHORT", "1h", current_price, current_price - (atr * 1.5), current_price - (atr * 3.0), current_price - (atr * 4.5), sl, short_score)
+            except: pass
+        l, s = st.columns(2)
+        with l: st.dataframe(pd.DataFrame(scan_long) if scan_long else pd.DataFrame(columns=["No Active Long Setup"]), use_container_width=True)
+        with s: st.dataframe(pd.DataFrame(scan_short) if scan_short else pd.DataFrame(columns=["No Active Short Setup"]), use_container_width=True)
+
+    render_swing_scanner(df)
 
 # =========================================================
-# ⚡ FRAGMENT 2: DEEP PORTAL WITH CHART (INDEPENDENT)
+# COIN SPECIFIC INDEPENDENT INTERACTION PORTAL
 # =========================================================
 st.markdown("---")
 st.subheader("🔍 COIN SPECIFIC SMC DEEP INTERACTION")
 
-# මේක Fragment එක ඇතුළට දාලා තියෙන්නේ ප්‍රශ්නය විසඳන්නයි
 @st.fragment(run_every=30)
-def render_deep_portal(tf_val):
-    search_coin = st.text_input("Enter Coin Asset Name (e.g., BTC, ETH, SOL)", "BTC", key="stable_search")
+def render_deep_portal():
+    # User selects the portal timeframe manually inside here to prevent fragmentation conflicts
+    p_col1, p_col2 = st.columns([3, 1])
+    with p_col1:
+        search_coin = st.text_input("Enter Coin Asset Name (e.g., BTC, ETH, SOL)", "BTC", key="stable_search")
+    with p_col2:
+        portal_tf = st.selectbox("CHART TIMEFRAME", ["5m", "15m", "1h"], index=1, key="portal_tf_select")
+        
     selected_coin = f"{search_coin.upper()}USDT"
-
-    kline = get_klines(selected_coin, tf_val)
+    kline = get_klines(selected_coin, portal_tf)
 
     if not kline.empty:
         close = kline["close"]
@@ -360,7 +443,7 @@ def render_deep_portal(tf_val):
         
         st.markdown(f"""
         <div class="card">
-            <h2 style='text-align: center; color:#38bdf8;'>{selected_coin} Advanced SMC Portal (Auto-Refresh)</h2>
+            <h2 style='text-align: center; color:#38bdf8;'>{selected_coin} ({portal_tf}) Advanced SMC Portal</h2>
             <div class="{css}">{status_txt}</div><br>
             <table style='width:100%; text-align:center; font-size:16px;'>
                 <tr>
@@ -392,29 +475,17 @@ def render_deep_portal(tf_val):
         ))
         
         fig.update_layout(
-            template="plotly_dark",
-            xaxis_rangeslider_visible=False,
-            height=500,
-            paper_bgcolor='rgba(15,23,42,0.55)',
-            plot_bgcolor='rgba(0,0,0,0)'
+            template="plotly_dark", xaxis_rangeslider_visible=False, height=500,
+            paper_bgcolor='rgba(15,23,42,0.55)', plot_bgcolor='rgba(0,0,0,0)'
         )
         st.plotly_chart(fig, use_container_width=True)
         
         t1, t2 = st.columns(2)
         with t1:
-            st.success(f"🟢 INSTITUTIONAL LONG MATRIX\n\n"
-                       f"🔹 entry point: {current_price:,.4f}\n\n"
-                       f"🎯 target 1: {current_price+(atr_val*1.5):,.4f}\n"
-                       f"🎯 target 2: {current_price+(atr_val*3.0):,.4f}\n\n"
-                       f"🛑 stop trigger: {current_price-(atr_val*1.5):,.4f}")
+            st.success(f"🟢 INSTITUTIONAL LONG MATRIX\n\n🔹 entry point: {current_price:,.4f}\n\n🎯 target 1: {current_price+(atr_val*1.5):,.4f}\n🎯 target 2: {current_price+(atr_val*3.0):,.4f}\n\n🛑 stop trigger: {current_price-(atr_val*1.5):,.4f}")
         with t2:
-            st.error(f"🔴 INSTITUTIONAL SHORT MATRIX\n\n"
-                     f"🔹 entry point: {current_price:,.4f}\n\n"
-                     f"🎯 target 1: {current_price-(atr_val*1.5):,.4f}\n"
-                     f"🎯 target 2: {current_price-(atr_val*3.0):,.4f}\n\n"
-                     f"🛑 stop trigger: {current_price+(atr_val*1.5):,.4f}")
+            st.error(f"🔴 INSTITUTIONAL SHORT MATRIX\n\n🔹 entry point: {current_price:,.4f}\n\n🎯 target 1: {current_price-(atr_val*1.5):,.4f}\n🎯 target 2: {current_price-(atr_val*3.0):,.4f}\n\n🛑 stop trigger: {current_price+(atr_val*1.5):,.4f}")
     else:
         st.warning("Please type a valid asset name or wait for data synchronization...")
 
-# Run Deep Portal Fragment
-render_deep_portal(timeframe)
+render_deep_portal()
