@@ -5,49 +5,54 @@ from binance_feed import get_top_coins, get_price, get_candles
 from smc_engine import SMCEngine
 from score_engine import ScoreEngine
 
+
 # =========================
 # INIT
 # =========================
 smc = SMCEngine()
 score_engine = ScoreEngine()
 
-st.set_page_config(page_title="SMC Quantum Dashboard", layout="wide")
+st.set_page_config(page_title="SMC Dashboard", layout="wide")
 st_autorefresh(interval=30000, key="refresh")
 
 st.title("📊 SMC Quantum Dashboard")
-st.caption("Smart Money Concepts + Binance Live Data")
+st.caption("Smart Money Concepts System")
 
 st.markdown("---")
 
+
 # =========================
-# COINS
+# COINS (200)
 # =========================
-coins = get_top_coins(100)
+coins = get_top_coins(200)
 
 if not coins:
-    st.error("❌ Market data not loaded.")
+    st.error("Market data not loaded.")
     st.stop()
 
-coin = st.selectbox("🔍 Select Coin", coins)
-
-st.markdown(f"### 🪙 {coin}")
 
 # =========================
-# PRICE
+# SELECT 10 COINS
 # =========================
-price = get_price(coin)
+selected_coins = st.multiselect(
+    "🔍 Select coins (max 10)",
+    coins,
+    max_selections=10
+)
 
-if price:
-    st.success(f"💰 Price: {price}")
-else:
-    st.error("Price loading failed")
+st.markdown("---")
+
 
 # =========================
-# CANDLES
+# ANALYSIS
 # =========================
-candles = get_candles(coin)
+for coin in selected_coins:
 
-if candles:
+    price = get_price(coin)
+    candles = get_candles(coin)
+
+    if not candles:
+        continue
 
     smc_result = smc.update(candles)
 
@@ -62,36 +67,16 @@ if candles:
 
     final_result = score_engine.update_scores(analysis)
 
-    st.subheader("🧠 SMC Analysis")
-    st.write("Structure:", smc_result.get("structure"))
+    st.subheader(f"🪙 {coin}")
+
+    if price:
+        st.write("💰 Price:", price)
+
+    st.write("📊 Structure:", smc_result.get("structure"))
 
     st.success(f"""
 Score: {final_result['total_score']}
-
-{final_result['decision']}
+Decision: {final_result['decision']}
 """)
 
-else:
-    st.warning("No candle data available")
-
-# =========================
-# CHART
-# =========================
-symbol = f"BINANCE:{coin}"
-
-html_code = f"""
-<div id="tradingview_chart"></div>
-<script src="https://s3.tradingview.com/tv.js"></script>
-<script>
-new TradingView.widget({{
-"width":1000,
-"height":600,
-"symbol":"{symbol}",
-"interval":"15",
-"theme":"dark",
-"container_id":"tradingview_chart"
-}});
-</script>
-"""
-
-st.components.v1.html(html_code, height=650)
+    st.markdown("---")
