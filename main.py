@@ -11,28 +11,118 @@ import sqlite3
 from datetime import datetime
 
 # =========================================================
-# 1. MASTER ENGINE: STRUCTURE & PATTERN ENGINE (A, B, C)
+# 1. MASTER ENGINE: STRUCTURE & PATTERN ENGINE (UPGRADED)
 # =========================================================
+
 def get_structure_data(df):
-    highs, lows, closes = df["high"].values, df["low"].values, df["close"].values
-    bos_bull = (closes[-1] > highs[-4])
-    is_bullish_qm = (highs[-3] > highs[-5]) and (lows[-3] > lows[-5]) and (lows[-1] < lows[-3])
-    return {"bos_bull": bos_bull, "qm_bull": is_bullish_qm}
+
+    highs = df["high"].values
+    lows = df["low"].values
+    closes = df["close"].values
+
+    bos_bull = closes[-1] > max(highs[-6:-1])
+
+    mss_bull = (
+        closes[-1] > highs[-3]
+        and lows[-2] > lows[-5]
+    )
+
+    qm_bull = (
+        highs[-3] > highs[-6]
+        and lows[-1] < lows[-3]
+        and closes[-1] > highs[-2]
+    )
+
+    liquidity_sweep = (
+        lows[-2] < min(lows[-8:-3])
+        and closes[-1] > closes[-2]
+    )
+
+    return {
+        "bos_bull": bos_bull,
+        "mss_bull": mss_bull,
+        "qm_bull": qm_bull,
+        "liquidity_sweep": liquidity_sweep
+    }
+
 
 def get_validation_data(df):
-    is_high_volume = df['volume'].iloc[-1] > df['volume'].rolling(20).mean().iloc[-1] * 1.5
-    return {"high_vol": is_high_volume}
+
+    close = df["close"]
+    volume = df["volume"]
+
+    delta = close.diff()
+
+    gain = delta.where(delta > 0, 0).rolling(14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+
+    rs = gain / loss
+    rsi = 100 - (100 / (1 + rs))
+
+    rsi_div = (
+        close.iloc[-1] < close.iloc[-3]
+        and rsi.iloc[-1] > rsi.iloc[-3]
+    )
+
+    high_volume = (
+        volume.iloc[-1]
+        > volume.rolling(20).mean().iloc[-1] * 1.5
+    )
+
+    trend_filter = (
+        close.iloc[-1]
+        > close.ewm(span=50).mean().iloc[-1]
+    )
+
+    return {
+        "rsi_div": rsi_div,
+        "high_vol": high_volume,
+        "trend_filter": trend_filter
+    }
+
 
 def master_sniper_engine(df):
+
     struct = get_structure_data(df)
     valid = get_validation_data(df)
-    reasons = []
-    if struct['bos_bull']: reasons.append("BOS")
-    if struct['qm_bull']: reasons.append("QM_TRAP")
-    if valid['high_vol']: reasons.append("HIGH_VOL")
-    signal = "LONG" if len(reasons) >= 2 else None
-    return signal, " + ".join(reasons)
 
+    score = 0
+    reasons = []
+
+    if struct["bos_bull"]:
+        score += 20
+        reasons.append("BOS")
+
+    if struct["mss_bull"]:
+        score += 20
+        reasons.append("MSS")
+
+    if struct["qm_bull"]:
+        score += 20
+        reasons.append("QM")
+
+    if struct["liquidity_sweep"]:
+        score += 20
+        reasons.append("LIQ_SWEEP")
+
+    if valid["rsi_div"]:
+        score += 10
+        reasons.append("RSI_DIV")
+
+    if valid["high_vol"]:
+        score += 5
+        reasons.append("HIGH_VOL")
+
+    if valid["trend_filter"]:
+        score += 5
+        reasons.append("EMA_TREND")
+
+    probability = min(score, 100)
+
+    if score >= 60:
+        return "LONG", " + ".join(reasons)
+
+    return None, "NO_CONFLUENCE"
 # =========================================================
 # 2. DATABASE SETUP
 # =========================================================
