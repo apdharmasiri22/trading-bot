@@ -1,6 +1,5 @@
 # =========================================================
-# QUANTUM X TERMINAL - GRAND FINAL (REAL-TIME LIVE FIX)
-# PART 1
+# QUANTUM X TERMINAL - SMART MONEY CONCEPTS (FULLY FIXED)
 # =========================================================
 
 import streamlit as st
@@ -8,7 +7,6 @@ import requests
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import plotly.express as px
 import sqlite3
 from datetime import datetime
 
@@ -45,7 +43,7 @@ CREATE TABLE IF NOT EXISTS signals (
 conn.commit()
 
 # =========================================================
-# ULTRA PREMIUM QUANTUM UI (CSS)
+# ORIGINAL PREMIUM QUANTUM UI (CSS)
 # =========================================================
 st.markdown("""
 <style>
@@ -83,11 +81,10 @@ html, body, .stApp {
 </style>
 """, unsafe_allow_html=True)
 
-# Header
-st.markdown('<div class="card"><div class="title">⚡ QUANTUM X TERMINAL</div><div>Institutional Multi-Confluence Trading Engine</div></div>', unsafe_allow_html=True)
+st.markdown('<div class="card"><div class="title">⚡ QUANTUM X TERMINAL</div><div>Smart Money Concepts & Institutional Execution Engine</div></div>', unsafe_allow_html=True)
 
 # =========================================================
-# TECHNICAL INDICATORS
+# INDICATORS & ORIGINAL SMC ANALYSIS METHODS
 # =========================================================
 def calculate_rsi(data, period=14):
     delta = data.diff()
@@ -99,13 +96,6 @@ def calculate_rsi(data, period=14):
 def calculate_ema(data, period):
     return data.ewm(span=period, adjust=False).mean()
 
-def calculate_macd(data):
-    ema12 = calculate_ema(data, 12)
-    ema26 = calculate_ema(data, 26)
-    macd = ema12 - ema26
-    signal = calculate_ema(macd, 9)
-    return macd, signal
-
 def calculate_atr(df, period=14):
     high_low = df["high"] - df["low"]
     high_close = np.abs(df["high"] - df["close"].shift())
@@ -114,28 +104,55 @@ def calculate_atr(df, period=14):
     true_range = np.max(ranges, axis=1)
     return pd.Series(true_range).rolling(period).mean()
 
+# Original SMC Logic (Fixed Detection Logic)
+def detect_smc_features(df):
+    highs = df["high"].values
+    lows = df["low"].values
+    closes = df["close"].values
+    
+    bos_bullish = False
+    bos_bearish = False
+    fvg_bullish = False
+    fvg_bearish = False
+    order_block_bullish = False
+    order_block_bearish = False
+    
+    # Looking back 15 candles for accurate structural shifts
+    for i in range(-15, -2):
+        if closes[-1] > highs[i]: bos_bullish = True
+        if closes[-1] < lows[i]: bos_bearish = True
+        
+    # FVG Detection (Gap between Candle 1 High and Candle 3 Low)
+    if highs[-3] < lows[-1]: fvg_bullish = True
+    if lows[-3] > highs[-1]: fvg_bearish = True
+        
+    # Order Block Detection (Last opposite candle before a strong move)
+    if closes[-1] > closes[-2] and closes[-3] < closes[-4]: order_block_bullish = True
+    if closes[-1] < closes[-2] and closes[-3] > closes[-4]: order_block_bearish = True
+        
+    return bos_bullish, bos_bearish, fvg_bullish, fvg_bearish, order_block_bullish, order_block_bearish
+
 # =========================================================
-# REAL-TIME MARKET DATA FETCHING (NO MORE FAKE PRICES)
+# ANTI-BLOCK REAL-TIME BINANCE FETCHING
 # =========================================================
-# Cache එක තත්පර 5කට අඩු කරා එවෙලේම live price එක ගන්න
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=4)
 def get_market():
-    # 100% Real-time prices එන Binance API endpoints
-    urls = [
-        "https://fapi.binance.com/fapi/v1/ticker/24hr",  # Futures API (Highly Recommended for Trading)
-        "https://api.binance.com/api/v3/ticker/24hr"
+    endpoints = [
+        "https://api.binance.com/api/v3/ticker/24hr",
+        "https://api1.binance.com/api/v3/ticker/24hr",
+        "https://api2.binance.com/api/v3/ticker/24hr",
+        "https://fapi.binance.com/fapi/v1/ticker/24hr"
     ]
     headers = {"User-Agent": "Mozilla/5.0"}
     
-    for url in urls:
+    for url in endpoints:
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(url, headers=headers, timeout=5)
             if response.status_code == 200:
                 data = response.json()
                 rows = []
                 for coin in data:
                     symbol = str(coin.get("symbol", ""))
-                    # USDT pairs පමණක් පෙරා ගැනීම (e.g., BTCUSDT)
                     if symbol.endswith("USDT") and not "_" in symbol:
                         rows.append({
                             "symbol": symbol,
@@ -145,29 +162,34 @@ def get_market():
                         })
                 if rows:
                     df = pd.DataFrame(rows)
-                    return df.sort_values(by="volume", ascending=False).head(40) # Top 40 coins for speed optimization
-        except Exception as e:
+                    return df.sort_values(by="volume", ascending=False).head(35)
+        except:
             continue
-            
-    st.error("⚠️ Binance API Connection Failed! Please refresh page.")
     return pd.DataFrame()
 
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=4)
 def get_klines(symbol, interval="15m"):
-    try:
-        url = f"https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={interval}&limit=100"
-        response = requests.get(url, timeout=10)
-        data = response.json()
-        frame = pd.DataFrame(data).iloc[:, :6]
-        frame.columns = ["time", "open", "high", "low", "close", "volume"]
-        for col in ["open", "high", "low", "close", "volume"]:
-            frame[col] = frame[col].astype(float)
-        return frame
-    except:
-        return pd.DataFrame()
+    endpoints = [
+        f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit=100",
+        f"https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={interval}&limit=100"
+    ]
+    for url in endpoints:
+        try:
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                frame = pd.DataFrame(data).iloc[:, :6]
+                frame.columns = ["time", "open", "high", "low", "close", "volume"]
+                frame["time"] = pd.to_datetime(frame["time"], unit='ms')
+                for col in ["open", "high", "low", "close", "volume"]:
+                    frame[col] = frame[col].astype(float)
+                return frame
+        except:
+            continue
+    return pd.DataFrame()
 
 # =========================================================
-# SIGNAL MANAGEMENT
+# SIGNAL SAVER
 # =========================================================
 def save_signal(coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability):
     try:
@@ -178,12 +200,12 @@ def save_signal(coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability):
             VALUES (?,?,?,?,?,?,?,?,?,?,?)
             """, (coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability, "RUNNING", str(datetime.now())))
             conn.commit()
-    except Exception as e:
+    except:
         pass
 
-# Real-time Track old signals
+# Tracker
 try:
-    signals = pd.read_sql("SELECT * FROM signals WHERE status='RUNNING' ORDER BY id DESC LIMIT 20", conn)
+    signals = pd.read_sql("SELECT * FROM signals WHERE status='RUNNING' ORDER BY id DESC LIMIT 15", conn)
     for _, row in signals.iterrows():
         coin, signal_type, signal_id, timeframe_sig = row["coin"], row["signal"], row["id"], row["timeframe"]
         tp1, tp2, tp3, sl_val = row["tp1"], row["tp2"], row["tp3"], row["sl"]
@@ -206,9 +228,9 @@ except:
     pass
 
 # =========================================================
-# ACCURACY DASHBOARD
+# DASHBOARD
 # =========================================================
-st.subheader("📊 ACCURACY DASHBOARD")
+st.subheader("📊 SYSTEM ACCURACY DASHBOARD")
 signals_df = pd.read_sql("SELECT * FROM signals", conn)
 
 if not signals_df.empty:
@@ -221,7 +243,7 @@ if not signals_df.empty:
     win_rate = round(((tp1_hits+tp2_hits+tp3_hits) / total_signals) * 100, 2) if total_signals > 0 else 0
 
     a, b, c, d, e, f = st.columns(6)
-    a.metric("TOTAL", total_signals)
+    a.metric("TOTAL SIGNALS", total_signals)
     b.metric("RUNNING", running)
     c.metric("TP1 HITS", tp1_hits)
     d.metric("TP2 HITS", tp2_hits)
@@ -229,10 +251,11 @@ if not signals_df.empty:
     f.metric("WIN RATE", f"{win_rate}%")
 
 # =========================================================
-# TRADING CONFIGURATION
+# CONFIGURATION
 # =========================================================
 df = get_market()
 if df.empty:
+    st.error("🚨 Connecting to live Binance node. Please wait a moment and refresh.")
     st.stop()
 
 trading_type = st.selectbox("🎯 SELECT TRADING TYPE", ["SCALPING", "DAY TRADING", "SWING TRADING"])
@@ -241,139 +264,155 @@ elif trading_type == "DAY TRADING": timeframe = "15m"
 else: timeframe = "1h"
 
 # =========================================================
-# HIGH ACCURACY ALGORITHMIC SCANNER (CONFLUENCE METHOD)
+# ORIGINAL SMC ALGORITHMIC SCANNER (FIXED)
 # =========================================================
-st.subheader(f"🔥 ELITE PRO SCANNER ({timeframe} - {trading_type})")
+st.subheader(f"🔥 INSTITUTIONAL SMC SCANNER ({timeframe})")
 scan_long, scan_short = [], []
 coins = df["symbol"].tolist()
 
 for coin in coins:
     try:
         kline = get_klines(coin, timeframe)
-        if kline.empty or len(kline) < 50: continue
+        if kline.empty or len(kline) < 40: continue
 
         close = kline["close"]
         current_price = close.iloc[-1]
         
-        # 1. Trend Filter (EMA Confluence)
+        # Original Indicators
         ema50 = calculate_ema(close, 50).iloc[-1]
-        ema200 = calculate_ema(close, 200).iloc[-1]
-        
-        # 2. Momentum Filter (RSI & MACD)
         rsi = calculate_rsi(close).iloc[-1]
-        macd, macd_sig = calculate_macd(close)
-        macd_val = macd.iloc[-1]
-        macd_sig_val = macd_sig.iloc[-1]
-        
-        # 3. Volatility (ATR) for Risk Management
         atr = calculate_atr(kline).iloc[-1]
         if atr == 0 or np.isnan(atr): continue
 
-        # --- Professional Score System ---
+        # Detect SMC Features
+        bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
+
+        # Original Scoring Points System
         long_score, short_score = 0, 0
         
-        # Bullish Scoring
-        if current_price > ema50: long_score += 30
-        if ema50 > ema200: long_score += 20
-        if rsi > 45 and rsi < 65: long_score += 25  # Healthy momentum
-        if macd_val > macd_sig_val: long_score += 25
+        if current_price > ema50: long_score += 20
+        if 40 < rsi < 70: long_score += 20
+        if bos_bull: long_score += 20
+        if fvg_bull: long_score += 20
+        if ob_bull: long_score += 20
         
-        # Bearish Scoring
-        if current_price < ema50: short_score += 30
-        if ema50 < ema200: short_score += 20
-        if rsi < 55 and rsi > 35: short_score += 25
-        if macd_val < macd_sig_val: short_score += 25
+        if current_price < ema50: short_score += 20
+        if 30 < rsi < 60: short_score += 20
+        if bos_bear: short_score += 20
+        if fvg_bear: short_score += 20
+        if ob_bear: short_score += 20
 
-        # Signal Generation (75% Threshold for stable entries)
-        if long_score >= 75:
+        # Optimization: Changed boundary to 60%+ to ensure regular signals trigger on SMC criteria
+        if long_score >= 60:
             sl = current_price - (atr * 1.5)
-            tp1 = current_price + (atr * 1.5)
-            tp2 = current_price + (atr * 3.0)
-            tp3 = current_price + (atr * 4.5)
-            
             scan_long.append({
-                "COIN": coin, "PRICE": round(current_price, 4), "ACCURACY": f"{long_score}%",
-                "ENTRY": round(current_price, 4), "TP1": round(tp1, 4), "TP2": round(tp2, 4), "TP3": round(tp3, 4), "SL": round(sl, 4)
+                "COIN": coin, "PRICE": round(current_price, 4), "SMC SCORE": f"{long_score}%",
+                "ENTRY": round(current_price, 4), "TP1": round(current_price + (atr * 1.5), 4),
+                "TP2": round(current_price + (atr * 3.0), 4), "SL": round(sl, 4)
             })
-            save_signal(coin, "LONG", timeframe, current_price, tp1, tp2, tp3, sl, long_score)
+            save_signal(coin, "LONG", timeframe, current_price, current_price + (atr * 1.5), current_price + (atr * 3.0), current_price + (atr * 4.5), sl, long_score)
 
-        if short_score >= 75:
+        if short_score >= 60:
             sl = current_price + (atr * 1.5)
-            tp1 = current_price - (atr * 1.5)
-            tp2 = current_price - (atr * 3.0)
-            tp3 = current_price - (atr * 4.5)
-            
             scan_short.append({
-                "COIN": coin, "PRICE": round(current_price, 4), "ACCURACY": f"{short_score}%",
-                "ENTRY": round(current_price, 4), "TP1": round(tp1, 4), "TP2": round(tp2, 4), "TP3": round(tp3, 4), "SL": round(sl, 4)
+                "COIN": coin, "PRICE": round(current_price, 4), "SMC SCORE": f"{short_score}%",
+                "ENTRY": round(current_price, 4), "TP1": round(current_price - (atr * 1.5), 4),
+                "TP2": round(current_price - (atr * 3.0), 4), "SL": round(sl, 4)
             })
-            save_signal(coin, "SHORT", timeframe, current_price, tp1, tp2, tp3, sl, short_score)
+            save_signal(coin, "SHORT", timeframe, current_price, current_price - (atr * 1.5), current_price - (atr * 3.0), current_price - (atr * 4.5), sl, short_score)
     except:
         pass
 
-# Display Tables
 lcol, scol = st.columns(2)
 with lcol:
-    st.subheader("🚀 LONG SIGNALS")
+    st.subheader("🚀 LONG SIGNALS (BULLISH SMC)")
     if scan_long: st.dataframe(pd.DataFrame(scan_long), use_container_width=True)
-    else: st.warning("Scanning Market for Institutional Long Setups...")
-
+    else: st.info("Scanning Market for Order Blocks & BOS Long setups...")
 with scol:
-    st.subheader("🔴 SHORT SIGNALS")
+    st.subheader("🔴 SHORT SIGNALS (BEARISH SMC)")
     if scan_short: st.dataframe(pd.DataFrame(scan_short), use_container_width=True)
-    else: st.warning("Scanning Market for Institutional Short Setups...")
+    else: st.info("Scanning Market for Order Blocks & BOS Short setups...")
 
 # =========================================================
-# INDIVIDUAL COIN DEEP ANALYSIS
+# INDIVIDUAL COIN SMC ANALYSIS & CHART
 # =========================================================
 st.markdown("---")
-st.subheader("🔍 COIN DEEP ANALYSIS FILTER")
-search_coin = st.text_input("Type Coin Symbol (e.g., BTC, ETH, SOL)", "BTC")
-coin_to_analyze = f"{search_coin.upper()}USDT"
+st.subheader("🔍 COIN SPECIFIC SMC DEEP INTERACTION")
 
-if coin_to_analyze in df["symbol"].tolist():
-    kline = get_klines(coin_to_analyze, timeframe)
-    if not kline.empty:
-        close = kline["close"]
-        current_price = close.iloc[-1]
-        rsi = calculate_rsi(close).iloc[-1]
-        atr = calculate_atr(kline).iloc[-1]
-        
-        # Confluence Signals
-        ema50 = calculate_ema(close, 50).iloc[-1]
-        macd, macd_sig = calculate_macd(close)
-        
-        long_score = sum([30 if current_price > ema50 else 0, 35 if rsi < 40 else 20, 35 if macd.iloc[-1] > macd_sig.iloc[-1] else 0])
-        short_score = 100 - long_score
-        
-        css, status_txt = "neutral", "⚪ NEUTRAL MARKET"
-        if long_score >= 70: css, status_txt = "buy", "🚀 STRONG LONG OPPORTUNITY"
-        elif short_score >= 70: css, status_txt = "sell", "🔴 STRONG SHORT OPPORTUNITY"
-        
-        st.markdown(f"""
-        <div class="card">
-            <h2 style='text-align: center;'>{coin_to_analyze} Live Analysis</h2>
-            <div class="{css}">{status_txt}</div><br>
-            <table style='width:100%; text-align:center; font-size:18px;'>
-                <tr>
-                    <th>LIVE PRICE</th>
-                    <th>LONG SCORE</th>
-                    <th>SHORT SCORE</th>
-                    <th>RSI</th>
-                </tr>
-                <tr>
-                    <td style='color:#38bdf8; font-weight:bold;'>${current_price:,.4f}</td>
-                    <td style='color:#22c55e;'>{long_score}%</td>
-                    <td style='color:#ef4444;'>{short_score}%</td>
-                    <td>{rsi:.2f}</td>
-                </tr>
-            </table>
-            <hr>
-            <h4 style='color:#22c55e;'>🎯 IF LONG SETUP:</h4>
-            <p>Entry: {current_price:,.4f} | TP1: {current_price+(atr*1.5):,.4f} | TP2: {current_price+(atr*3):,.4f} | SL: {current_price-(atr*1.5):,.4f}</p>
-            <h4 style='color:#ef4444;'>🎯 IF SHORT SETUP:</h4>
-            <p>Entry: {current_price:,.4f} | TP1: {current_price-(atr*1.5):,.4f} | TP2: {current_price-(atr*3):,.4f} | SL: {current_price+(atr*1.5):,.4f}</p>
-        </div>
-        """, unsafe_allow_html=True)
-else:
-    st.error("Coin not found or active in Top Volume list. Check the symbol again.")
+search_coin = st.text_input("Enter Coin Asset Name (e.g., BTC, ETH, SOL)", "BTC")
+selected_coin = f"{search_coin.upper()}USDT"
+
+kline = get_klines(selected_coin, timeframe)
+
+if not kline.empty:
+    close = kline["close"]
+    current_price = close.iloc[-1]
+    rsi_val = calculate_rsi(close).iloc[-1]
+    atr_val = calculate_atr(kline).iloc[-1]
+    ema50_val = calculate_ema(close, 50).iloc[-1]
+    
+    bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
+    
+    long_score = sum([20 if current_price > ema50_val else 0, 20 if 40 < rsi_val < 70 else 0, 20 if bos_bull else 0, 20 if fvg_bull else 0, 20 if ob_bull else 0])
+    short_score = sum([20 if current_price < ema50_val else 0, 20 if 30 < rsi_val < 60 else 0, 20 if bos_bear else 0, 20 if fvg_bear else 0, 20 if ob_bear else 0])
+    
+    css, status_txt = "neutral", "⚪ SMC MARKET STRUCTURE CONSOLIDATION"
+    if long_score >= 60: css, status_txt = "buy", "🚀 SMC BULLISH EXPANSION DETECTED"
+    elif short_score >= 60: css, status_txt = "sell", "🔴 SMC BEARISH EXPANSION DETECTED"
+    
+    st.markdown(f"""
+    <div class="card">
+        <h2 style='text-align: center; color:#38bdf8;'>{selected_coin} Advanced SMC Portal</h2>
+        <div class="{css}">{status_txt}</div><br>
+        <table style='width:100%; text-align:center; font-size:16px;'>
+            <tr>
+                <th>REAL-TIME PRICE</th>
+                <th>BOS DETECTED</th>
+                <th>FVG PRESENT</th>
+                <th>ORDER BLOCK ACTIVE</th>
+            </tr>
+            <tr>
+                <td style='color:#38bdf8; font-weight:bold; font-size:20px;'>${current_price:,.4f}</td>
+                <td>{"🟢 Bullish BOS" if bos_bull else "🔴 Bearish BOS" if bos_bear else "❌ No"}</td>
+                <td>{"🟢 Bullish FVG" if fvg_bull else "🔴 Bearish FVG" if fvg_bear else "❌ No"}</td>
+                <td>{"🟢 Bullish OB" if ob_bull else "🔴 Bearish OB" if ob_bear else "❌ No"}</td>
+            </tr>
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # CHARTS WITH ORIGINAL LOOK
+    fig = go.Figure()
+    fig.add_trace(go.Candlestick(
+        x=kline['time'], open=kline['open'], high=kline['high'],
+        low=kline['low'], close=kline['close'], name="Market Price"
+    ))
+    
+    kline['EMA50'] = calculate_ema(close, 50)
+    fig.add_trace(go.Scatter(
+        x=kline['time'], y=kline['EMA50'], 
+        line=dict(color='#6366f1', width=2), name="EMA 50 Line"
+    ))
+    
+    fig.update_layout(
+        template="plotly_dark",
+        xaxis_rangeslider_visible=False,
+        height=500,
+        paper_bgcolor='rgba(15,23,42,0.55)',
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+    t1, t2 = st.columns(2)
+    with t1:
+        st.success(f"🟢 INSTITUTIONAL LONG MATRIX\n\n"
+                   f"🔹 entry point: {current_price:,.4f}\n\n"
+                   f"🎯 target 1: {current_price+(atr_val*1.5):,.4f}\n"
+                   f"🎯 target 2: {current_price+(atr_val*3.0):,.4f}\n\n"
+                   f"🛑 stop trigger: {current_price-(atr_val*1.5):,.4f}")
+    with t2:
+        st.error(f"🔴 INSTITUTIONAL SHORT MATRIX\n\n"
+                 f"🔹 entry point: {current_price:,.4f}\n\n"
+                 f"🎯 target 1: {current_price-(atr_val*1.5):,.4f}\n"
+                 f"🎯 target 2: {current_price-(atr_val*3.0):,.4f}\n\n"
+                 f"🛑 stop trigger: {current_price+(atr_val*1.5):,.4f}")
