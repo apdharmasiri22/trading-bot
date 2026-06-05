@@ -1,5 +1,5 @@
 # =========================================================
-# QUANTUM X TERMINAL - SMART FRAGMENT SMOOTH UPDATE ENGINE
+# QUANTUM X TERMINAL - DUAL FRAGMENT HIGH-STABILITY ENGINE
 # =========================================================
 
 import streamlit as st
@@ -227,12 +227,11 @@ def save_signal(coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability):
     except: pass
 
 # =========================================================
-# STATIC UI ELEMENTS (NOT AFFECTED BY REFRESH)
+# STATIC ACCURACY DASHBOARD
 # =========================================================
 st.subheader("📊 SYSTEM ACCURACY DASHBOARD")
 accuracy_container = st.empty()
 
-# Render Accuracy Metrics Once
 signals_df = pd.read_sql("SELECT * FROM signals", conn)
 if not signals_df.empty:
     with accuracy_container.container():
@@ -254,13 +253,14 @@ if df.empty:
     st.error("🚨 Connecting to data nodes. Please standby...")
     st.stop()
 
+# STABLE INPUT CONTROLS
 trading_type = st.selectbox("🎯 SELECT TRADING TYPE", ["SCALPING", "DAY TRADING", "SWING TRADING"])
 if trading_type == "SCALPING": timeframe = "5m"
 elif trading_type == "DAY TRADING": timeframe = "15m"
 else: timeframe = "1h"
 
 # =========================================================
-# ⚡ SMART FRAGMENT (REFRESHES EVERY 30 SECONDS SMOOTHLY)
+# ⚡ FRAGMENT 1: LIVE SMC SCANNER (REFRESHES EVERY 30s)
 # =========================================================
 @st.fragment(run_every=30)
 def render_live_scanner(market_df, tf_val):
@@ -325,90 +325,96 @@ def render_live_scanner(market_df, tf_val):
         if scan_short: st.dataframe(pd.DataFrame(scan_short), use_container_width=True)
         else: st.info("Scanning Market for Order Blocks Short setups...")
 
-# Run Fragment
+# Run Scanner Fragment
 render_live_scanner(df, timeframe)
 
 # =========================================================
-# COIN SPECIFIC PORTAL (STABLE - NO INTERRUPTION ON REFRESH)
+# ⚡ FRAGMENT 2: DEEP PORTAL WITH CHART (INDEPENDENT)
 # =========================================================
 st.markdown("---")
 st.subheader("🔍 COIN SPECIFIC SMC DEEP INTERACTION")
 
-search_coin = st.text_input("Enter Coin Asset Name (e.g., BTC, ETH, SOL)", "BTC", key="stable_search")
-selected_coin = f"{search_coin.upper()}USDT"
+# මේක Fragment එක ඇතුළට දාලා තියෙන්නේ ප්‍රශ්නය විසඳන්නයි
+@st.fragment(run_every=30)
+def render_deep_portal(tf_val):
+    search_coin = st.text_input("Enter Coin Asset Name (e.g., BTC, ETH, SOL)", "BTC", key="stable_search")
+    selected_coin = f"{search_coin.upper()}USDT"
 
-kline = get_klines(selected_coin, timeframe)
+    kline = get_klines(selected_coin, tf_val)
 
-if not kline.empty:
-    close = kline["close"]
-    current_price = close.iloc[-1]
-    rsi_val = calculate_rsi(close).iloc[-1]
-    atr_val = calculate_atr(kline).iloc[-1]
-    ema50_val = calculate_ema(close, 50).iloc[-1]
-    
-    bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
-    
-    long_score = sum([20 if current_price > ema50_val else 0, 20 if 40 < rsi_val < 70 else 0, 20 if bos_bull else 0, 20 if fvg_bull else 0, 20 if ob_bull else 0])
-    short_score = sum([20 if current_price < ema50_val else 0, 20 if 30 < rsi_val < 60 else 0, 20 if bos_bear else 0, 20 if fvg_bear else 0, 20 if ob_bear else 0])
-    
-    css, status_txt = "neutral", "⚪ SMC MARKET STRUCTURE CONSOLIDATION"
-    if long_score >= 60: css, status_txt = "buy", "🚀 SMC BULLISH EXPANSION DETECTED"
-    elif short_score >= 60: css, status_txt = "sell", "🔴 SMC BEARISH EXPANSION DETECTED"
-    
-    st.markdown(f"""
-    <div class="card">
-        <h2 style='text-align: center; color:#38bdf8;'>{selected_coin} Advanced SMC Portal</h2>
-        <div class="{css}">{status_txt}</div><br>
-        <table style='width:100%; text-align:center; font-size:16px;'>
-            <tr>
-                <th>REAL-TIME PRICE</th>
-                <th>BOS DETECTED</th>
-                <th>FVG PRESENT</th>
-                <th>ORDER BLOCK ACTIVE</th>
-            </tr>
-            <tr>
-                <td style='color:#38bdf8; font-weight:bold; font-size:20px;'>${current_price:,.4f}</td>
-                <td>{"🟢 Bullish BOS" if bos_bull else "🔴 Bearish BOS" if bos_bear else "❌ No"}</td>
-                <td>{"🟢 Bullish FVG" if fvg_bull else "🔴 Bearish FVG" if fvg_bear else "❌ No"}</td>
-                <td>{"🟢 Bullish OB" if ob_bull else "🔴 Bearish OB" if ob_bear else "❌ No"}</td>
-            </tr>
-        </table>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    fig = go.Figure()
-    fig.add_trace(go.Candlestick(
-        x=kline['time'], open=kline['open'], high=kline['high'],
-        low=kline['low'], close=kline['close'], name="Market Price"
-    ))
-    
-    kline['EMA50'] = calculate_ema(close, 50)
-    fig.add_trace(go.Scatter(
-        x=kline['time'], y=kline['EMA50'], 
-        line=dict(color='#6366f1', width=2), name="EMA 50 Line"
-    ))
-    
-    fig.update_layout(
-        template="plotly_dark",
-        xaxis_rangeslider_visible=False,
-        height=500,
-        paper_bgcolor='rgba(15,23,42,0.55)',
-        plot_bgcolor='rgba(0,0,0,0)'
-    )
-    st.plotly_chart(fig, use_container_width=True)
-    
-    t1, t2 = st.columns(2)
-    with t1:
-        st.success(f"🟢 INSTITUTIONAL LONG MATRIX\n\n"
-                   f"🔹 entry point: {current_price:,.4f}\n\n"
-                   f"🎯 target 1: {current_price+(atr_val*1.5):,.4f}\n"
-                   f"🎯 target 2: {current_price+(atr_val*3.0):,.4f}\n\n"
-                   f"🛑 stop trigger: {current_price-(atr_val*1.5):,.4f}")
-    with t2:
-        st.error(f"🔴 INSTITUTIONAL SHORT MATRIX\n\n"
-                 f"🔹 entry point: {current_price:,.4f}\n\n"
-                 f"🎯 target 1: {current_price-(atr_val*1.5):,.4f}\n"
-                 f"🎯 target 2: {current_price-(atr_val*3.0):,.4f}\n\n"
-                 f"🛑 stop trigger: {current_price+(atr_val*1.5):,.4f}")
-else:
-    st.warning("Please type a valid asset name or wait for data synchronization...")
+    if not kline.empty:
+        close = kline["close"]
+        current_price = close.iloc[-1]
+        rsi_val = calculate_rsi(close).iloc[-1]
+        atr_val = calculate_atr(kline).iloc[-1]
+        ema50_val = calculate_ema(close, 50).iloc[-1]
+        
+        bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
+        
+        long_score = sum([20 if current_price > ema50_val else 0, 20 if 40 < rsi_val < 70 else 0, 20 if bos_bull else 0, 20 if fvg_bull else 0, 20 if ob_bull else 0])
+        short_score = sum([20 if current_price < ema50_val else 0, 20 if 30 < rsi_val < 60 else 0, 20 if bos_bear else 0, 20 if fvg_bear else 0, 20 if ob_bear else 0])
+        
+        css, status_txt = "neutral", "⚪ SMC MARKET STRUCTURE CONSOLIDATION"
+        if long_score >= 60: css, status_txt = "buy", "🚀 SMC BULLISH EXPANSION DETECTED"
+        elif short_score >= 60: css, status_txt = "sell", "🔴 SMC BEARISH EXPANSION DETECTED"
+        
+        st.markdown(f"""
+        <div class="card">
+            <h2 style='text-align: center; color:#38bdf8;'>{selected_coin} Advanced SMC Portal (Auto-Refresh)</h2>
+            <div class="{css}">{status_txt}</div><br>
+            <table style='width:100%; text-align:center; font-size:16px;'>
+                <tr>
+                    <th>REAL-TIME PRICE</th>
+                    <th>BOS DETECTED</th>
+                    <th>FVG PRESENT</th>
+                    <th>ORDER BLOCK ACTIVE</th>
+                </tr>
+                <tr>
+                    <td style='color:#38bdf8; font-weight:bold; font-size:20px;'>${current_price:,.4f}</td>
+                    <td>{"🟢 Bullish BOS" if bos_bull else "🔴 Bearish BOS" if bos_bear else "❌ No"}</td>
+                    <td>{"🟢 Bullish FVG" if fvg_bull else "🔴 Bearish FVG" if fvg_bear else "❌ No"}</td>
+                    <td>{"🟢 Bullish OB" if ob_bull else "🔴 Bearish OB" if ob_bear else "❌ No"}</td>
+                </tr>
+            </table>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        fig = go.Figure()
+        fig.add_trace(go.Candlestick(
+            x=kline['time'], open=kline['open'], high=kline['high'],
+            low=kline['low'], close=kline['close'], name="Market Price"
+        ))
+        
+        kline['EMA50'] = calculate_ema(close, 50)
+        fig.add_trace(go.Scatter(
+            x=kline['time'], y=kline['EMA50'], 
+            line=dict(color='#6366f1', width=2), name="EMA 50 Line"
+        ))
+        
+        fig.update_layout(
+            template="plotly_dark",
+            xaxis_rangeslider_visible=False,
+            height=500,
+            paper_bgcolor='rgba(15,23,42,0.55)',
+            plot_bgcolor='rgba(0,0,0,0)'
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        t1, t2 = st.columns(2)
+        with t1:
+            st.success(f"🟢 INSTITUTIONAL LONG MATRIX\n\n"
+                       f"🔹 entry point: {current_price:,.4f}\n\n"
+                       f"🎯 target 1: {current_price+(atr_val*1.5):,.4f}\n"
+                       f"🎯 target 2: {current_price+(atr_val*3.0):,.4f}\n\n"
+                       f"🛑 stop trigger: {current_price-(atr_val*1.5):,.4f}")
+        with t2:
+            st.error(f"🔴 INSTITUTIONAL SHORT MATRIX\n\n"
+                     f"🔹 entry point: {current_price:,.4f}\n\n"
+                     f"🎯 target 1: {current_price-(atr_val*1.5):,.4f}\n"
+                     f"🎯 target 2: {current_price-(atr_val*3.0):,.4f}\n\n"
+                     f"🛑 stop trigger: {current_price+(atr_val*1.5):,.4f}")
+    else:
+        st.warning("Please type a valid asset name or wait for data synchronization...")
+
+# Run Deep Portal Fragment
+render_deep_portal(timeframe)
