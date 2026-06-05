@@ -2,7 +2,7 @@ import requests
 import streamlit as st
 
 
-COINGECKO_MARKETS = "https://api.coingecko.com/api/v3/coins/markets"
+URL = "https://min-api.cryptocompare.com/data/top/mktcapfull"
 
 
 @st.cache_data(ttl=60)
@@ -11,18 +11,15 @@ def get_top_coins(limit=200):
     try:
 
         params = {
-            "vs_currency": "usd",
-            "order": "market_cap_desc",
-            "per_page": limit,
-            "page": 1,
-            "sparkline": "false"
+            "tsym": "USD",
+            "limit": limit
         }
 
 
         r = requests.get(
-            COINGECKO_MARKETS,
+            URL,
             params=params,
-            timeout=15,
+            timeout=10,
             headers={
                 "User-Agent": "Mozilla/5.0"
             }
@@ -32,25 +29,16 @@ def get_top_coins(limit=200):
         data = r.json()
 
 
-        # check response
-        if not isinstance(data, list):
-            st.error(f"CoinGecko response error: {data}")
-            return []
-
-
         coins = []
 
 
-        for item in data:
+        for item in data.get("Data", []):
 
-            if isinstance(item, dict):
+            symbol = item["CoinInfo"]["Name"]
 
-                symbol = item.get("symbol")
-
-                if symbol:
-                    coins.append(
-                        symbol.upper() + "USDT"
-                    )
+            coins.append(
+                symbol + "USDT"
+            )
 
 
         return coins
@@ -71,38 +59,31 @@ def get_price(symbol):
         coin = symbol.replace(
             "USDT",
             ""
-        ).lower()
+        )
 
 
         url = (
-            "https://api.coingecko.com/api/v3/simple/price"
+            "https://min-api.cryptocompare.com/data/price"
         )
 
 
         params = {
-            "ids": coin,
-            "vs_currencies": "usd"
+            "fsym": coin,
+            "tsyms": "USD"
         }
 
 
         r = requests.get(
             url,
             params=params,
-            timeout=10,
-            headers={
-                "User-Agent":"Mozilla/5.0"
-            }
+            timeout=10
         )
 
 
         data = r.json()
 
 
-        if coin in data:
-            return data[coin]["usd"]
-
-
-        return None
+        return data.get("USD")
 
 
     except:
