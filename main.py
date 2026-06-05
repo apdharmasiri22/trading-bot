@@ -477,57 +477,20 @@ with tab1:
                 bearish_confluence = (bos_bear and fvg_bear) or (fvg_bear and ob_bear) or (bos_bear and ob_bear)
 
                 if bullish_confluence and current_price > calculate_ema(close, 50).iloc[-1] and trend_1h_price > trend_1h_ema:
-                    sl = current_price - (atr * 1.8)
-                    scan_long.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "ENTRY": round(current_price, 4), "TP1": round(current_price + (atr * 2.0), 4), "SL": round(sl, 4)})
-                    save_signal(coin, "LONG", "5m", current_price, current_price + (atr * 2.0), current_price + (atr * 4.5), current_price + (atr * 7.0), sl, 90)
-                
-                if bearish_confluence and current_price < calculate_ema(close, 50).iloc[-1] and trend_1h_price < trend_1h_ema:
-                    sl = current_price + (atr * 1.8)
-                    scan_short.append({"COIN": coin, "PRICE": f"${current_price:,.4f}", "ENTRY": round(current_price, 4), "TP1": round(current_price - (atr * 2.0), 4), "SL": round(sl, 4)})
-                    save_signal(coin, "SHORT", "5m", current_price, current_price - (atr * 2.0), current_price - (atr * 4.5), current_price - (atr * 7.0), sl, 90)
-            except: pass
-        l, s = st.columns(2)
-        with l: st.dataframe(pd.DataFrame(scan_long) if scan_long else pd.DataFrame(columns=["No High Probability Long"]), use_container_width=True)
-        with s: st.dataframe(pd.DataFrame(scan_short) if scan_short else pd.DataFrame(columns=["No High Probability Short"]), use_container_width=True)
-
-    run_5m_scanner(df_market)
-
-with tab2:
-    st.markdown("### 📊 INDEPENDENT ACCURACY DASHBOARD (15m)")
-    render_accuracy_dashboard("15m")
-    
-    @st.fragment(run_every=30)
-    def run_15m_scanner(market_df):
-        st.subheader("🔥 REAL-TIME 15m SMC SCANNER (Ultra-Filtered)")
-        scan_long, scan_short = [], []
-        for coin in market_df["symbol"].tolist()[:15]:
-            try:
-                kline_1h = get_klines(coin, "1h")
-                if kline_1h.empty: continue
-                trend_1h_ema = calculate_ema(kline_1h["close"], 50).iloc[-1]
-                trend_1h_price = kline_1h["close"].iloc[-1]
-
-                kline = get_klines(coin, "15m")
-                if kline.empty or len(kline) < 30: continue
-                close = kline["close"]
-                current_price = close.iloc[-1]
-                atr = calculate_atr(kline).iloc[-1]
-                
-                if atr == 0 or np.isnan(atr) or (atr / current_price) < 0.0008: continue
-
-def run_5m_scanner(market_df):
-
-    st.subheader("Scanner")
-
+ def run_scanner_logic(market_df, tf):
     for coin in market_df["symbol"].tolist()[:15]:
+        kline = get_klines(coin, tf)
+        if kline.empty:
+            continue
 
-        try:
-            kline = get_klines(coin, "5m")
+        signal, reason = master_sniper_engine(kline)
 
-            signal, reason = master_sniper_engine(kline)
+        if signal:
+            atr = calculate_atr(kline).iloc[-1]
+            entry = kline["close"].iloc[-1]
+            sl = entry - (atr * 1.8)
 
-            if signal == "LONG":
-                pass
+            save_signal(...)
 
         except:
             pass
