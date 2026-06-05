@@ -783,17 +783,100 @@ def render_accuracy_dashboard(tf):
         )
 
 # =========================================================
-# HEADER
+# PREMIUM HEADER UI
 # =========================================================
 
-st.markdown(
-    """
-    # ⚡ QUANTUM X TERMINAL
-    ### Institutional Smart Money Engine
-    """
-)
+st.markdown("""
+<style>
 
-update_live_signals_status(df_market)
+.main-title{
+    text-align:center;
+    font-size:54px;
+    font-weight:900;
+    color:#00F5FF;
+    letter-spacing:2px;
+}
+
+.sub-title{
+    text-align:center;
+    font-size:18px;
+    color:#B8B8B8;
+    margin-bottom:10px;
+}
+
+.status-box{
+    background:#111827;
+    padding:15px;
+    border-radius:15px;
+    border:1px solid #1F2937;
+    text-align:center;
+    margin-bottom:15px;
+}
+
+.status-green{
+    color:#22C55E;
+    font-weight:bold;
+}
+
+hr{
+    border:none;
+    border-top:1px solid #1F2937;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div class="main-title">
+🚀 QUANTUM X INSTITUTIONAL TERMINAL
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div class="sub-title">
+AI Smart Money Concepts • Liquidity Hunter • Sniper Engine
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div class="status-box">
+<span class="status-green">
+🟢 MARKET NODES ONLINE
+</span>
+&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+⚡ REAL-TIME BINANCE FEED
+&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+🎯 AUTO SIGNAL TRACKING ACTIVE
+</div>
+""", unsafe_allow_html=True)
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.metric(
+        "📈 MARKET PAIRS",
+        len(df_market)
+    )
+
+with col2:
+    st.metric(
+        "🟢 ACTIVE FEED",
+        "ONLINE"
+    )
+
+with col3:
+    st.metric(
+        "⚡ SCANNER",
+        "RUNNING"
+    )
+
+with col4:
+    st.metric(
+        "🧠 ENGINE",
+        "SNIPER V2"
+    )
+
+st.markdown("---")
 
 # =========================================================
 # TABS
