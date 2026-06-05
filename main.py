@@ -129,17 +129,19 @@ def detect_smc_features(df):
     return bos_bullish, bos_bearish, fvg_bullish, fvg_bearish, order_block_bullish, order_block_bearish
 
 # =========================================================
-# ULTRA STABLE LIVE APIS DATA NODES
+# ULTRA STABLE LIVE APIS DATA NODES (UPDATED FOR STABILITY)
 # =========================================================
-@st.cache_data(ttl=2)
+@st.cache_data(ttl=5) # Cache එක තත්පර 5ක් කරලා API Burden එක අඩු කරා
 def get_market():
     endpoints = [
-        "https://fapi.binance.com/fapi/v1/ticker/24hr",
-        "https://api.binance.com/api/v3/ticker/24hr"
+        "https://api.binance.com/api/v3/ticker/24hr",
+        "https://api4.binance.com/api/v3/ticker/24hr",
+        "https://fapi.binance.com/fapi/v1/ticker/24hr"
     ]
     for url in endpoints:
         try:
-            response = requests.get(url, timeout=3)
+            # Timeout එක තත්පර 10ක් දක්වා වැඩි කරා Cloud Node එක ස්ටේබල් වෙන්න
+            response = requests.get(url, timeout=10) 
             if response.status_code == 200:
                 data = response.json()
                 rows = []
@@ -154,20 +156,23 @@ def get_market():
                         })
                 if rows:
                     df = pd.DataFrame(rows)
-                    # FILTER: High Volume Coins only to avoid bad low liquidity dumps
-                    return df.sort_values(by="volume", ascending=False).head(25)
-        except: continue
+                    # VOLUME FILTER: Top Volume තියෙන කොයින්ස් 15 විතරක් ගන්නවා
+                    return df.sort_values(by="volume", ascending=False).head(15)
+        except Exception as e: 
+            continue
     return pd.DataFrame()
 
-@st.cache_data(ttl=2)
+@st.cache_data(ttl=5)
 def get_klines(symbol, interval="15m"):
+    # Spot සහ Futures Endpoints දෙකම Backup විදිහට පාවිච්චි කරනවා
     endpoints = [
-        f"https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={interval}&limit=100",
-        f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit=100"
+        f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit=100",
+        f"https://api4.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit=100",
+        f"fhttps://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={interval}&limit=100"
     ]
     for url in endpoints:
         try:
-            response = requests.get(url, timeout=3)
+            response = requests.get(url, timeout=10)
             if response.status_code == 200:
                 data = response.json()
                 frame = pd.DataFrame(data).iloc[:, :6]
@@ -176,7 +181,8 @@ def get_klines(symbol, interval="15m"):
                 for col in ["open", "high", "low", "close", "volume"]:
                     frame[col] = frame[col].astype(float)
                 return frame
-        except: continue
+        except Exception as e: 
+            continue
     return pd.DataFrame()
 
 # =========================================================
