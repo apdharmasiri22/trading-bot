@@ -909,12 +909,17 @@ def run_scanner(timeframe):
                 timeframe
             )
 
+            if kline.empty:
+                continue
+
             if len(kline) < 30:
                 continue
 
-            signal, reason = master_sniper_engine(kline)
+            signal, reason = master_sniper_engine(
+                kline
+            )
 
-            if not signal:
+            if signal is None:
                 continue
 
             price = kline["close"].iloc[-1]
@@ -926,15 +931,29 @@ def run_scanner(timeframe):
             if np.isnan(atr):
                 continue
 
+            probability = 90
+
+            # =====================
+            # LONG SIGNAL
+            # =====================
+
             if signal == "LONG":
 
                 sl = price - (atr * 1.8)
+
+                tp1 = price + (atr * 2.0)
+                tp2 = price + (atr * 4.5)
+                tp3 = price + (atr * 7.0)
 
                 longs.append(
                     {
                         "COIN": coin,
                         "ENTRY": round(price, 4),
-                        "TP1": round(price + atr * 2, 4),
+                        "TP1": round(tp1, 4),
+                        "TP2": round(tp2, 4),
+                        "TP3": round(tp3, 4),
+                        "SL": round(sl, 4),
+                        "PROBABILITY": f"{probability}%",
                         "REASON": reason
                     }
                 )
@@ -944,23 +963,35 @@ def run_scanner(timeframe):
                     "LONG",
                     timeframe,
                     price,
-                    price + atr * 2,
-                    price + atr * 4.5,
-                    price + atr * 7,
+                    tp1,
+                    tp2,
+                    tp3,
                     sl,
-                    90,
+                    probability,
                     reason
                 )
 
-            if signal == "SHORT":
+            # =====================
+            # SHORT SIGNAL
+            # =====================
+
+            elif signal == "SHORT":
 
                 sl = price + (atr * 1.8)
+
+                tp1 = price - (atr * 2.0)
+                tp2 = price - (atr * 4.5)
+                tp3 = price - (atr * 7.0)
 
                 shorts.append(
                     {
                         "COIN": coin,
                         "ENTRY": round(price, 4),
-                        "TP1": round(price - atr * 2, 4),
+                        "TP1": round(tp1, 4),
+                        "TP2": round(tp2, 4),
+                        "TP3": round(tp3, 4),
+                        "SL": round(sl, 4),
+                        "PROBABILITY": f"{probability}%",
                         "REASON": reason
                     }
                 )
@@ -970,11 +1001,11 @@ def run_scanner(timeframe):
                     "SHORT",
                     timeframe,
                     price,
-                    price - atr * 2,
-                    price - atr * 4.5,
-                    price - atr * 7,
+                    tp1,
+                    tp2,
+                    tp3,
                     sl,
-                    90,
+                    probability,
                     reason
                 )
 
@@ -984,19 +1015,42 @@ def run_scanner(timeframe):
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("🟢 LONG SIGNALS")
-        st.dataframe(
-            pd.DataFrame(longs),
-            use_container_width=True
+
+        st.subheader(
+            "🟢 LONG SIGNALS"
         )
+
+        if longs:
+
+            st.dataframe(
+                pd.DataFrame(longs),
+                use_container_width=True
+            )
+
+        else:
+
+            st.info(
+                "No LONG setups detected."
+            )
 
     with col2:
-        st.subheader("🔴 SHORT SIGNALS")
-        st.dataframe(
-            pd.DataFrame(shorts),
-            use_container_width=True
+
+        st.subheader(
+            "🔴 SHORT SIGNALS"
         )
 
+        if shorts:
+
+            st.dataframe(
+                pd.DataFrame(shorts),
+                use_container_width=True
+            )
+
+        else:
+
+            st.info(
+                "No SHORT setups detected."
+            )
 
 # =========================================================
 # 5M
