@@ -11,43 +11,33 @@ PRICE_URL = "https://min-api.cryptocompare.com/data/price"
 # =========================
 # GET TOP COINS
 # =========================
-@st.cache_data(ttl=60)
-def get_top_coins(limit=200):
+@st.cache_data(ttl=300)
+def get_top_coins(limit=100):
 
     try:
+        url = "https://min-api.cryptocompare.com/data/top/mktcapfull"
+
+        params = {
+            "tsym": "USD",
+            "limit": 100
+        }
+
+        r = requests.get(url, params=params, timeout=10)
+        data = r.json()
+
         coins = []
 
-        for page in range(3):
+        for item in data.get("Data", []):
 
-            params = {
-                "tsym": "USD",
-                "limit": 100,
-                "page": page
-            }
+            symbol = item.get("CoinInfo", {}).get("Name")
 
-            r = requests.get(
-                TOP_URL,
-                params=params,
-                timeout=10,
-                headers={"User-Agent": "Mozilla/5.0"}
-            )
-
-            data = r.json()
-
-            for item in data.get("Data", []):
-
-                symbol = item.get("CoinInfo", {}).get("Name")
-
-                if symbol:
-                    coins.append(symbol + "USDT")
-
-        # remove duplicates
-        coins = list(dict.fromkeys(coins))
+            if symbol:
+                coins.append(symbol + "USDT")
 
         return coins[:limit]
 
     except Exception as e:
-        st.error(f"Data Error (coins): {e}")
+        st.error(f"API Error: {e}")
         return []
 
 
