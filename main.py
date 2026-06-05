@@ -40,7 +40,7 @@ coins = get_top_coins(30)
 
 if not coins:
     st.error(
-        "❌ Binance data not loaded. Check internet/API connection."
+        "❌ Market data not loaded."
     )
     st.stop()
 
