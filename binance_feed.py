@@ -5,36 +5,42 @@ import streamlit as st
 TOP_URL = "https://api.binance.com/api/v3/exchangeInfo"
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600)
 def get_top_coins(limit=200):
 
     try:
         url = "https://api.binance.com/api/v3/ticker/24hr"
-
         r = requests.get(url, timeout=10)
         data = r.json()
 
-        # 🧠 SAFETY CHECK (IMPORTANT)
-        if not isinstance(data, list):
-            return []
-
         coins = []
 
-        for item in data:
+        if isinstance(data, list):
+            for item in data:
+                if isinstance(item, dict):
+                    symbol = item.get("symbol")
+                    if symbol and symbol.endswith("USDT"):
+                        coins.append(symbol)
 
-            if not isinstance(item, dict):
-                continue
+        # sort (important)
+        coins = sorted(coins)
 
-            symbol = item.get("symbol")
+        # if API works, return full list
+        if len(coins) > 20:
+            return coins[:limit]
 
-            if symbol and symbol.endswith("USDT"):
-                coins.append(symbol)
+    except:
+        pass
 
-        return coins[:limit]
-
-    except Exception as e:
-        st.error(f"Binance Error: {e}")
-        return []
+    # 🔥 BIG FALLBACK (expanded list)
+    return [
+        "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT",
+        "XRPUSDT", "ADAUSDT", "DOGEUSDT", "TRXUSDT",
+        "AVAXUSDT", "MATICUSDT", "DOTUSDT", "LTCUSDT",
+        "BCHUSDT", "LINKUSDT", "ATOMUSDT",
+        "NEARUSDT", "ALGOUSDT", "FTMUSDT", "SANDUSDT",
+        "APEUSDT", "APTUSDT", "OPUSDT", "ARBUsdt".upper()
+    ][:limit]
 
 @st.cache_data(ttl=60)
 def get_price(symbol):
