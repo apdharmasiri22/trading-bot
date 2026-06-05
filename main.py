@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
-from data.binance_feed import get_top_coins, get_price, get_candles
+from binance_feed import get_top_coins, get_price, get_candles
 from smc_engine import SMCEngine
 from score_engine import ScoreEngine
 
