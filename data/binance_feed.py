@@ -1,3 +1,10 @@
+import requests
+import streamlit as st
+
+
+URL = "https://min-api.cryptocompare.com/data/top/mktcapfull"
+
+
 @st.cache_data(ttl=60)
 def get_top_coins(limit=200):
 
@@ -5,11 +12,7 @@ def get_top_coins(limit=200):
 
         coins = []
 
-        pages = 5   # more coins fetch
-
-        for page in range(pages):
-
-            url = "https://min-api.cryptocompare.com/data/top/mktcapfull"
+        for page in range(3):
 
             params = {
                 "tsym": "USD",
@@ -18,9 +21,12 @@ def get_top_coins(limit=200):
             }
 
             r = requests.get(
-                url,
+                URL,
                 params=params,
-                timeout=10
+                timeout=10,
+                headers={
+                    "User-Agent": "Mozilla/5.0"
+                }
             )
 
             data = r.json()
@@ -28,7 +34,7 @@ def get_top_coins(limit=200):
 
             for item in data.get("Data", []):
 
-                symbol = item["CoinInfo"]["Name"]
+                symbol = item.get("CoinInfo", {}).get("Name")
 
                 if symbol:
                     coins.append(
@@ -37,7 +43,7 @@ def get_top_coins(limit=200):
 
 
         # remove duplicates
-        coins = list(set(coins))
+        coins = list(dict.fromkeys(coins))
 
 
         return coins[:limit]
@@ -47,3 +53,39 @@ def get_top_coins(limit=200):
 
         st.error(f"Data Error: {e}")
         return []
+
+
+
+@st.cache_data(ttl=15)
+def get_price(symbol):
+
+    try:
+
+        coin = symbol.replace("USDT", "")
+
+
+        url = "https://min-api.cryptocompare.com/data/price"
+
+
+        params = {
+            "fsym": coin,
+            "tsyms": "USD"
+        }
+
+
+        r = requests.get(
+            url,
+            params=params,
+            timeout=10
+        )
+
+
+        data = r.json()
+
+
+        return data.get("USD")
+
+
+    except:
+
+        return None
