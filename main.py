@@ -260,11 +260,11 @@ elif trading_type == "DAY TRADING": timeframe = "15m"
 else: timeframe = "1h"
 
 # =========================================================
-# ⚡ SMART FRAGMENT (ONLY THIS PART REFRESHES IN BACKGROUND)
+# ⚡ SMART FRAGMENT (REFRESHES EVERY 30 SECONDS SMOOTHLY)
 # =========================================================
-@st.fragment(run_every=5)
+@st.fragment(run_every=30)
 def render_live_scanner(market_df, tf_val):
-    st.subheader(f"🔥 INSTITUTIONAL SMC SCANNER ({tf_val}) - Live Updating")
+    st.subheader(f"🔥 INSTITUTIONAL SMC SCANNER ({tf_val}) - Live Updating (30s)")
     
     scan_long, scan_short = [], []
     coins = market_df["symbol"].tolist()
