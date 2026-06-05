@@ -515,9 +515,31 @@ with tab2:
                 
                 if atr == 0 or np.isnan(atr) or (atr / current_price) < 0.0008: continue
 
-                bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
-                bullish_confluence = (bos_bull and fvg_bull) or (fvg_bull and ob_bull) or (bos_bull and ob_bull)
-                bearish_confluence = (bos_bear and fvg_bear) or (fvg_bear and ob_bear) or (bos_bear and ob_bear)
+               signal, reason = master_sniper_engine(kline)
+
+if signal == "LONG":
+    sl = current_price - (atr * 1.8)
+
+    scan_long.append({
+        "COIN": coin,
+        "PRICE": f"${current_price:,.4f}",
+        "ENTRY": round(current_price,4),
+        "TP1": round(current_price + (atr*2),4),
+        "SL": round(sl,4),
+        "REASON": reason
+    })
+
+    save_signal(
+        coin,
+        "LONG",
+        "5m",
+        current_price,
+        current_price + (atr*2),
+        current_price + (atr*4.5),
+        current_price + (atr*7),
+        sl,
+        90
+    )
 
                 if bullish_confluence and current_price > calculate_ema(close, 50).iloc[-1] and trend_1h_price > trend_1h_ema:
                     sl = current_price - (atr * 1.8)
