@@ -7,26 +7,37 @@ BASE_URL = "https://api.binance.com/api/v3"
 # =========================
 # COINS (200 list)
 # =========================
-@st.cache_data(ttl=3600)
+import requests
+
+BASE_URL = "https://api.binance.com/api/v3"
+
 def get_top_coins(limit=200):
 
     try:
         r = requests.get(f"{BASE_URL}/exchangeInfo", timeout=10)
         data = r.json()
 
+        # 🧠 SAFETY CHECK (IMPORTANT)
+        if not isinstance(data, dict):
+            return []
+
+        if "symbols" not in data:
+            return []
+
         coins = []
 
-        for s in data.get("symbols", []):
+        for s in data["symbols"]:
             if (
-                s.get("status") == "TRADING"
+                isinstance(s, dict)
+                and s.get("status") == "TRADING"
                 and s.get("symbol", "").endswith("USDT")
             ):
                 coins.append(s["symbol"])
 
         return coins[:limit]
 
-    except:
-        return ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"]
+    except Exception as e:
+        return []
 
 
 # =========================
