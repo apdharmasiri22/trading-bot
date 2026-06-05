@@ -20,11 +20,19 @@ def get_top_coins(limit=200):
         r = requests.get(url, timeout=10)
         data = r.json()
 
+        # 🧠 SAFETY CHECK
+        if "symbols" not in data:
+            return []
+
         coins = []
 
         for symbol in data["symbols"]:
 
-            if symbol["status"] == "TRADING" and symbol["symbol"].endswith("USDT"):
+            if (
+                isinstance(symbol, dict)
+                and symbol.get("status") == "TRADING"
+                and symbol.get("symbol", "").endswith("USDT")
+            ):
                 coins.append(symbol["symbol"])
 
         return coins[:limit]
