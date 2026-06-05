@@ -1085,7 +1085,9 @@ with tab3:
 
 with tab4:
 
-    st.subheader("📜 SIGNAL HISTORY")
+    st.subheader(
+        "📜 QUANTUM SIGNAL DATABASE"
+    )
 
     try:
 
@@ -1098,13 +1100,126 @@ with tab4:
             conn
         )
 
-        st.dataframe(
-            history,
-            use_container_width=True
-        )
+        if history.empty:
 
-    except:
+            st.info(
+                "No signal history available."
+            )
 
-        st.info(
-            "No history available."
+        else:
+
+            total_trades = len(history)
+
+            wins = len(
+                history[
+                    history["status"] == "TP3 HIT"
+                ]
+            )
+
+            losses = len(
+                history[
+                    history["status"] == "SL HIT"
+                ]
+            )
+
+            running = len(
+                history[
+                    history["status"] == "RUNNING"
+                ]
+            )
+
+            accuracy = (
+                round(
+                    (wins / (wins + losses)) * 100,
+                    1
+                )
+                if (wins + losses) > 0
+                else 0
+            )
+
+            net_score = wins - losses
+
+            col1, col2, col3, col4, col5 = st.columns(5)
+
+            col1.metric(
+                "📊 TOTAL",
+                total_trades
+            )
+
+            col2.metric(
+                "🟢 WINS",
+                wins
+            )
+
+            col3.metric(
+                "🔴 LOSSES",
+                losses
+            )
+
+            col4.metric(
+                "🔥 RUNNING",
+                running
+            )
+
+            col5.metric(
+                "🎯 ACCURACY",
+                f"{accuracy}%"
+            )
+
+            st.markdown("---")
+
+            st.info(
+                f"""
+                📈 Net Performance Score : {net_score}
+
+                🧠 Quantum Engine Status : ACTIVE
+
+                ⚡ Signal Tracking : LIVE
+                """
+            )
+
+            display_df = history.copy()
+
+            display_df = display_df[
+                [
+                    "coin",
+                    "signal",
+                    "timeframe",
+                    "entry",
+                    "tp1",
+                    "tp2",
+                    "tp3",
+                    "sl",
+                    "probability",
+                    "status",
+                    "reason",
+                    "created_at"
+                ]
+            ]
+
+            display_df.columns = [
+                "COIN",
+                "SIGNAL",
+                "TF",
+                "ENTRY",
+                "TP1",
+                "TP2",
+                "TP3",
+                "SL",
+                "PROBABILITY",
+                "STATUS",
+                "REASON",
+                "CREATED"
+            ]
+
+            st.dataframe(
+                display_df,
+                use_container_width=True,
+                height=600
+            )
+
+    except Exception as e:
+
+        st.error(
+            f"History Error : {e}"
         )
