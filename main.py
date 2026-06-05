@@ -1,5 +1,5 @@
 # =========================================================
-# QUANTUM X TERMINAL - SMART MONEY CONCEPTS (FULLY FIXED)
+# QUANTUM X TERMINAL - ULTRA-STABLE SMC EDITION (100% FIXED)
 # =========================================================
 
 import streamlit as st
@@ -104,7 +104,6 @@ def calculate_atr(df, period=14):
     true_range = np.max(ranges, axis=1)
     return pd.Series(true_range).rolling(period).mean()
 
-# Original SMC Logic (Fixed Detection Logic)
 def detect_smc_features(df):
     highs = df["high"].values
     lows = df["low"].values
@@ -117,37 +116,37 @@ def detect_smc_features(df):
     order_block_bullish = False
     order_block_bearish = False
     
-    # Looking back 15 candles for accurate structural shifts
+    # Structural Shift Lookback
     for i in range(-15, -2):
         if closes[-1] > highs[i]: bos_bullish = True
         if closes[-1] < lows[i]: bos_bearish = True
         
-    # FVG Detection (Gap between Candle 1 High and Candle 3 Low)
+    # FVG Detection
     if highs[-3] < lows[-1]: fvg_bullish = True
     if lows[-3] > highs[-1]: fvg_bearish = True
         
-    # Order Block Detection (Last opposite candle before a strong move)
+    # Order Block Detection
     if closes[-1] > closes[-2] and closes[-3] < closes[-4]: order_block_bullish = True
     if closes[-1] < closes[-2] and closes[-3] > closes[-4]: order_block_bearish = True
         
     return bos_bullish, bos_bearish, fvg_bullish, fvg_bearish, order_block_bullish, order_block_bearish
 
 # =========================================================
-# ANTI-BLOCK REAL-TIME BINANCE FETCHING
+# ANTI-FAIL DATA FETCHING WITH CRYPTOCOMPARE FALLBACK
 # =========================================================
 @st.cache_data(ttl=4)
 def get_market():
+    # Primary: Binance Multi-Endpoints
     endpoints = [
         "https://api.binance.com/api/v3/ticker/24hr",
-        "https://api1.binance.com/api/v3/ticker/24hr",
-        "https://api2.binance.com/api/v3/ticker/24hr",
-        "https://fapi.binance.com/fapi/v1/ticker/24hr"
+        "https://fapi.binance.com/fapi/v1/ticker/24hr",
+        "https://api1.binance.com/api/v3/ticker/24hr"
     ]
     headers = {"User-Agent": "Mozilla/5.0"}
     
     for url in endpoints:
         try:
-            response = requests.get(url, headers=headers, timeout=5)
+            response = requests.get(url, headers=headers, timeout=4)
             if response.status_code == 200:
                 data = response.json()
                 rows = []
@@ -165,6 +164,30 @@ def get_market():
                     return df.sort_values(by="volume", ascending=False).head(35)
         except:
             continue
+            
+    # Secondary Fallback: CryptoCompare Public API (වැඩේ නවතින්නේ නැහැ සදහටම)
+    try:
+        fallback_url = "https://min-api.cryptocompare.com/data/top/mktcapfull?limit=35&tsym=USDT"
+        res = requests.get(fallback_url, timeout=5)
+        if res.status_code == 200:
+            data = res.json().get("Data", [])
+            rows = []
+            for coin in data:
+                raw = coin.get("RAW", {}).get("USDT", {})
+                info = coin.get("CoinInfo", {})
+                symbol = f"{info.get('Name', '')}USDT"
+                if raw:
+                    rows.append({
+                        "symbol": symbol,
+                        "price": float(raw.get("PRICE", 0)),
+                        "change": float(raw.get("CHANGEPCT24HOUR", 0)),
+                        "volume": float(raw.get("VOLUME24HOURTO", 0))
+                    })
+            if rows:
+                return pd.DataFrame(rows)
+    except:
+        pass
+        
     return pd.DataFrame()
 
 @st.cache_data(ttl=4)
@@ -175,7 +198,7 @@ def get_klines(symbol, interval="15m"):
     ]
     for url in endpoints:
         try:
-            response = requests.get(url, timeout=5)
+            response = requests.get(url, timeout=4)
             if response.status_code == 200:
                 data = response.json()
                 frame = pd.DataFrame(data).iloc[:, :6]
@@ -186,6 +209,26 @@ def get_klines(symbol, interval="15m"):
                 return frame
         except:
             continue
+            
+    # Fallback Klines from CryptoCompare if Binance is completely blocked
+    try:
+        base_asset = symbol.replace("USDT", "")
+        limit = 100
+        histo_type = "histohour" if "1h" in interval else "histominute"
+        agg = 15 if "15m" in interval else 5 if "5m" in interval else 1
+        
+        url = f"https://min-api.cryptocompare.com/data/v2/{histo_type}?fsym={base_asset}&tsym=USDT&limit={limit}&aggregate={agg}"
+        res = requests.get(url, timeout=5).json()
+        data = res.get("Data", {}).get("Data", [])
+        if data:
+            frame = pd.DataFrame(data)
+            frame = frame[['time', 'open', 'high', 'low', 'close', 'volumeto']]
+            frame.columns = ["time", "open", "high", "low", "close", "volume"]
+            frame["time"] = pd.to_datetime(frame["time"], unit='s')
+            return frame
+    except:
+        pass
+        
     return pd.DataFrame()
 
 # =========================================================
@@ -203,7 +246,7 @@ def save_signal(coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability):
     except:
         pass
 
-# Tracker
+# Tracker Engine
 try:
     signals = pd.read_sql("SELECT * FROM signals WHERE status='RUNNING' ORDER BY id DESC LIMIT 15", conn)
     for _, row in signals.iterrows():
@@ -228,7 +271,7 @@ except:
     pass
 
 # =========================================================
-# DASHBOARD
+# ACCURACY DASHBOARD
 # =========================================================
 st.subheader("📊 SYSTEM ACCURACY DASHBOARD")
 signals_df = pd.read_sql("SELECT * FROM signals", conn)
@@ -251,11 +294,11 @@ if not signals_df.empty:
     f.metric("WIN RATE", f"{win_rate}%")
 
 # =========================================================
-# CONFIGURATION
+# MARKET INITIALIZATION
 # =========================================================
 df = get_market()
 if df.empty:
-    st.error("🚨 Connecting to live Binance node. Please wait a moment and refresh.")
+    st.error("🚨 Institutional Data Nodes down. Please check your internet connection and reload page.")
     st.stop()
 
 trading_type = st.selectbox("🎯 SELECT TRADING TYPE", ["SCALPING", "DAY TRADING", "SWING TRADING"])
@@ -264,7 +307,7 @@ elif trading_type == "DAY TRADING": timeframe = "15m"
 else: timeframe = "1h"
 
 # =========================================================
-# ORIGINAL SMC ALGORITHMIC SCANNER (FIXED)
+# ORIGINAL SMC ALGORITHMIC SCANNER
 # =========================================================
 st.subheader(f"🔥 INSTITUTIONAL SMC SCANNER ({timeframe})")
 scan_long, scan_short = [], []
@@ -273,12 +316,12 @@ coins = df["symbol"].tolist()
 for coin in coins:
     try:
         kline = get_klines(coin, timeframe)
-        if kline.empty or len(kline) < 40: continue
+        if kline.empty or len(kline) < 30: continue
 
         close = kline["close"]
         current_price = close.iloc[-1]
         
-        # Original Indicators
+        # Original Metrics
         ema50 = calculate_ema(close, 50).iloc[-1]
         rsi = calculate_rsi(close).iloc[-1]
         atr = calculate_atr(kline).iloc[-1]
@@ -287,7 +330,7 @@ for coin in coins:
         # Detect SMC Features
         bos_bull, bos_bear, fvg_bull, fvg_bear, ob_bull, ob_bear = detect_smc_features(kline)
 
-        # Original Scoring Points System
+        # Original Point Calculation System
         long_score, short_score = 0, 0
         
         if current_price > ema50: long_score += 20
@@ -302,7 +345,7 @@ for coin in coins:
         if fvg_bear: short_score += 20
         if ob_bear: short_score += 20
 
-        # Optimization: Changed boundary to 60%+ to ensure regular signals trigger on SMC criteria
+        # High Probability Filters Trigger
         if long_score >= 60:
             sl = current_price - (atr * 1.5)
             scan_long.append({
@@ -334,7 +377,7 @@ with scol:
     else: st.info("Scanning Market for Order Blocks & BOS Short setups...")
 
 # =========================================================
-# INDIVIDUAL COIN SMC ANALYSIS & CHART
+# COIN SPECIFIC ANALYSIS
 # =========================================================
 st.markdown("---")
 st.subheader("🔍 COIN SPECIFIC SMC DEEP INTERACTION")
@@ -381,7 +424,6 @@ if not kline.empty:
     </div>
     """, unsafe_allow_html=True)
     
-    # CHARTS WITH ORIGINAL LOOK
     fig = go.Figure()
     fig.add_trace(go.Candlestick(
         x=kline['time'], open=kline['open'], high=kline['high'],
@@ -416,3 +458,5 @@ if not kline.empty:
                  f"🎯 target 1: {current_price-(atr_val*1.5):,.4f}\n"
                  f"🎯 target 2: {current_price-(atr_val*3.0):,.4f}\n\n"
                  f"🛑 stop trigger: {current_price+(atr_val*1.5):,.4f}")
+else:
+    st.warning("Please type a valid asset name or wait for data synchronization...")
