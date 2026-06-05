@@ -515,7 +515,20 @@ with tab2:
                 
                 if atr == 0 or np.isnan(atr) or (atr / current_price) < 0.0008: continue
 
-               signal, reason = master_sniper_engine(kline)
+for coin in market_df["symbol"].tolist()[:15]:
+    try:
+        kline = get_klines(coin, "5m")
+
+        if kline.empty:
+            continue
+
+        signal, reason = master_sniper_engine(kline)
+
+        if signal == "LONG":
+            pass
+
+    except:
+        pass
 
 if signal == "LONG":
     sl = current_price - (atr * 1.8)
