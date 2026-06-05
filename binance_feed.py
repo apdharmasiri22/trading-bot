@@ -14,9 +14,16 @@ def get_top_coins(limit=200):
         r = requests.get(url, timeout=10)
         data = r.json()
 
+        # 🧠 SAFETY CHECK (IMPORTANT)
+        if not isinstance(data, list):
+            return []
+
         coins = []
 
         for item in data:
+
+            if not isinstance(item, dict):
+                continue
 
             symbol = item.get("symbol")
 
