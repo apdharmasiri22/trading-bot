@@ -654,7 +654,7 @@ def update_live_signals_status(market_df):
         pass
 
 
-# =========================================================
+## =========================================================
 # ACCURACY DASHBOARD
 # =========================================================
 
@@ -671,36 +671,116 @@ def render_accuracy_dashboard(tf):
             conn
         )
 
+        if df.empty:
+
+            a, b, c, d, e = st.columns(5)
+
+            a.metric("TOTAL TRADES", 0)
+            b.metric("LIVE RUNNING", 0)
+            c.metric("WINS", 0)
+            d.metric("LOSSES", 0)
+            e.metric("ACCURACY", "0%")
+
+            return
+
         total = len(df)
 
-        tp1 = len(df[df["status"] == "TP1 HIT"])
-        tp2 = len(df[df["status"] == "TP2 HIT"])
-        tp3 = len(df[df["status"] == "TP3 HIT"])
-        sl = len(df[df["status"] == "SL HIT"])
-        running = len(df[df["status"] == "RUNNING"])
+        running = len(
+            df[df["status"] == "RUNNING"]
+        )
 
-        wins = tp1 + tp2 + tp3
+        tp1 = len(
+            df[df["status"] == "TP1 HIT"]
+        )
 
-        win_rate = (
+        tp2 = len(
+            df[df["status"] == "TP2 HIT"]
+        )
+
+        tp3 = len(
+            df[df["status"] == "TP3 HIT"]
+        )
+
+        sl = len(
+            df[df["status"] == "SL HIT"]
+        )
+
+        # FINAL WINS ONLY
+        wins = tp3
+
+        completed = wins + sl
+
+        accuracy = (
             round(
-                (wins / (wins + sl)) * 100,
+                (wins / completed) * 100,
                 1
             )
-            if (wins + sl) > 0
+            if completed > 0
             else 0
         )
 
+        best_status = "TP3 HIT" if wins > 0 else "-"
+
+        net_score = wins - sl
+
         a, b, c, d, e = st.columns(5)
 
-        a.metric("TOTAL", total)
-        b.metric("RUNNING", running)
-        c.metric("TP HITS", wins)
-        d.metric("SL", sl)
-        e.metric("WIN RATE", f"{win_rate}%")
+        a.metric(
+            "📊 TOTAL TRADES",
+            total
+        )
 
-    except:
-        pass
+        b.metric(
+            "🔥 LIVE RUNNING",
+            running
+        )
 
+        c.metric(
+            "🟢 FINAL WINS",
+            wins
+        )
+
+        d.metric(
+            "🔴 LOSSES",
+            sl
+        )
+
+        e.metric(
+            "🎯 ACCURACY",
+            f"{accuracy}%"
+        )
+
+        st.markdown("---")
+
+        x1, x2, x3 = st.columns(3)
+
+        x1.metric(
+            "TP1 HITS",
+            tp1
+        )
+
+        x2.metric(
+            "TP2 HITS",
+            tp2
+        )
+
+        x3.metric(
+            "TP3 HITS",
+            tp3
+        )
+
+        st.info(
+            f"""
+            Net Performance Score : {net_score}
+            | Best Result : {best_status}
+            """
+        )
+
+    except Exception as e:
+
+        st.error(
+            f"Dashboard Error : {e}"
+        )
 
 # =========================================================
 # HEADER
