@@ -8,7 +8,7 @@ APP_NAME = "SMC Quantum Trading Dashboard"
 
 st.set_page_config(page_title=APP_NAME, layout="wide")
 
-# 🔁 Auto refresh (safe 30 sec)
+# 🔁 Auto refresh (30 sec)
 st_autorefresh(interval=30000, key="refresh")
 
 # =========================
@@ -19,7 +19,7 @@ st.markdown("Smart Money Concepts + Liquidity Based Trading System")
 st.markdown("---")
 
 # =========================
-# 🪙 COIN LIST (TEMP - Part 2 will make this dynamic)
+# 🪙 COIN LIST (STATIC - Part 2 will make dynamic)
 # =========================
 coins = [
     "BTCUSDT",
@@ -42,7 +42,7 @@ st.markdown(f"### 📌 Selected Coin: `{coin}`")
 st.markdown("---")
 
 # =========================
-# 📈 TRADINGVIEW CHART (FIXED WORKING)
+# 📈 TRADINGVIEW CHART
 # =========================
 st.subheader("📈 TradingView Chart")
 
@@ -78,7 +78,7 @@ st.components.v1.html(html_code, height=650)
 st.markdown("---")
 
 # =========================
-# 🧠 ANALYSIS PANEL (PLACEHOLDER ENGINE READY)
+# 🧠 ANALYSIS PLACEHOLDERS
 # =========================
 col1, col2, col3 = st.columns(3)
 
@@ -97,11 +97,11 @@ with col3:
 st.markdown("---")
 
 # =========================
-# 📊 SIGNAL SUMMARY BOX
+# 📊 SIGNAL SUMMARY
 # =========================
 st.subheader("🧠 Signal Summary")
 
-st.write("Status: ⏳ Not Connected Yet")
+st.write("Status: ⏳ Base UI Loaded")
 st.write("Next Step: Binance Data Engine (Part 2)")
 
 st.markdown("---")
@@ -109,48 +109,4 @@ st.markdown("---")
 # =========================
 # 📌 FOOTER
 # =========================
-st.caption("SMC Quantum Trading Dashboard v1.0 - Complete Base UI (Part 1)")
-
-import streamlit as st
-from streamlit_autorefresh import st_autorefresh
-from data.binance_feed import get_top_coins, get_price
-
-st.set_page_config(layout="wide")
-
-st.title("📊 SMC Quantum Dashboard - Part 2")
-
-# 🔁 refresh safe
-st_autorefresh(interval=30000, key="refresh")
-
-# =========================
-# 🪙 LIVE COINS (BINANCE)
-# =========================
-coins = get_top_coins(20)
-
-coin = st.selectbox("🔍 Select Coin (Live Binance)", coins)
-
-st.markdown(f"### Selected: {coin}")
-
-# =========================
-# 💰 LIVE PRICE
-# =========================
-price = get_price(coin)
-
-if price:
-    st.success(f"💰 Live Price: {price}")
-else:
-    st.error("Price loading failed")
-
-st.markdown("---")
-
-# =========================
-# 🧠 PLACEHOLDERS (Next Parts)
-# =========================
-st.subheader("🧠 SMC Engine")
-st.info("Coming in Part 3")
-
-st.subheader("🎯 Signal Engine")
-st.info("Coming in Part 4")
-
-st.subheader("📊 Accuracy System")
-st.info("Coming in Part 6")
+st.caption("SMC Quantum Trading Dashboard v1.0 - Clean Base Version")
