@@ -42,7 +42,7 @@ st.markdown("---")
 # =========================
 # LOAD COINS
 # =========================
-coins = get_top_coins(200)
+coins = get_top_coins(100)
 
 if not coins:
     st.error("❌ Market data not loaded.")
