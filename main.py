@@ -1,7 +1,11 @@
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
-from binance_feed import get_top_coins, get_price, get_candles
+import binance_feed
+
+get_top_coins = binance_feed.get_top_coins
+get_price = binance_feed.get_price
+get_candles = binance_feed.get_candles
 from smc_engine import SMCEngine
 from score_engine import ScoreEngine
 
