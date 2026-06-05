@@ -1,112 +1,63 @@
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
+import pandas as pd
+import numpy as np
 
-# =========================
-# 🏆 APP CONFIG
-# =========================
-APP_NAME = "SMC Quantum Trading Dashboard"
+# අපේ files import කරගැනීම
+from data.binance_feed import get_top_coins, get_price
+from engine.smc_logic import analyze_market_structure, find_liquidity_zones
 
-st.set_page_config(page_title=APP_NAME, layout="wide")
+st.set_page_config(layout="wide")
 
-# 🔁 Auto refresh (30 sec)
+st.title("📊 SMC Quantum Dashboard - Part 3")
+
+# 🔁 30 seconds refresh
 st_autorefresh(interval=30000, key="refresh")
 
 # =========================
-# HEADER
+# 🪙 LIVE COINS (BINANCE)
 # =========================
-st.title(f"📊 {APP_NAME}")
-st.markdown("Smart Money Concepts + Liquidity Based Trading System")
-st.markdown("---")
+coins = get_top_coins(20)
+coin = st.selectbox("🔍 Select Coin (Live Binance)", coins)
 
-# =========================
-# 🪙 COIN LIST (STATIC - Part 2 will make dynamic)
-# =========================
-coins = [
-    "BTCUSDT",
-    "ETHUSDT",
-    "BNBUSDT",
-    "SOLUSDT",
-    "XRPUSDT",
-    "DOGEUSDT",
-    "ADAUSDT",
-    "AVAXUSDT"
-]
+st.markdown(f"### Selected: {coin}")
 
-# =========================
-# 🔍 COIN SELECTOR
-# =========================
-coin = st.selectbox("🔍 Select Coin", coins)
-
-st.markdown(f"### 📌 Selected Coin: `{coin}`")
+# Price display
+price = get_price(coin)
+if price:
+    st.success(f"💰 Live Price: {price}")
+else:
+    st.error("Price loading failed")
 
 st.markdown("---")
 
 # =========================
-# 📈 TRADINGVIEW CHART
+# 🧠 SMC ENGINE
 # =========================
-st.subheader("📈 TradingView Chart")
+st.subheader("🧠 SMC Engine")
 
-symbol = f"BINANCE:{coin}"
+# Testing සඳහා mock data (මෙතනින් එහාට අපි මේක live data වලට මාරු කරනවා)
+mock_data = pd.DataFrame({
+    'close': np.random.rand(20) * 100,
+    'high': np.random.rand(20) * 105,
+    'low': np.random.rand(20) * 95
+})
 
-html_code = f"""
-<div class="tradingview-widget-container">
-  <div id="tradingview_chart"></div>
+# Logic එක call කිරීම
+bias = analyze_market_structure(mock_data)
+liq = find_liquidity_zones(mock_data)
 
-  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-
-  <script type="text/javascript">
-  new TradingView.widget({{
-    "width": 1000,
-    "height": 600,
-    "symbol": "{symbol}",
-    "interval": "15",
-    "timezone": "Etc/UTC",
-    "theme": "dark",
-    "style": "1",
-    "locale": "en",
-    "toolbar_bg": "#f1f3f6",
-    "enable_publishing": false,
-    "allow_symbol_change": true,
-    "container_id": "tradingview_chart"
-  }});
-  </script>
-</div>
-"""
-
-st.components.v1.html(html_code, height=650)
+col1, col2 = st.columns(2)
+col1.metric("Market Bias", bias)
+col2.write(f"Liquidity Zones: {liq}")
 
 st.markdown("---")
 
 # =========================
-# 🧠 ANALYSIS PLACEHOLDERS
+# 🎯 FUTURE SECTIONS
 # =========================
-col1, col2, col3 = st.columns(3)
+st.subheader("🎯 Signal Engine")
+st.info("Coming in Part 4")
 
-with col1:
-    st.subheader("📊 Market Bias")
-    st.info("⏳ Waiting for SMC Engine (Part 3)")
-
-with col2:
-    st.subheader("🎯 Entry Zone")
-    st.warning("FVG / Order Block will appear here")
-
-with col3:
-    st.subheader("⚠️ Risk (SL / TP)")
-    st.error("TP1 / TP2 / SL pending engine")
-
-st.markdown("---")
-
-# =========================
-# 📊 SIGNAL SUMMARY
-# =========================
-st.subheader("🧠 Signal Summary")
-
-st.write("Status: ⏳ Base UI Loaded")
-st.write("Next Step: Binance Data Engine (Part 2)")
-
-st.markdown("---")
-
-# =========================
-# 📌 FOOTER
-# =========================
-st.caption("SMC Quantum Trading Dashboard v1.0 - Clean Base Version")
+st.subheader("📊 Accuracy System")
+st.info("Coming in Part 6")
