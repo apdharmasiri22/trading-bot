@@ -11,33 +11,26 @@ PRICE_URL = "https://min-api.cryptocompare.com/data/price"
 # =========================
 # GET TOP COINS
 # =========================
-@st.cache_data(ttl=300)
-def get_top_coins(limit=100):
+@st.cache_data(ttl=600)
+def get_top_coins(limit=200):
 
     try:
-        url = "https://min-api.cryptocompare.com/data/top/mktcapfull"
+        url = "https://api.binance.com/api/v3/exchangeInfo"
 
-        params = {
-            "tsym": "USD",
-            "limit": 100
-        }
-
-        r = requests.get(url, params=params, timeout=10)
+        r = requests.get(url, timeout=10)
         data = r.json()
 
         coins = []
 
-        for item in data.get("Data", []):
+        for symbol in data["symbols"]:
 
-            symbol = item.get("CoinInfo", {}).get("Name")
-
-            if symbol:
-                coins.append(symbol + "USDT")
+            if symbol["status"] == "TRADING" and symbol["symbol"].endswith("USDT"):
+                coins.append(symbol["symbol"])
 
         return coins[:limit]
 
     except Exception as e:
-        st.error(f"API Error: {e}")
+        st.error(f"Binance Error: {e}")
         return []
 
 
