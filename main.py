@@ -141,18 +141,40 @@ def detect_smc_features(df):
     return bos_bullish, bos_bearish, fvg_bullish, fvg_bearish, order_block_bullish, order_block_bearish
 
 # =========================================================
-# LIVE APIS DATA NODES
+# ULTRA STABLE LIVE APIS DATA NODES (BYPASSES BINANCE BLOCKS)
 # =========================================================
 @st.cache_data(ttl=2)
 def get_market():
+    # Priority 1: CryptoCompare API (No restrictions in Sri Lanka, highly stable)
+    try:
+        url = "https://min-api.cryptocompare.com/data/top/mktcapfull?limit=30&tsym=USDT"
+        res = requests.get(url, timeout=4)
+        if res.status_code == 200:
+            data = res.json().get("Data", [])
+            rows = []
+            for coin in data:
+                raw = coin.get("RAW", {}).get("USDT", {})
+                info = coin.get("CoinInfo", {})
+                symbol = f"{info.get('Name', '')}USDT"
+                if raw and info.get('Name'):
+                    rows.append({
+                        "symbol": symbol,
+                        "price": float(raw.get("PRICE", 0)),
+                        "change": float(raw.get("CHANGEPCT24HOUR", 0)),
+                        "volume": float(raw.get("VOLUME24HOURTO", 0))
+                    })
+            if rows:
+                return pd.DataFrame(rows)
+    except: pass
+
+    # Priority 2: Fallback to Binance Futures Endpoints if CryptoCompare fails
     endpoints = [
-        "https://api.binance.com/api/v3/ticker/24hr",
-        "https://fapi.binance.com/fapi/v1/ticker/24hr"
+        "https://fapi.binance.com/fapi/v1/ticker/24hr",
+        "https://api.binance.com/api/v3/ticker/24hr"
     ]
-    headers = {"User-Agent": "Mozilla/5.0"}
     for url in endpoints:
         try:
-            response = requests.get(url, headers=headers, timeout=3)
+            response = requests.get(url, timeout=3)
             if response.status_code == 200:
                 data = response.json()
                 rows = []
@@ -173,9 +195,29 @@ def get_market():
 
 @st.cache_data(ttl=2)
 def get_klines(symbol, interval="15m"):
+    base_asset = symbol.replace("USDT", "")
+    
+    # Priority 1: CryptoCompare Historical Aggregator Node
+    try:
+        histo_type = "histohour" if "1h" in interval else "histominute"
+        agg = 15 if "15m" in interval else 5 if "5m" in interval else 1
+        url = f"https://min-api.cryptocompare.com/data/v2/{histo_type}?fsym={base_asset}&tsym=USDT&limit=100&aggregate={agg}"
+        res = requests.get(url, timeout=3).json()
+        data = res.get("Data", {}).get("Data", [])
+        if data:
+            frame = pd.DataFrame(data)
+            frame = frame[['time', 'open', 'high', 'low', 'close', 'volumeto']]
+            frame.columns = ["time", "open", "high", "low", "close", "volume"]
+            frame["time"] = pd.to_datetime(frame["time"], unit='s')
+            for col in ["open", "high", "low", "close", "volume"]:
+                frame[col] = frame[col].astype(float)
+            return frame
+    except: pass
+            
+    # Priority 2: Fallback to Binance Nodes
     endpoints = [
-        f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit=100",
-        f"https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={interval}&limit=100"
+        f"https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={interval}&limit=100",
+        f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit=100"
     ]
     for url in endpoints:
         try:
@@ -206,7 +248,6 @@ def save_signal(coin, signal, timeframe, entry, tp1, tp2, tp3, sl, probability):
     except: pass
 
 def update_live_signals_status(market_df):
-    """ සේව් වුණු සිග්නල් වල ප්‍රයිස් එක චෙක් කරලා TP/SL වැදුණද කියලා බලන සිස්ටම් එක """
     try:
         running_signals = pd.read_sql("SELECT * FROM signals WHERE status='RUNNING'", conn)
         if running_signals.empty: return
@@ -216,7 +257,6 @@ def update_live_signals_status(market_df):
             coin = row['coin']
             direction = row['signal']
             
-            # Get current live price from market dataframe
             match = market_df[market_df['symbol'] == coin]
             if match.empty: continue
             current_price = float(match.iloc[0]['price'])
@@ -239,7 +279,6 @@ def update_live_signals_status(market_df):
     except: pass
 
 def render_accuracy_dashboard(tf_val):
-    """ එක් එක් Timeframe එකට අදාළව නිවැරදිව Accuracy Metric හදන ක්‍රමය """
     df_sig = pd.read_sql(f"SELECT * FROM signals WHERE timeframe='{tf_val}'", conn)
     
     total = len(df_sig)
@@ -262,7 +301,7 @@ def render_accuracy_dashboard(tf_val):
 # Fetch Global Market Data
 df_market = get_market()
 if df_market.empty:
-    st.error("🚨 Connecting to data nodes. Please standby...")
+    st.error("🚨 Cloud Data Synchronization Offline. Retrying network nodes...")
     st.stop()
 
 # Update running signals based on latest prices
@@ -289,7 +328,7 @@ with tab1:
     def run_5m_scanner(market_df):
         st.subheader("🔥 REAL-TIME 5m SMC SCANNER (Auto-Updates)")
         scan_long, scan_short = [], []
-        for coin in market_df["symbol"].tolist():
+        for coin in market_df["symbol"].tolist()[:20]: # Restricted to top 20 for extreme speed
             try:
                 kline = get_klines(coin, "5m")
                 if kline.empty or len(kline) < 30: continue
@@ -330,7 +369,7 @@ with tab2:
     def run_15m_scanner(market_df):
         st.subheader("🔥 REAL-TIME 15m SMC SCANNER (Auto-Updates)")
         scan_long, scan_short = [], []
-        for coin in market_df["symbol"].tolist():
+        for coin in market_df["symbol"].tolist()[:20]:
             try:
                 kline = get_klines(coin, "15m")
                 if kline.empty or len(kline) < 30: continue
@@ -371,7 +410,7 @@ with tab3:
     def run_1h_scanner(market_df):
         st.subheader("🔥 REAL-TIME 1h SMC SCANNER (Auto-Updates)")
         scan_long, scan_short = [], []
-        for coin in market_df["symbol"].tolist():
+        for coin in market_df["symbol"].tolist()[:20]:
             try:
                 kline = get_klines(coin, "1h")
                 if kline.empty or len(kline) < 30: continue
@@ -402,15 +441,13 @@ with tab3:
     run_1h_scanner(df_market)
 
 # ---------------------------------------------------------
-# TAB 4: ALL SIGNALS HISTORY (මකන්නේ නැතුව සේව් වෙන තැන)
+# TAB 4: ALL SIGNALS HISTORY
 # ---------------------------------------------------------
 with tab4:
     st.subheader("📜 QUANTUM CENTRAL SIGNAL DATABASE")
     st.markdown("මෙතන ඔයාගේ සේව් වුණු සියලුම සිග්නල් සහ ඒවා ලයිව් මාකට් එකේ **TP/SL වැදුණද නැද්ද** කියන ලොග් එක බලාගන්න පුළුවන් මචං.")
     
-    # Fetch data directly from SQLite database
     all_signals = pd.read_sql("SELECT id, coin, signal, timeframe, entry, tp1, tp2, sl, status, created_at FROM signals ORDER BY id DESC", conn)
-    
     if not all_signals.empty:
         st.dataframe(all_signals, use_container_width=True)
     else:
