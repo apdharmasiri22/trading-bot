@@ -32,15 +32,17 @@ st.markdown(f"### 📌 Selected Coin: `{coin}`")
 # =========================
 # 💰 LIVE PRICE
 # =========================
-# TradingView එකට හරියන format එක (BTCUSDT) යවනවා
-price = get_price(f"{coin[:3]}/{coin[3:]}" if len(coin) > 6 else coin) 
-
-if price:
-    st.success(f"💰 Live Price: {price}")
+if coin:  # coin එකක් තෝරලා තියෙනවා නම් විතරක් price එක ගන්න
+    # සරලව format එක හදමු
+    formatted_coin = f"{coin[:3]}/{coin[3:]}" if len(coin) > 6 else coin
+    price = get_price(formatted_coin)
+    
+    if price:
+        st.success(f"💰 Live Price: {price}")
+    else:
+        st.warning("Price could not be fetched for this coin.")
 else:
-    st.error("Price loading failed")
-
-st.markdown("---")
+    st.info("Please select a coin to view the price.")
 
 # =========================
 # 📈 TRADINGVIEW CHART
