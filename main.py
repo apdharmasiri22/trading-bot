@@ -21,7 +21,10 @@ st.markdown("---")
 # =========================
 # 🪙 LIVE BINANCE COIN SELECTOR
 # =========================
-coins = get_top_coins(20)
+# Binance එකෙන් data අරගෙන "/" අයින් කරලා list එක හදනවා
+raw_coins = get_top_coins(20)
+coins = [c.replace('/', '') for c in raw_coins]
+
 coin = st.selectbox("🔍 Select Coin (Live from Binance)", coins)
 
 st.markdown(f"### 📌 Selected Coin: `{coin}`")
@@ -29,7 +32,9 @@ st.markdown(f"### 📌 Selected Coin: `{coin}`")
 # =========================
 # 💰 LIVE PRICE
 # =========================
-price = get_price(coin)
+# TradingView එකට හරියන format එක (BTCUSDT) යවනවා
+price = get_price(f"{coin[:3]}/{coin[3:]}" if len(coin) > 6 else coin) 
+
 if price:
     st.success(f"💰 Live Price: {price}")
 else:
