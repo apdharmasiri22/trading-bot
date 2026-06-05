@@ -10,12 +10,20 @@ BINANCE_URL = "https://api.binance.com/api/v3/ticker/24hr"
 def get_all_coins():
 
     try:
-        response = requests.get(
+        r = requests.get(
             BINANCE_URL,
-            timeout=10
+            timeout=15,
+            headers={
+                "User-Agent": "Mozilla/5.0"
+            }
         )
 
-        data = response.json()
+        # debug
+        if r.status_code != 200:
+            st.error(f"Binance API Error: {r.status_code}")
+            return []
+
+        data = r.json()
 
         coins = []
 
@@ -27,36 +35,36 @@ def get_all_coins():
 
                 coins.append({
                     "symbol": symbol,
-                    "priceChangePercent": float(
-                        item.get("priceChangePercent",0)
-                    ),
-                    "volume": float(
-                        item.get("quoteVolume",0)
-                    )
+                    "volume": float(item.get("quoteVolume", 0)),
+                    "change": float(item.get("priceChangePercent", 0))
                 })
+
 
         return coins
 
 
     except Exception as e:
-        print("BINANCE ERROR:", e)
+
+        st.error(f"Connection Error: {e}")
         return []
 
 
 
 @st.cache_data(ttl=30)
-def get_top_coins(limit=30):
+def get_top_coins(limit=100):
 
     coins = get_all_coins()
 
-    if not coins:
+
+    if len(coins) == 0:
         return []
 
 
     df = pd.DataFrame(coins)
 
+
     df = df.sort_values(
-        by="volume",
+        "volume",
         ascending=False
     )
 
@@ -71,20 +79,23 @@ def get_price(symbol):
     try:
 
         url = (
-        "https://api.binance.com/api/v3/ticker/price"
-        f"?symbol={symbol}"
+            "https://api.binance.com/api/v3/ticker/price"
+            f"?symbol={symbol}"
         )
 
-
-        data = requests.get(
+        r = requests.get(
             url,
-            timeout=5
-        ).json()
+            timeout=10,
+            headers={
+                "User-Agent":"Mozilla/5.0"
+            }
+        )
 
+        data = r.json()
 
         return float(data["price"])
 
 
     except Exception as e:
-        print("PRICE ERROR:", e)
+
         return None
