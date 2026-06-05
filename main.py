@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS signals (
 conn.commit()
 
 # =========================================================
-# MASTER SNIPER ENGINE
+# ADVANCED MASTER SNIPER ENGINE V2
 # =========================================================
 
 def get_structure_data(df):
@@ -61,7 +61,8 @@ def get_structure_data(df):
     lows = df["low"].values
     closes = df["close"].values
 
-    bos_bull = closes[-1] > max(highs[-6:-1])
+    bos_bull = closes[-1] > max(highs[-8:-1])
+    bos_bear = closes[-1] < min(lows[-8:-1])
 
     qm_bull = (
         highs[-3] > highs[-6]
@@ -69,29 +70,68 @@ def get_structure_data(df):
         and closes[-1] > highs[-2]
     )
 
-    liquidity_sweep = (
-        lows[-2] < min(lows[-8:-3])
+    qm_bear = (
+        lows[-3] < lows[-6]
+        and highs[-1] > highs[-3]
+        and closes[-1] < lows[-2]
+    )
+
+    liquidity_bull = (
+        lows[-2] < min(lows[-10:-3])
         and closes[-1] > closes[-2]
+    )
+
+    liquidity_bear = (
+        highs[-2] > max(highs[-10:-3])
+        and closes[-1] < closes[-2]
     )
 
     return {
         "bos_bull": bos_bull,
+        "bos_bear": bos_bear,
         "qm_bull": qm_bull,
-        "liquidity_sweep": liquidity_sweep
+        "qm_bear": qm_bear,
+        "liquidity_bull": liquidity_bull,
+        "liquidity_bear": liquidity_bear
     }
 
 
 def get_validation_data(df):
 
-    volume = df["volume"]
+    price = df["close"].iloc[-1]
 
-    high_vol = (
-        volume.iloc[-1]
-        > volume.rolling(20).mean().iloc[-1] * 1.5
+    volume_ma = (
+        df["volume"]
+        .rolling(20)
+        .mean()
+        .iloc[-1]
     )
 
+    atr = calculate_atr(df).iloc[-1]
+
+    ema50 = calculate_ema(
+        df["close"],
+        50
+    ).iloc[-1]
+
+    rsi = calculate_rsi(
+        df["close"]
+    ).iloc[-1]
+
     return {
-        "high_vol": high_vol
+
+        "high_vol":
+        df["volume"].iloc[-1]
+        > volume_ma * 1.2,
+
+        "atr_ok":
+        (atr / price) > 0.001,
+
+        "price": price,
+
+        "ema50": ema50,
+
+        "rsi": rsi
     }
 
 
@@ -100,30 +140,95 @@ def master_sniper_engine(df):
     struct = get_structure_data(df)
     valid = get_validation_data(df)
 
-    score = 0
+    bull_score = 0
+    bear_score = 0
+
     reasons = []
 
+    # =====================
+    # BULLISH
+    # =====================
+
     if struct["bos_bull"]:
-        score += 20
+        bull_score += 25
         reasons.append("BOS")
 
     if struct["qm_bull"]:
-        score += 20
+        bull_score += 25
         reasons.append("QM")
 
-    if struct["liquidity_sweep"]:
-        score += 20
-        reasons.append("LIQ_SWEEP")
+    if struct["liquidity_bull"]:
+        bull_score += 20
+        reasons.append("LIQ")
+
+    # =====================
+    # BEARISH
+    # =====================
+
+    if struct["bos_bear"]:
+        bear_score += 25
+
+    if struct["qm_bear"]:
+        bear_score += 25
+
+    if struct["liquidity_bear"]:
+        bear_score += 20
+
+    # =====================
+    # VOLUME
+    # =====================
 
     if valid["high_vol"]:
-        score += 20
-        reasons.append("HIGH_VOL")
+        bull_score += 15
+        bear_score += 15
+        reasons.append("VOL")
 
-    if score >= 40:
-        return "LONG", " + ".join(reasons)
+    # =====================
+    # EMA TREND
+    # =====================
+
+    if valid["price"] > valid["ema50"]:
+        bull_score += 15
+
+    if valid["price"] < valid["ema50"]:
+        bear_score += 15
+
+    # =====================
+    # RSI
+    # =====================
+
+    if valid["rsi"] < 35:
+        bull_score += 10
+
+    if valid["rsi"] > 65:
+        bear_score += 10
+
+    # =====================
+    # VOLATILITY FILTER
+    # =====================
+
+    if not valid["atr_ok"]:
+        return None, "LOW_VOL"
+
+    # =====================
+    # FINAL DECISION
+    # =====================
+
+    if bull_score >= 35 and bull_score > bear_score:
+
+        return (
+            "LONG",
+            " | ".join(reasons)
+        )
+
+    if bear_score >= 35 and bear_score > bull_score:
+
+        return (
+            "SHORT",
+            "BEARISH_SETUP"
+        )
 
     return None, "NO_CONFLUENCE"
-
 
 # =========================================================
 # SIGNAL SAVE
