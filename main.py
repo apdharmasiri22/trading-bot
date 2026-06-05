@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS signals (
 conn.commit()
 
 # =========================================================
-# ORIGINAL PREMIUM QUANTUM UI (CSS)
+# ORIGINAL PREMIUM QUANTUM UI (CSS WITH LIVE STATUS COLORS)
 # =========================================================
 st.markdown("""
 <style>
@@ -141,11 +141,10 @@ def detect_smc_features(df):
     return bos_bullish, bos_bearish, fvg_bullish, fvg_bearish, order_block_bullish, order_block_bearish
 
 # =========================================================
-# ULTRA STABLE LIVE APIS DATA NODES (BYPASSES BINANCE BLOCKS)
+# ULTRA STABLE LIVE APIS DATA NODES
 # =========================================================
 @st.cache_data(ttl=2)
 def get_market():
-    # Priority 1: CryptoCompare API (No restrictions in Sri Lanka, highly stable)
     try:
         url = "https://min-api.cryptocompare.com/data/top/mktcapfull?limit=30&tsym=USDT"
         res = requests.get(url, timeout=4)
@@ -163,11 +162,9 @@ def get_market():
                         "change": float(raw.get("CHANGEPCT24HOUR", 0)),
                         "volume": float(raw.get("VOLUME24HOURTO", 0))
                     })
-            if rows:
-                return pd.DataFrame(rows)
+            if rows: return pd.DataFrame(rows)
     except: pass
 
-    # Priority 2: Fallback to Binance Futures Endpoints if CryptoCompare fails
     endpoints = [
         "https://fapi.binance.com/fapi/v1/ticker/24hr",
         "https://api.binance.com/api/v3/ticker/24hr"
@@ -196,8 +193,6 @@ def get_market():
 @st.cache_data(ttl=2)
 def get_klines(symbol, interval="15m"):
     base_asset = symbol.replace("USDT", "")
-    
-    # Priority 1: CryptoCompare Historical Aggregator Node
     try:
         histo_type = "histohour" if "1h" in interval else "histominute"
         agg = 15 if "15m" in interval else 5 if "5m" in interval else 1
@@ -214,7 +209,6 @@ def get_klines(symbol, interval="15m"):
             return frame
     except: pass
             
-    # Priority 2: Fallback to Binance Nodes
     endpoints = [
         f"https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={interval}&limit=100",
         f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit=100"
@@ -328,7 +322,7 @@ with tab1:
     def run_5m_scanner(market_df):
         st.subheader("🔥 REAL-TIME 5m SMC SCANNER (Auto-Updates)")
         scan_long, scan_short = [], []
-        for coin in market_df["symbol"].tolist()[:20]: # Restricted to top 20 for extreme speed
+        for coin in market_df["symbol"].tolist()[:20]:
             try:
                 kline = get_klines(coin, "5m")
                 if kline.empty or len(kline) < 30: continue
@@ -441,17 +435,76 @@ with tab3:
     run_1h_scanner(df_market)
 
 # ---------------------------------------------------------
-# TAB 4: ALL SIGNALS HISTORY
+# TAB 4: CLEAN ALL SIGNALS HISTORY (PROFITS/LOSS MATRICES)
 # ---------------------------------------------------------
 with tab4:
     st.subheader("📜 QUANTUM CENTRAL SIGNAL DATABASE")
-    st.markdown("මෙතන ඔයාගේ සේව් වුණු සියලුම සිග්නල් සහ ඒවා ලයිව් මාකට් එකේ **TP/SL වැදුණද නැද්ද** කියන ලොග් එක බලාගන්න පුළුවන් මචං.")
     
-    all_signals = pd.read_sql("SELECT id, coin, signal, timeframe, entry, tp1, tp2, sl, status, created_at FROM signals ORDER BY id DESC", conn)
-    if not all_signals.empty:
-        st.dataframe(all_signals, use_container_width=True)
+    # 1. Fetch raw rows from Database for math analytics
+    raw_history = pd.read_sql("SELECT coin, signal, timeframe, entry, tp1, tp2, tp3, sl, status, created_at FROM signals", conn)
+    
+    if not raw_history.empty:
+        processed_rows = []
+        total_profits, total_losses, completed_trades = 0, 0, 0
+        
+        for _, row in raw_history.iterrows():
+            status = row['status']
+            entry = float(row['entry'])
+            direction = row['signal']
+            
+            # Default fallback percentage values
+            p_l_val = "0.00%"
+            
+            # Math engine to calculate exact structural percentage change
+            if "HIT" in status:
+                completed_trades += 1
+                if "TP" in status:
+                    total_profits += 1
+                    target_price = float(row['tp3']) if status == "TP3 HIT" else float(row['tp2']) if status == "TP2 HIT" else float(row['tp1'])
+                    change = ((target_price - entry) / entry) * 100 if direction == "LONG" else ((entry - target_price) / entry) * 100
+                    p_l_val = f"+{abs(change):.2f}%"
+                elif "SL" in status:
+                    total_losses += 1
+                    sl_price = float(row['sl'])
+                    change = ((sl_price - entry) / entry) * 100 if direction == "LONG" else ((entry - sl_price) / entry) * 100
+                    p_l_val = f"-{abs(change):.2f}%"
+            else:
+                p_l_val = "RUNNING ⏳"
+
+            processed_rows.append({
+                "COIN": row['coin'],
+                "DIRECTION": direction,
+                "TIMEFRAME": row['timeframe'],
+                "TRIGGER TIME": row['created_at'],
+                "STATUS": status,
+                "PROFIT / LOSS %": p_l_val
+            })
+            
+        # 2. Render Final Cumulative Database Analytics Header Metrics
+        final_accuracy = round((total_profits / completed_trades) * 100, 1) if completed_trades > 0 else 0.0
+        
+        m_col1, m_col2, m_col3 = st.columns(3)
+        m_col1.metric("🟢 CUMULATIVE PROFIT TRADES", total_profits)
+        m_col2.metric("🔴 CUMULATIVE LOSS TRADES", total_losses)
+        m_col3.metric("🎯 FINAL HISTORY ACCURACY", f"{final_accuracy}%")
+        
+        st.markdown("---")
+        
+        # 3. Apply Premium Custom CSS Color-Coding Framework to the Streamlit DataFrame Object
+        df_display = pd.DataFrame(processed_rows).sort_index(ascending=False)
+        
+        def highlight_status_cells(val):
+            if "TP" in str(val) or "+" in str(val): return 'color: #22c55e; font-weight: bold;' # Emerald Green
+            elif "SL" in str(val) or "-" in str(val): return 'color: #ef4444; font-weight: bold;' # Crimson Red
+            elif "RUNNING" in str(val): return 'color: #f59e0b; font-weight: bold;' # Amber Yellow
+            return ''
+            
+        st.dataframe(
+            df_display.style.map(highlight_status_cells, subset=['STATUS', 'PROFIT / LOSS %']),
+            use_container_width=True
+        )
     else:
-        st.info("No signals stored inside the database yet. Let the scanner run for a moment!")
+        st.info("No logs captured inside storage nodes yet. Terminal running background scans...")
 
 # =========================================================
 # COIN SPECIFIC INDEPENDENT INTERACTION PORTAL
