@@ -4,29 +4,32 @@ import pandas as pd
 
 def get_all_coins():
 
+    def get_all_coins():
+
     url = "https://api.binance.com/api/v3/ticker/24hr"
 
     try:
         response = requests.get(url, timeout=10)
 
+        print("STATUS:", response.status_code)
+
         data = response.json()
+
+        print("COINS:", len(data))
 
         coins = []
 
         for item in data:
-
-            symbol = item["symbol"]
-
-            if symbol.endswith("USDT"):
+            if item["symbol"].endswith("USDT"):
                 coins.append({
-                    "symbol": symbol,
+                    "symbol": item["symbol"],
                     "volume": float(item["quoteVolume"])
                 })
 
         return coins
 
     except Exception as e:
-        print(e)
+        print("ERROR:", e)
         return []
 
 
