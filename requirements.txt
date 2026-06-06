@@ -1,8 +1,5 @@
 streamlit
-pandas
-numpy
-requests
-plotly
-streamlit-autorefresh
 ccxt
 pandas
+pandas-ta
+python-dotenv
