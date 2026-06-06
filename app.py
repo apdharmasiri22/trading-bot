@@ -1,19 +1,17 @@
 import streamlit as st
 from modules.data_fetcher import get_ohlcv
+from modules.indicators import add_indicators # අලුතින් ඉම්පෝට් කළා
 
-st.title("Asaa Trading Dashboard - Part 2")
+st.title("Asaa Trading Dashboard")
 
-# කොයින් ලිස්ට් එක (ඔයාට ඕන කොයින් ටික මෙතන දාගන්න)
-coins = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT']
-selected_coin = st.selectbox("Select a Coin", coins)
+symbol = st.selectbox("Select Coin", ["BTC/USDT", "ETH/USDT"])
+df = get_ohlcv(symbol)
 
-if selected_coin:
-    # දත්ත ගන්නා කොටස
-    df = get_ohlcv(selected_coin, timeframe='1h', limit=50)
+if not df.empty:
+    # Indicators එකතු කරමු
+    df = add_indicators(df)
     
-    if not df.empty:
-        st.write(f"Displaying data for: {selected_coin}")
-        st.table(df.head()) # දත්ත ටික table එකක පේනවා
-        st.line_chart(df['close']) # නිකමට ප්‍රයිස් චාට් එක
-    else:
-        st.warning("Data fetch failed!")
+    st.write(f"Indicators added for {symbol}")
+    st.write(df.tail()) # දැන් බලන්න EMA, RSI, BB තීරු ඇවිල්ලා තියෙනවද කියලා
+else:
+    st.warning("Data not found.")
