@@ -18,7 +18,8 @@ st_autorefresh(interval=30000, key="refresh")
 # =========================
 # 🪙 LIVE COINS (BINANCE)
 # =========================
-coins = get_top_coins(20)
+coins = get_top_coins(100)
+st.write("DEBUG COIN COUNT:", len(coins))
 
 coin = st.selectbox("🔍 Select Coin (Live Binance)", coins)
 
