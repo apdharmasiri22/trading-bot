@@ -1,59 +1,62 @@
 import requests
+import pandas as pd
 
-BASE_URL = "https://api.binance.com/api/v3"
+BINANCE_URL = "https://api.binance.com/api/v3/ticker/24hr"
 
+# =========================
+# 🪙 GET ALL COINS
+# =========================
+def get_all_coins():
 
-def get_top_coins(limit=200):
     try:
-        r = requests.get(f"{BASE_URL}/exchangeInfo", timeout=10)
-        data = r.json()
+        data = requests.get(BINANCE_URL, timeout=5).json()
 
         coins = []
 
-        for s in data.get("symbols", []):
-            if isinstance(s, dict):
-                if s.get("status") == "TRADING" and s.get("symbol", "").endswith("USDT"):
-                    coins.append(s["symbol"])
+        for item in data:
+            symbol = item["symbol"]
 
-        return coins[:limit] if coins else ["BTCUSDT", "ETHUSDT"]
+            # only USDT pairs
+            if symbol.endswith("USDT"):
+                coins.append({
+                    "symbol": symbol,
+                    "priceChangePercent": float(item["priceChangePercent"]),
+                    "volume": float(item["quoteVolume"])
+                })
 
-    except:
-        return ["BTCUSDT", "ETHUSDT"]
-
-
-def get_price(symbol):
-    try:
-        r = requests.get(
-            f"{BASE_URL}/ticker/price",
-            params={"symbol": symbol},
-            timeout=10
-        )
-        return float(r.json()["price"])
-    except:
-        return None
-
-
-def get_candles(symbol, limit=50):
-    try:
-        r = requests.get(
-            f"{BASE_URL}/klines",
-            params={"symbol": symbol, "interval": "1m", "limit": limit},
-            timeout=10
-        )
-
-        data = r.json()
-
-        candles = []
-
-        for c in data:
-            candles.append({
-                "open": float(c[1]),
-                "high": float(c[2]),
-                "low": float(c[3]),
-                "close": float(c[4])
-            })
-
-        return candles
+        return coins
 
     except:
         return []
+
+
+# =========================
+# 🔥 TOP VOLUME COINS
+# =========================
+def get_top_coins(limit=20):
+
+    coins = get_all_coins()
+
+    df = pd.DataFrame(coins)
+
+    if df.empty:
+        return []
+
+    df = df.sort_values(by="volume", ascending=False)
+
+    return df.head(limit)["symbol"].tolist()
+
+
+# =========================
+# 💰 GET LIVE PRICE
+# =========================
+def get_price(symbol):
+
+    try:
+        url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
+        data = requests.get(url, timeout=5).json()
+
+        return float(data["price"])
+
+    except:
+        return None
