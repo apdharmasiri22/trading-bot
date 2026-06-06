@@ -2,56 +2,71 @@ import requests
 import pandas as pd
 
 
+BINANCE_URL = "https://api.binance.com/api/v3/ticker/24hr"
+
+
+# =========================
+# GET ALL BINANCE COINS
+# =========================
 def get_all_coins():
 
-    def get_all_coins():
-
-    url = "https://api.binance.com/api/v3/ticker/24hr"
-
     try:
-        response = requests.get(url, timeout=10)
-
-        print("STATUS:", response.status_code)
+        response = requests.get(
+            BINANCE_URL,
+            timeout=10
+        )
 
         data = response.json()
-
-        print("COINS:", len(data))
 
         coins = []
 
         for item in data:
-            if item["symbol"].endswith("USDT"):
+
+            symbol = item["symbol"]
+
+            if symbol.endswith("USDT"):
+
                 coins.append({
-                    "symbol": item["symbol"],
+                    "symbol": symbol,
                     "volume": float(item["quoteVolume"])
                 })
 
         return coins
 
+
     except Exception as e:
-        print("ERROR:", e)
+        print("Binance Error:", e)
         return []
 
 
 
-def get_top_coins(limit=20):
+# =========================
+# TOP VOLUME COINS
+# =========================
+def get_top_coins(limit=100):
 
     coins = get_all_coins()
 
-    if not coins:
+    if len(coins) == 0:
         return []
 
+
     df = pd.DataFrame(coins)
+
 
     df = df.sort_values(
         by="volume",
         ascending=False
     )
 
+
     return df.head(limit)["symbol"].tolist()
 
 
 
+# =========================
+# LIVE PRICE
+# =========================
 def get_price(symbol):
 
     try:
@@ -61,12 +76,17 @@ def get_price(symbol):
             f"?symbol={symbol}"
         )
 
+
         data = requests.get(
             url,
             timeout=10
         ).json()
 
+
         return float(data["price"])
 
-    except:
+
+    except Exception as e:
+
+        print("Price Error:", e)
         return None
