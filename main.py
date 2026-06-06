@@ -8,35 +8,49 @@ from streamlit_autorefresh import st_autorefresh
 
 from binance_feed import get_top_coins, get_price
 
-st.set_page_config(layout="wide")
 
+# =========================
+# 🏁 APP CONFIG
+# =========================
+st.set_page_config(layout="wide")
 st.title("📊 SMC Quantum Dashboard - Part 2")
 
-# 🔁 refresh safe
-st_autorefresh(interval=30000, key="refresh")
+
+# =========================
+# 🔁 AUTO REFRESH (STABLE)
+# =========================
+st_autorefresh(interval=60000, key="refresh")  # 60 sec (safer than 30s)
+
 
 # =========================
 # 🪙 LIVE COINS (BINANCE)
 # =========================
 coins = get_top_coins(100)
+
 st.write("DEBUG COIN COUNT:", len(coins))
+
+if not coins:
+    st.error("No coins loaded from Binance API")
+    st.stop()
 
 coin = st.selectbox("🔍 Select Coin (Live Binance)", coins)
 
 st.markdown(f"### Selected: {coin}")
+
 
 # =========================
 # 💰 LIVE PRICE
 # =========================
 price = get_price(coin)
 
-if price:
+if price is not None:
     st.success(f"💰 Live Price: {price}")
 else:
-    st.error("Price loading failed")
+    st.error("Price loading failed (API / Network / Symbol issue)")
+
 
 # =========================
-# 📊 PLACEHOLDER (Next Parts)
+# 🧠 PLACEHOLDERS
 # =========================
 st.subheader("🧠 SMC Engine")
 st.info("Coming in Part 3")
