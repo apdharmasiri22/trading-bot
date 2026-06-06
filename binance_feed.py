@@ -90,3 +90,25 @@ def get_price(symbol):
 
         print("Price Error:", e)
         return None
+
+def get_top_coins(limit=100):
+
+    coins = get_all_coins()
+
+    if not coins:
+        return [
+            "BTCUSDT",
+            "ETHUSDT",
+            "BNBUSDT",
+            "SOLUSDT",
+            "XRPUSDT"
+        ]
+
+    df = pd.DataFrame(coins)
+
+    df = df.sort_values(
+        by="volume",
+        ascending=False
+    )
+
+    return df.head(limit)["symbol"].tolist()
