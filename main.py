@@ -16,9 +16,6 @@ def market_structure(change):
     else:
         return "⚖️ Sideways"
 
-
-def apply_smc_god(df):
-
     df = df.copy()
 
     vol_max = df["Volume"].max() if df["Volume"].max() != 0 else 1
