@@ -75,6 +75,19 @@ filtered = filtered.sort_values("Volume", ascending=False)
 # ======================
 # 🧠 SMC ENGINE APPLY
 # ======================
+def market_structure(change):
+    if change > 7:
+        return "🚀 BOS"
+    elif change < -7:
+        return "🔻 CHoCH"
+    elif change > 2:
+        return "📈 Uptrend"
+    elif change < -2:
+        return "📉 Downtrend"
+    else:
+        return "⚖️ Sideways"
+
+
 def apply_smc_god(df):
 
     df = df.copy()
@@ -86,6 +99,8 @@ def apply_smc_god(df):
         df["Change %"].abs() * 8 +
         (df["Volume"] / vol_max) * 50
     ).clip(0, 100)
+
+    return df
 
     # STRUCTURE
     df["Structure"] = df["Change %"].apply(market_structure)
