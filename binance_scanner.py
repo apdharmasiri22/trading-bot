@@ -1,43 +1,39 @@
 import requests
 import pandas as pd
 
-URLS = [
-    "https://api1.binance.com/api/v3/ticker/24hr",
-    "https://fapi.binance.com/fapi/v1/ticker/24hr"
-]
+URL = "https://api.coingecko.com/api/v3/coins/markets"
 
 def get_market_data():
 
-    for url in URLS:
+    try:
+        params = {
+            "vs_currency": "usd",
+            "order": "volume_desc",
+            "per_page": 100,
+            "page": 1,
+            "sparkline": False
+        }
 
-        try:
-            r = requests.get(url, timeout=10)
+        r = requests.get(URL, params=params, timeout=10)
 
-            if r.status_code != 200:
-                continue
+        if r.status_code != 200:
+            return pd.DataFrame()
 
-            data = r.json()
+        data = r.json()
 
-            coins = []
+        coins = []
 
-            for c in data:
+        for c in data:
 
-                symbol = c.get("symbol", "")
+            coins.append({
+                "Symbol": c.get("symbol", "").upper() + "USDT",
+                "Price": c.get("current_price", 0),
+                "Change %": c.get("price_change_percentage_24h", 0),
+                "Volume": c.get("total_volume", 0)
+            })
 
-                if not symbol.endswith("USDT"):
-                    continue
+        return pd.DataFrame(coins)
 
-                coins.append({
-                    "Symbol": symbol,
-                    "Price": float(c.get("lastPrice", 0)),
-                    "Change %": float(c.get("priceChangePercent", 0)),
-                    "Volume": float(c.get("volume", 0))
-                })
-
-            if coins:
-                return pd.DataFrame(coins)
-
-        except:
-            continue
-
-    return pd.DataFrame()
+    except Exception as e:
+        print("ERROR:", e)
+        return pd.DataFrame()
