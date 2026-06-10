@@ -4,6 +4,53 @@ import time
 from scanner import get_market_data
 from smc_engine import apply_smc
 
+def market_structure(change):
+    if change > 7:
+        return "🚀 BOS"
+    elif change < -7:
+        return "🔻 CHoCH"
+    elif change > 2:
+        return "📈 Uptrend"
+    elif change < -2:
+        return "📉 Downtrend"
+    else:
+        return "⚖️ Sideways"
+
+
+def apply_smc_god(df):
+
+    df = df.copy()
+
+    vol_max = df["Volume"].max() if df["Volume"].max() != 0 else 1
+
+    df["SMC Score"] = (
+        df["Change %"].abs() * 8 +
+        (df["Volume"] / vol_max) * 50
+    ).clip(0, 100)
+
+    df["Structure"] = df["Change %"].apply(market_structure)
+
+    vol_med = df["Volume"].median()
+
+    df["Liquidity"] = df["Volume"].apply(
+        lambda v: "🔥 High" if v > vol_med * 2 else
+                  "⚡ Medium" if v > vol_med else "🧊 Low"
+    )
+
+    def signal(row):
+        if row["SMC Score"] > 80 and row["Change %"] > 3:
+            return "🟢 STRONG BUY"
+        elif row["SMC Score"] > 80 and row["Change %"] < -3:
+            return "🔴 STRONG SELL"
+        elif row["SMC Score"] > 60:
+            return "🟡 WATCH"
+        else:
+            return "⚪ NO TRADE"
+
+    df["Signal"] = df.apply(signal, axis=1)
+
+    return df
+
 # ======================
 # INITIAL VARIABLES
 # ======================
