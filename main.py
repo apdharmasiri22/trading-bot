@@ -70,6 +70,10 @@ filtered = filtered.sort_values("Volume", ascending=False)
 # 🧠 SMC ENGINE APPLY
 # ======================
 filtered = apply_smc_pro(filtered)
+snipers = filtered[
+    (filtered["SMC Score"] >= 70) &
+    (filtered["Volume"] > filtered["Volume"].median())
+]
 
 # ======================
 # TABLE OUTPUT
