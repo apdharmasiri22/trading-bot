@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 
 
-BINANCE_URL = "https://api.binance.com/api/v3/ticker/24hr"
+BINANCE_URL = "https://fapi.binance.com/fapi/v1/ticker/24hr"
 
 
 def get_market_data():
@@ -11,14 +11,15 @@ def get_market_data():
 
         response = requests.get(
             BINANCE_URL,
-            timeout=15
+            timeout=15,
+            headers={
+                "User-Agent": "Mozilla/5.0"
+            }
         )
-
-        print("STATUS:", response.status_code)
-        print("TEXT:", response.text[:200])
 
 
         if response.status_code != 200:
+            print("BINANCE ERROR:", response.text)
             return pd.DataFrame()
 
 
@@ -27,16 +28,20 @@ def get_market_data():
 
         coins = []
 
+
         for item in data:
 
-            if item["symbol"].endswith("USDT"):
+            symbol = item.get("symbol","")
+
+
+            if symbol.endswith("USDT"):
 
                 coins.append({
 
-                    "Symbol": item["symbol"],
-                    "Price": item["lastPrice"],
-                    "Change %": item["priceChangePercent"],
-                    "Volume": item["quoteVolume"]
+                    "Symbol": symbol,
+                    "Price": float(item["lastPrice"]),
+                    "Change %": float(item["priceChangePercent"]),
+                    "Volume": float(item["quoteVolume"])
 
                 })
 
@@ -46,7 +51,9 @@ def get_market_data():
         return df
 
 
+
     except Exception as e:
 
-        print("ERROR:", e)
+        print("ERROR:",e)
+
         return pd.DataFrame()
