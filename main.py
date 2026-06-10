@@ -4,6 +4,7 @@ import time
 from scanner import get_market_data
 from smc_engine import apply_smc
 
+
 def market_structure(change):
     if change > 7:
         return "🚀 BOS"
@@ -16,7 +17,8 @@ def market_structure(change):
     else:
         return "⚖️ Sideways"
 
-    def apply_smc_god(df):
+
+def apply_smc_god(df):
 
     df = df.copy()
 
