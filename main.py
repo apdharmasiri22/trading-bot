@@ -150,8 +150,6 @@ def apply_smc_god(df):
         (df["Volume"] / vol_max) * 50
     ).clip(0, 100)
 
-    return df
-
     # STRUCTURE
     df["Structure"] = df["Change %"].apply(market_structure)
 
@@ -177,7 +175,6 @@ def apply_smc_god(df):
     df["Signal"] = df.apply(signal, axis=1)
 
     return df
-
 # ======================
 # TABLE OUTPUT
 # ======================
