@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 import streamlit as st
 
-BINANCE_URL = "https://api.binance.com/api/v3/ticker/24hr"
+BINANCE_URL = "https://api1.binance.com/api/v3/ticker/24hr"
 
 def get_market_data():
 
