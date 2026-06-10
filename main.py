@@ -5,6 +5,12 @@ from scanner import get_market_data
 from smc_engine import apply_smc
 
 # ======================
+# INITIAL VARIABLES
+# ======================
+coin = None
+coin_data = None
+
+# ======================
 # PAGE CONFIG
 # ======================
 st.set_page_config(page_title="SMC Dashboard", layout="wide")
