@@ -68,7 +68,9 @@ with col3:
 filtered = df[
     (df["Volume"] >= min_volume) &
     (df["Change %"] >= change)
-]
+].copy()
+
+filtered = apply_smc_god(filtered)
 
 filtered = filtered.sort_values("Volume", ascending=False)
 
