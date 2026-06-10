@@ -74,6 +74,15 @@ snipers = filtered[
     (filtered["SMC Score"] >= 70) &
     (filtered["Volume"] > filtered["Volume"].median())
 ]
+st.subheader("🚀 SMC SNIPER COINS")
+
+if len(snipers) > 0:
+    st.dataframe(
+        snipers.head(10),
+        use_container_width=True
+    )
+else:
+    st.warning("No sniper setups right now")
 
 # ======================
 # TABLE OUTPUT
