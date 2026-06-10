@@ -78,7 +78,11 @@ st.dataframe(
     filtered.head(limit),
     use_container_width=True
 )
+st.subheader("🧠 SMC PRO Analysis")
 
+selected = filtered[filtered["Symbol"] == coin]
+
+st.write(selected)
 st.divider()
 
 # ======================
