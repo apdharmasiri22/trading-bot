@@ -1,13 +1,17 @@
 import streamlit as st
 import time
 from scanner import get_market_data
+from smc_engine import apply_smc
 
+# ======================
+# PAGE CONFIG
+# ======================
 st.set_page_config(page_title="SMC Dashboard", layout="wide")
 
 st.title("📊 SMC AI Trading Dashboard")
 
 # ======================
-# CACHE (slow API avoid)
+# CACHE SYSTEM
 # ======================
 if "df" not in st.session_state:
     st.session_state.df = None
@@ -34,11 +38,11 @@ df = load_data()
 # CHECK DATA
 # ======================
 if df.empty:
-    st.error("Data load වෙන්නේ නෑ (API issue)")
+    st.error("Binance/CoinGecko data loading failed")
     st.stop()
 
 # ======================
-# FILTERS
+# FILTER UI
 # ======================
 col1, col2, col3 = st.columns(3)
 
@@ -51,6 +55,9 @@ with col2:
 with col3:
     limit = st.slider("Show Coins", 5, 50, 20)
 
+# ======================
+# FILTER DATA
+# ======================
 filtered = df[
     (df["Volume"] >= min_volume) &
     (df["Change %"] >= change)
@@ -58,13 +65,43 @@ filtered = df[
 
 filtered = filtered.sort_values("Volume", ascending=False)
 
-st.dataframe(filtered.head(limit), use_container_width=True)
+# ======================
+# 🧠 SMC ENGINE APPLY
+# ======================
+filtered = apply_smc(filtered)
 
 # ======================
-# COIN SELECT
+# TABLE OUTPUT
+# ======================
+st.dataframe(
+    filtered.head(limit),
+    use_container_width=True
+)
+
+st.divider()
+
+# ======================
+# COIN SELECTOR
 # ======================
 st.subheader("🎯 Coin Select")
 
-coin = st.selectbox("Coin එක තෝරන්න", filtered["Symbol"].tolist())
+if len(filtered) > 0:
 
-st.success("Selected: " + coin)
+    coin = st.selectbox(
+        "Choose Coin",
+        filtered["Symbol"].tolist()
+    )
+
+    st.success(f"Selected: {coin}")
+
+    # ======================
+    # SMC DETAIL VIEW
+    # ======================
+    st.subheader("📊 SMC Signal View")
+
+    selected = filtered[filtered["Symbol"] == coin]
+
+    st.write(selected)
+
+else:
+    st.warning("No coins match filters")
