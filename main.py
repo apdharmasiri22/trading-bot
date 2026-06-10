@@ -78,17 +78,15 @@ st.dataframe(
     filtered.head(limit),
     use_container_width=True
 )
-st.subheader("🧠 SMC PRO Analysis")
 
-selected = filtered[filtered["Symbol"] == coin]
-
-st.write(selected)
 st.divider()
 
 # ======================
 # COIN SELECTOR
 # ======================
 st.subheader("🎯 Coin Select")
+
+coin = None
 
 if len(filtered) > 0:
 
@@ -99,9 +97,23 @@ if len(filtered) > 0:
 
     st.success(f"Selected: {coin}")
 
-    # ======================
-    # SMC DETAIL VIEW
-    # ======================
+else:
+    st.warning("No coins found")
+
+st.divider()
+
+# ======================
+# 🧠 SMC PRO ANALYSIS
+# ======================
+st.subheader("🧠 SMC PRO Analysis")
+
+if coin is not None:
+    selected = filtered[filtered["Symbol"] == coin]
+    st.write(selected)
+    
+# ======================
+# SMC DETAIL VIEW
+# ======================
     st.subheader("📊 SMC Signal View")
 
     selected = filtered[filtered["Symbol"] == coin]
