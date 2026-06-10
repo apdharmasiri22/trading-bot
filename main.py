@@ -111,7 +111,7 @@ if len(filtered) > 0:
 
     st.success(f"Selected: {coin}")
 
-    # 👉 pre-calculate coin data (IMPORTANT FIX)
+    # 👉 pre-calculate coin data
     coin_data = filtered[filtered["Symbol"] == coin]
 
 else:
