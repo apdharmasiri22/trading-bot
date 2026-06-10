@@ -25,8 +25,10 @@ def get_market_data():
 
         for c in data:
 
+            symbol = c.get("symbol", "").upper()
+
             coins.append({
-                "Symbol": c.get("symbol", "").upper() + "USDT",
+                "Symbol": symbol,   # 👈 FIXED (NO USDT force)
                 "Price": c.get("current_price", 0),
                 "Change %": c.get("price_change_percentage_24h", 0),
                 "Volume": c.get("total_volume", 0)
