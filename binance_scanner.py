@@ -1,15 +1,20 @@
 import requests
 import pandas as pd
+import streamlit as st
 
 BINANCE_URL = "https://api.binance.com/api/v3/ticker/24hr"
 
 def get_market_data():
 
     try:
-        r = requests.get(BINANCE_URL, timeout=10)
+        headers = {
+            "User-Agent": "Mozilla/5.0"
+        }
+
+        r = requests.get(BINANCE_URL, headers=headers, timeout=10)
 
         st.write("STATUS:", r.status_code)
-        st.write("TEXT:", r.text[:200])
+        st.write("RAW SAMPLE:", r.text[:150])
 
         if r.status_code != 200:
             return pd.DataFrame()
@@ -19,10 +24,8 @@ def get_market_data():
         coins = []
 
         for c in data:
-            if "symbol" not in c:
-                continue
 
-            if not c["symbol"].endswith("USDT"):
+            if not c.get("symbol", "").endswith("USDT"):
                 continue
 
             coins.append({
@@ -35,5 +38,5 @@ def get_market_data():
         return pd.DataFrame(coins)
 
     except Exception as e:
-        print("ERROR:", e)
+        st.error(f"ERROR: {e}")
         return pd.DataFrame()
