@@ -1,26 +1,45 @@
 import streamlit as st
 import time
-from binance_scanner import get_market_data
+from scanner import get_market_data
 
-st.set_page_config(page_title="SMC AI Dashboard", layout="wide")
+st.set_page_config(page_title="SMC Dashboard", layout="wide")
 
 st.title("📊 SMC AI Trading Dashboard")
 
-# =========================
-# LOAD DATA FIRST
-# =========================
-df = get_market_data()
+# ======================
+# CACHE (slow API avoid)
+# ======================
+if "df" not in st.session_state:
+    st.session_state.df = None
+    st.session_state.time = 0
 
-# =========================
-# CHECK AFTER LOADING
-# =========================
-if df is None or df.empty:
-    st.error("Binance data loading failed")
+CACHE_TIME = 20
+
+def load_data():
+
+    if st.session_state.df is not None and time.time() - st.session_state.time < CACHE_TIME:
+        return st.session_state.df
+
+    df = get_market_data()
+
+    st.session_state.df = df
+    st.session_state.time = time.time()
+
+    return df
+
+
+df = load_data()
+
+# ======================
+# CHECK DATA
+# ======================
+if df.empty:
+    st.error("Data load වෙන්නේ නෑ (API issue)")
     st.stop()
 
-# =========================
-# FILTER UI
-# =========================
+# ======================
+# FILTERS
+# ======================
 col1, col2, col3 = st.columns(3)
 
 with col1:
@@ -32,9 +51,6 @@ with col2:
 with col3:
     limit = st.slider("Show Coins", 5, 50, 20)
 
-# =========================
-# FILTER DATA
-# =========================
 filtered = df[
     (df["Volume"] >= min_volume) &
     (df["Change %"] >= change)
@@ -44,21 +60,11 @@ filtered = filtered.sort_values("Volume", ascending=False)
 
 st.dataframe(filtered.head(limit), use_container_width=True)
 
-st.divider()
+# ======================
+# COIN SELECT
+# ======================
+st.subheader("🎯 Coin Select")
 
-# =========================
-# SELECT COIN
-# =========================
-st.subheader("🎯 Select Coin")
+coin = st.selectbox("Coin එක තෝරන්න", filtered["Symbol"].tolist())
 
-if len(filtered) > 0:
-
-    coin = st.selectbox(
-        "Choose Coin",
-        filtered["Symbol"].tolist()
-    )
-
-    st.success(f"Selected: {coin}")
-
-else:
-    st.warning("No coins match filters")
+st.success("Selected: " + coin)
