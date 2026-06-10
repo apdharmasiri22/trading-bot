@@ -4,7 +4,9 @@ import time
 from scanner import get_market_data
 from smc_engine import apply_smc
 
-
+# ======================
+# SMC ENGINE
+# ======================
 def market_structure(change):
     if change > 7:
         return "🚀 BOS"
@@ -52,21 +54,18 @@ def apply_smc_god(df):
 
     return df
 
+
 # ======================
-# INITIAL VARIABLES
+# INIT
 # ======================
 coin = None
 coin_data = None
 
-# ======================
-# PAGE CONFIG
-# ======================
 st.set_page_config(page_title="SMC Dashboard", layout="wide")
-
 st.title("📊 SMC AI Trading Dashboard")
 
 # ======================
-# CACHE SYSTEM
+# CACHE
 # ======================
 if "df" not in st.session_state:
     st.session_state.df = None
@@ -75,7 +74,6 @@ if "df" not in st.session_state:
 CACHE_TIME = 20
 
 def load_data():
-
     if st.session_state.df is not None and time.time() - st.session_state.time < CACHE_TIME:
         return st.session_state.df
 
@@ -111,7 +109,7 @@ with col3:
     limit = st.slider("Show Coins", 5, 50, 20)
 
 # ======================
-# FILTER DATA
+# FILTER
 # ======================
 filtered = df[
     (df["Volume"] >= min_volume) &
@@ -119,64 +117,10 @@ filtered = df[
 ].copy()
 
 filtered = apply_smc_god(filtered)
-
 filtered = filtered.sort_values("Volume", ascending=False)
 
 # ======================
-# 🧠 SMC ENGINE APPLY
-# ======================
-def market_structure(change):
-    if change > 7:
-        return "🚀 BOS"
-    elif change < -7:
-        return "🔻 CHoCH"
-    elif change > 2:
-        return "📈 Uptrend"
-    elif change < -2:
-        return "📉 Downtrend"
-    else:
-        return "⚖️ Sideways"
-
-
-def apply_smc_god(df):
-
-    df = df.copy()
-
-    vol_max = df["Volume"].max() if df["Volume"].max() != 0 else 1
-
-    # SCORE
-    df["SMC Score"] = (
-        df["Change %"].abs() * 8 +
-        (df["Volume"] / vol_max) * 50
-    ).clip(0, 100)
-
-    # STRUCTURE
-    df["Structure"] = df["Change %"].apply(market_structure)
-
-    # LIQUIDITY
-    vol_med = df["Volume"].median()
-
-    df["Liquidity"] = df["Volume"].apply(
-        lambda v: "🔥 High" if v > vol_med * 2 else
-                  "⚡ Medium" if v > vol_med else "🧊 Low"
-    )
-
-    # SIGNAL
-    def signal(row):
-        if row["SMC Score"] > 80 and row["Change %"] > 3:
-            return "🟢 STRONG BUY"
-        elif row["SMC Score"] > 80 and row["Change %"] < -3:
-            return "🔴 STRONG SELL"
-        elif row["SMC Score"] > 60:
-            return "🟡 WATCH"
-        else:
-            return "⚪ NO TRADE"
-
-    df["Signal"] = df.apply(signal, axis=1)
-
-    return df
-# ======================
-# TABLE OUTPUT
+# TABLE
 # ======================
 st.dataframe(
     filtered.head(limit),
@@ -186,36 +130,28 @@ st.dataframe(
 st.divider()
 
 # ======================
-# COIN SELECTOR
+# SELECT COIN
 # ======================
 st.subheader("🎯 Coin Select")
 
-coin = None
-
 if len(filtered) > 0:
-
     coin = st.selectbox(
         "Choose Coin",
         filtered["Symbol"].tolist()
     )
-
     st.success(f"Selected: {coin}")
-
 else:
     st.warning("No coins found")
 
 # ======================
-# 🧠 SMART COIN ANALYSIS
+# GOD MODE ANALYSIS
 # ======================
-
 st.subheader("🧠 GOD MODE ANALYSIS")
 
-if coin is not None:
-
+if coin:
     coin_data = filtered[filtered["Symbol"] == coin].reset_index(drop=True)
 
     if not coin_data.empty:
-
         col1, col2, col3 = st.columns(3)
 
         with col1:
@@ -228,30 +164,16 @@ if coin is not None:
             st.metric("Volume", coin_data.iloc[0]["Volume"])
 
         st.write(coin_data)
-
     else:
         st.warning("No data for selected coin")
-
 else:
-    st.info("Select a coin first to view GOD MODE analysis")
+    st.info("Select a coin first")
 
 # ======================
-# 🧠 SMC PRO ANALYSIS
+# PRO VIEW
 # ======================
 st.subheader("🧠 SMC PRO Analysis")
 
-if coin is not None:
+if coin:
     selected = filtered[filtered["Symbol"] == coin]
     st.write(selected)
-    
-# ======================
-# SMC DETAIL VIEW
-# ======================
-    st.subheader("📊 SMC Signal View")
-
-    selected = filtered[filtered["Symbol"] == coin]
-
-    st.write(selected)
-
-else:
-    st.warning("No coins match filters")
