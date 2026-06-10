@@ -1,3 +1,16 @@
+import requests
+import streamlit as st
+
+st.write("Testing Binance...")
+
+r = requests.get(
+    "https://fapi.binance.com/fapi/v1/ticker/24hr",
+    timeout=10
+)
+
+st.write(r.status_code)
+st.write(r.text[:500])
+
 import streamlit as st
 
 from binance_scanner import get_market_data
