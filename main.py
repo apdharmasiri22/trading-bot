@@ -54,6 +54,34 @@ def apply_smc_god(df):
 
     return df
 
+# ======================
+# 🚀 SNIPER + SIGNAL FILTER
+# ======================
+
+# 1. FILTER DATA FIRST
+filtered = df[
+    (df["Volume"] >= min_volume) &
+    (df["Change %"] >= change)
+].copy()
+
+# 2. APPLY SMC
+filtered = apply_smc_god(filtered)
+
+# 3. SORT
+filtered = filtered.sort_values("Volume", ascending=False)
+
+# 4. SNIPER + SIGNALS
+vol_med = filtered["Volume"].median()
+
+snipers = filtered[
+    (filtered["SMC Score"] >= 80) &
+    (filtered["Volume"] > vol_med)
+]
+
+buys = filtered[filtered["Signal"] == "🟢 STRONG BUY"]
+sells = filtered[filtered["Signal"] == "🔴 STRONG SELL"]
+watch = filtered[filtered["Signal"] == "🟡 WATCH"]
+
 
 # ======================
 # INIT
