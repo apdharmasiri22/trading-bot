@@ -2,7 +2,19 @@ import requests
 import pandas as pd
 import streamlit as st
 
-BINANCE_URL = "https://api1.binance.com/api/v3/ticker/24hr"
+import requests
+
+proxies = {
+    "http": "",
+    "https": ""
+}
+
+r = requests.get(
+    BINANCE_URL,
+    timeout=10,
+    headers={"User-Agent": "Mozilla/5.0"},
+    proxies=proxies
+)
 
 def get_market_data():
 
