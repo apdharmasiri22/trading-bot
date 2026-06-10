@@ -91,6 +91,7 @@ st.divider()
 st.subheader("🎯 Coin Select")
 
 coin = None
+coin_data = None
 
 if len(filtered) > 0:
 
@@ -101,10 +102,36 @@ if len(filtered) > 0:
 
     st.success(f"Selected: {coin}")
 
+    # 👉 pre-calculate coin data (IMPORTANT FIX)
+    coin_data = filtered[filtered["Symbol"] == coin]
+
 else:
     st.warning("No coins found")
 
 st.divider()
+
+# ======================
+# 🧠 SMART COIN ANALYSIS
+# ======================
+st.subheader("🧠 Smart Coin Analysis")
+
+if coin_data is not None and not coin_data.empty:
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("SMC Score", coin_data["SMC Score"].values[0])
+
+    with col2:
+        st.metric("Change %", coin_data["Change %"].values[0])
+
+    with col3:
+        st.metric("Volume", coin_data["Volume"].values[0])
+
+    st.write(coin_data)
+
+else:
+    st.info("Select a coin to view analysis")
 
 # ======================
 # 🧠 SMC PRO ANALYSIS
