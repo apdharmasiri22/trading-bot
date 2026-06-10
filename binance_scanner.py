@@ -8,8 +8,8 @@ def get_market_data():
     try:
         r = requests.get(BINANCE_URL, timeout=10)
 
-        print("STATUS:", r.status_code)
-        print("TEXT:", r.text[:200])
+        st.write("STATUS:", r.status_code)
+        st.write("TEXT:", r.text[:200])
 
         if r.status_code != 200:
             return pd.DataFrame()
