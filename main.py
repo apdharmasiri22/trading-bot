@@ -1,3 +1,7 @@
+st.dataframe(
+    filtered.head(limit),
+    use_container_width=True
+)
 from smc_pro import apply_smc_pro
 import streamlit as st
 import time
