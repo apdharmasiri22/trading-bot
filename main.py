@@ -69,20 +69,43 @@ filtered = filtered.sort_values("Volume", ascending=False)
 # ======================
 # 🧠 SMC ENGINE APPLY
 # ======================
-filtered = apply_smc_pro(filtered)
-snipers = filtered[
-    (filtered["SMC Score"] >= 70) &
-    (filtered["Volume"] > filtered["Volume"].median())
-]
-st.subheader("🚀 SMC SNIPER COINS")
+def apply_smc_god(df):
 
-if len(snipers) > 0:
-    st.dataframe(
-        snipers.head(10),
-        use_container_width=True
+    df = df.copy()
+
+    vol_max = df["Volume"].max() if df["Volume"].max() != 0 else 1
+
+    # SCORE
+    df["SMC Score"] = (
+        df["Change %"].abs() * 8 +
+        (df["Volume"] / vol_max) * 50
+    ).clip(0, 100)
+
+    # STRUCTURE
+    df["Structure"] = df["Change %"].apply(market_structure)
+
+    # LIQUIDITY
+    vol_med = df["Volume"].median()
+
+    df["Liquidity"] = df["Volume"].apply(
+        lambda v: "🔥 High" if v > vol_med * 2 else
+                  "⚡ Medium" if v > vol_med else "🧊 Low"
     )
-else:
-    st.warning("No sniper setups right now")
+
+    # SIGNAL
+    def signal(row):
+        if row["SMC Score"] > 80 and row["Change %"] > 3:
+            return "🟢 STRONG BUY"
+        elif row["SMC Score"] > 80 and row["Change %"] < -3:
+            return "🔴 STRONG SELL"
+        elif row["SMC Score"] > 60:
+            return "🟡 WATCH"
+        else:
+            return "⚪ NO TRADE"
+
+    df["Signal"] = df.apply(signal, axis=1)
+
+    return df
 
 # ======================
 # TABLE OUTPUT
