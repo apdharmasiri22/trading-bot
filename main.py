@@ -162,25 +162,33 @@ else:
 # ======================
 # 🧠 SMART COIN ANALYSIS
 # ======================
-st.subheader("🧠 Smart Coin Analysis")
 
-if coin_data is not None and not coin_data.empty:
+st.subheader("🧠 GOD MODE ANALYSIS")
 
-    col1, col2, col3 = st.columns(3)
+if coin is not None:
 
-    with col1:
-        st.metric("SMC Score", coin_data["SMC Score"].values[0])
+    coin_data = filtered[filtered["Symbol"] == coin].reset_index(drop=True)
 
-    with col2:
-        st.metric("Change %", coin_data["Change %"].values[0])
+    if not coin_data.empty:
 
-    with col3:
-        st.metric("Volume", coin_data["Volume"].values[0])
+        col1, col2, col3 = st.columns(3)
 
-    st.write(coin_data)
+        with col1:
+            st.metric("SMC Score", coin_data.iloc[0]["SMC Score"])
+
+        with col2:
+            st.metric("Change %", coin_data.iloc[0]["Change %"])
+
+        with col3:
+            st.metric("Volume", coin_data.iloc[0]["Volume"])
+
+        st.write(coin_data)
+
+    else:
+        st.warning("No data for selected coin")
 
 else:
-    st.info("Select a coin to view analysis")
+    st.info("Select a coin first to view GOD MODE analysis")
 
 # ======================
 # 🧠 SMC PRO ANALYSIS
