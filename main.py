@@ -69,7 +69,7 @@ filtered = filtered.sort_values("Volume", ascending=False)
 # ======================
 # 🧠 SMC ENGINE APPLY
 # ======================
-filtered = apply_smc(filtered)
+filtered = apply_smc_pro(filtered)
 
 # ======================
 # TABLE OUTPUT
