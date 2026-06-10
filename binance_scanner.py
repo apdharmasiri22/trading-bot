@@ -8,47 +8,45 @@ BINANCE_URL = "https://api.binance.com/api/v3/ticker/24hr"
 def get_market_data():
 
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0"
-        }
 
         response = requests.get(
             BINANCE_URL,
-            headers=headers,
             timeout=15
         )
 
-        print(response.status_code)
+        print("STATUS:", response.status_code)
+        print("TEXT:", response.text[:200])
 
-        data = response.json()
 
         if response.status_code != 200:
-            print(data)
             return pd.DataFrame()
+
+
+        data = response.json()
 
 
         coins = []
 
         for item in data:
 
-            symbol = item.get("symbol","")
-
-            if symbol.endswith("USDT"):
+            if item["symbol"].endswith("USDT"):
 
                 coins.append({
 
-                    "Symbol": symbol,
-                    "Price": float(item["lastPrice"]),
-                    "Change %": float(item["priceChangePercent"]),
-                    "Volume": float(item["quoteVolume"])
+                    "Symbol": item["symbol"],
+                    "Price": item["lastPrice"],
+                    "Change %": item["priceChangePercent"],
+                    "Volume": item["quoteVolume"]
 
                 })
 
 
-        return pd.DataFrame(coins)
+        df = pd.DataFrame(coins)
+
+        return df
 
 
     except Exception as e:
 
-        print("ERROR:",e)
+        print("ERROR:", e)
         return pd.DataFrame()
