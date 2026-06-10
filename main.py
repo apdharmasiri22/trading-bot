@@ -1,54 +1,25 @@
-if df is None or df.empty:
-    st.error("Binance API not reachable (try again in few seconds)")
-    st.stop()
-    
 import streamlit as st
 import time
 from binance_scanner import get_market_data
 
-# =========================
-# ⚙️ CONFIG
-# =========================
 st.set_page_config(page_title="SMC AI Dashboard", layout="wide")
 
 st.title("📊 SMC AI Trading Dashboard")
 
 # =========================
-# 💾 CACHE (ANTI-SPAM)
+# LOAD DATA FIRST
 # =========================
-if "df_cache" not in st.session_state:
-    st.session_state.df_cache = None
-    st.session_state.last_fetch = 0
-
-CACHE_TIME = 15  # seconds
-
-def load_data():
-
-    if (
-        st.session_state.df_cache is not None
-        and time.time() - st.session_state.last_fetch < CACHE_TIME
-    ):
-        return st.session_state.df_cache
-
-    df = get_market_data()
-
-    st.session_state.df_cache = df
-    st.session_state.last_fetch = time.time()
-
-    return df
-
-
-df = load_data()
+df = get_market_data()
 
 # =========================
-# 🚨 CHECK DATA
+# CHECK AFTER LOADING
 # =========================
-if df.empty:
+if df is None or df.empty:
     st.error("Binance data loading failed")
     st.stop()
 
 # =========================
-# FILTERS
+# FILTER UI
 # =========================
 col1, col2, col3 = st.columns(3)
 
