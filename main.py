@@ -120,27 +120,20 @@ st.divider()
 # ======================
 # COIN SELECTOR
 # ======================
-st.subheader("🎯 Coin Select")
+st.subheader("🧠 GOD MODE ANALYSIS")
 
-coin = None
-coin_data = None
+if coin is not None:
 
-if len(filtered) > 0:
+    coin_data = filtered[filtered["Symbol"] == coin].reset_index(drop=True)
 
-    coin = st.selectbox(
-        "Choose Coin",
-        filtered["Symbol"].tolist()
-    )
+    if coin_data.empty:
+        st.warning("No data for selected coin")
+    else:
+        st.metric("SMC Score", coin_data.iloc[0]["SMC Score"])
+        st.metric("Change %", coin_data.iloc[0]["Change %"])
+        st.metric("Volume", coin_data.iloc[0]["Volume"])
 
-    st.success(f"Selected: {coin}")
-
-    # 👉 pre-calculate coin data
-    coin_data = filtered[filtered["Symbol"] == coin]
-
-else:
-    st.warning("No coins found")
-
-st.divider()
+        st.write(coin_data)
 
 # ======================
 # 🧠 SMART COIN ANALYSIS
