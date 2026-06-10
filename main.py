@@ -1,3 +1,7 @@
+if df is None or df.empty:
+    st.error("Binance API not reachable (try again in few seconds)")
+    st.stop()
+    
 import streamlit as st
 import time
 from binance_scanner import get_market_data
