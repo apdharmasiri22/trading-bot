@@ -1,3 +1,4 @@
+from smc_pro import apply_smc_pro
 import streamlit as st
 import time
 from scanner import get_market_data
