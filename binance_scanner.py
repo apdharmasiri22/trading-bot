@@ -2,58 +2,43 @@ import requests
 import pandas as pd
 
 
-BINANCE_URL = "https://fapi.binance.com/fapi/v1/ticker/24hr"
+URL = "https://api.coingecko.com/api/v3/coins/markets"
 
 
 def get_market_data():
 
-    try:
-
-        response = requests.get(
-            BINANCE_URL,
-            timeout=15,
-            headers={
-                "User-Agent": "Mozilla/5.0"
-            }
-        )
+    params = {
+        "vs_currency":"usd",
+        "order":"volume_desc",
+        "per_page":100,
+        "page":1,
+        "sparkline":"false"
+    }
 
 
-        if response.status_code != 200:
-            print("BINANCE ERROR:", response.text)
-            return pd.DataFrame()
+    r = requests.get(
+        URL,
+        params=params,
+        timeout=15
+    )
 
 
-        data = response.json()
+    data = r.json()
 
 
-        coins = []
+    coins=[]
 
 
-        for item in data:
+    for c in data:
 
-            symbol = item.get("symbol","")
+        coins.append({
 
+            "Symbol": c["symbol"].upper()+"USDT",
+            "Price": c["current_price"],
+            "Change %": c["price_change_percentage_24h"],
+            "Volume": c["total_volume"]
 
-            if symbol.endswith("USDT"):
-
-                coins.append({
-
-                    "Symbol": symbol,
-                    "Price": float(item["lastPrice"]),
-                    "Change %": float(item["priceChangePercent"]),
-                    "Volume": float(item["quoteVolume"])
-
-                })
+        })
 
 
-        df = pd.DataFrame(coins)
-
-        return df
-
-
-
-    except Exception as e:
-
-        print("ERROR:",e)
-
-        return pd.DataFrame()
+    return pd.DataFrame(coins)
