@@ -1,5 +1,9 @@
+import streamlit as st
+from scanner import get_market_data
+
+df = get_market_data()
+
 st.write(df.head())
-st.write(df.columns)
 from smc_pro import apply_smc_pro
 import streamlit as st
 import time
