@@ -1,13 +1,18 @@
 import requests
 import pandas as pd
 
-BINANCE_URL = "https://fapi.binance.com/fapi/v1/ticker/24hr"
+BINANCE_URL = "https://api.binance.com/api/v3/ticker/24hr"
 
 
 def get_market_data():
 
     try:
         r = requests.get(BINANCE_URL, timeout=10)
+
+        if r.status_code != 200:
+            print("ERROR STATUS:", r.status_code)
+            return pd.DataFrame()
+
         data = r.json()
 
         coins = []
@@ -15,6 +20,10 @@ def get_market_data():
         for c in data:
 
             if "symbol" not in c:
+                continue
+
+            # skip non USDT pairs (optional but cleaner)
+            if not c["symbol"].endswith("USDT"):
                 continue
 
             coins.append({
