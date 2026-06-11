@@ -17,16 +17,17 @@ def get_market_data():
 
             r = requests.get(url, timeout=10)
 
-            # ❌ check HTTP
-            if r.status_code != 200:
-                print("HTTP FAIL:", symbol, r.text)
-                continue
+            print(symbol, r.status_code, r.text[:50])  # DEBUG 🔥
 
             data = r.json()
 
-            # ❌ check format
+            # Binance error check
+            if isinstance(data, dict) and "code" in data:
+                print("BINANCE ERROR:", symbol, data)
+                continue
+
             if not isinstance(data, list) or len(data) == 0:
-                print("INVALID:", symbol, data)
+                print("INVALID DATA:", symbol, data)
                 continue
 
             c = data[0]
