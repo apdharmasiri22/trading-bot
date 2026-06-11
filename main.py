@@ -2,7 +2,12 @@ import streamlit as st
 import time
 import pandas as pd
 
-from scanner import get_top_coins, get_market_data
+try:
+    from scanner import get_top_coins, get_market_data
+except Exception as e:
+    import sys
+    sys.path.append(".")
+    from scanner import get_top_coins, get_market_data
 from smc_engine import apply_smc
 from smc_pro import apply_smc_pro
 
