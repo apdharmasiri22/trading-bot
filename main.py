@@ -2,99 +2,39 @@ import streamlit as st
 import time
 import pandas as pd
 
-from scanner import get_market_data
+from scanner import get_top_coins, get_market_data
 from smc_engine import apply_smc
 from smc_pro import apply_smc_pro
+
+st.set_page_config(page_title="SMC Dashboard", layout="wide")
+st.title("📊 SMC PRO TRADING DASHBOARD")
 
 CACHE_TIME = 20
 
 # ======================
-# SMC ENGINE
+# SAFE CACHE INIT
 # ======================
-def market_structure(change):
-    if change > 7:
-        return "🚀 BOS"
-    elif change < -7:
-        return "🔻 CHoCH"
-    elif change > 2:
-        return "📈 Uptrend"
-    elif change < -2:
-        return "📉 Downtrend"
-    else:
-        return "⚖️ Sideways"
-
-
-def apply_smc_god(df):
-
-    df = df.copy()
-
-    vol_max = df["Volume"].max() if df["Volume"].max() != 0 else 1
-
-    df["SMC Score"] = (
-        df["Change %"].abs() * 8 +
-        (df["Volume"] / vol_max) * 50
-    ).clip(0, 100)
-
-    df["Structure"] = df["Change %"].apply(market_structure)
-
-    vol_med = df["Volume"].median()
-
-    df["Liquidity"] = df["Volume"].apply(
-        lambda v: "🔥 High" if v > vol_med * 2 else
-                  "⚡ Medium" if v > vol_med else "🧊 Low"
-    )
-
-    def signal(row):
-        if row["SMC Score"] > 80 and row["Change %"] > 3:
-            return "🟢 STRONG BUY"
-        elif row["SMC Score"] > 80 and row["Change %"] < -3:
-            return "🔴 STRONG SELL"
-        elif row["SMC Score"] > 60:
-            return "🟡 WATCH"
-        else:
-            return "⚪ NO TRADE"
-
-    df["Signal"] = df.apply(signal, axis=1)
-
-    return df
+if "df" not in st.session_state:
+    st.session_state.df = None
+    st.session_state.time = 0
 
 
 # ======================
-# INIT
+# LOAD DATA (BINANCE ONLY)
 # ======================
-coin = None
-coin_data = None
+def load_data(symbol):
 
-st.set_page_config(page_title="SMC Dashboard", layout="wide")
-st.title("📊 SMC AI Trading Dashboard")
-
-def load_data():
-
-    # ======================
-    # cache hit
-    # ======================
     if (
         st.session_state.df is not None
         and time.time() - st.session_state.time < CACHE_TIME
     ):
         return st.session_state.df
 
-    # ======================
-    # fetch data
-    # ======================
-    df = get_market_data()
+    df = get_market_data(symbol)
 
-    # ======================
-    # validate
-    # ======================
     if df is None or df.empty:
-        st.warning("⚠️ No data received from API")
-        print("DATA EMPTY - CHECK API / NETWORK")
         return pd.DataFrame()
 
-    # ======================
-    # cache save
-    # ======================
     st.session_state.df = df
     st.session_state.time = time.time()
 
@@ -102,20 +42,21 @@ def load_data():
 
 
 # ======================
+# COIN LIST
+# ======================
+coins = get_top_coins()
+coin = st.selectbox("Select Coin", coins)
+
+# ======================
 # LOAD DATA
 # ======================
-df = load_data()
+df = load_data(coin)
 
-st.write("DEBUG ROWS:", len(df))  # 🔥 TEST
+st.write("DEBUG ROWS:", len(df))
 
-
-# ======================
-# VALIDATION (ONLY ONCE)
-# ======================
-if df is None or df.empty:
-    st.error("Binance/CoinGecko data loading failed")
+if df.empty:
+    st.error("No Binance data")
     st.stop()
-
 
 # ======================
 # FILTER UI
@@ -123,96 +64,44 @@ if df is None or df.empty:
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    min_volume = st.number_input("Minimum Volume", value=1000000)
+    min_volume = st.number_input("Minimum Volume", value=0.0)
 
 with col2:
-    change = st.number_input("Min Change %", value=0.0)
+    change = st.number_input("Min Change %", value=-100.0)
 
 with col3:
-    limit = st.slider("Show Coins", 5, 50, 20)
+    limit = st.slider("Show Rows", 5, 50, 20)
 
 
 # ======================
-# FILTER
+# FILTER (SAFE)
 # ======================
-filtered = df[
-    (df["Volume"] >= min_volume) &
-    (df["Change %"] >= change)
-].copy()
+filtered = df.copy()
 
 
 # ======================
-# REAL SMC ENGINE
+# APPLY SMC ENGINE (ONLY ONCE)
 # ======================
 filtered = apply_smc(filtered)
 
-
 # ======================
-# PRO ANALYSIS
+# APPLY PRO SIGNALS
 # ======================
 filtered = apply_smc_pro(filtered)
 
-
-filtered = filtered.sort_values(
-    "Volume",
-    ascending=False
-)
+filtered = filtered.sort_values("Volume", ascending=False)
 
 # ======================
 # TABLE
 # ======================
-st.dataframe(
-    filtered.head(limit),
-    use_container_width=True
-)
+st.dataframe(filtered.head(limit), use_container_width=True)
 
 st.divider()
 
 # ======================
-# SELECT COIN
+# ANALYSIS
 # ======================
-st.subheader("🎯 Coin Select")
+st.subheader("🧠 Latest Signal")
 
-if len(filtered) > 0:
-    coin = st.selectbox(
-        "Choose Coin",
-        filtered["Symbol"].tolist()
-    )
-    st.success(f"Selected: {coin}")
-else:
-    st.warning("No coins found")
-
-# ======================
-# GOD MODE ANALYSIS
-# ======================
-st.subheader("🧠 GOD MODE ANALYSIS")
-
-if coin:
-    coin_data = filtered[filtered["Symbol"] == coin].reset_index(drop=True)
-
-    if not coin_data.empty:
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            st.metric("SMC Score", coin_data.iloc[0]["SMC Score"])
-
-        with col2:
-            st.metric("Change %", coin_data.iloc[0]["Change %"])
-
-        with col3:
-            st.metric("Volume", coin_data.iloc[0]["Volume"])
-
-        st.write(coin_data)
-    else:
-        st.warning("No data for selected coin")
-else:
-    st.info("Select a coin first")
-
-# ======================
-# PRO VIEW
-# ======================
-st.subheader("🧠 SMC PRO Analysis")
-
-if coin:
-    selected = filtered[filtered["Symbol"] == coin]
-    st.write(selected)
+if not filtered.empty:
+    st.write(filtered.tail(1))
