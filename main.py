@@ -67,25 +67,22 @@ st.title("📊 SMC AI Trading Dashboard")
 # ======================
 # CACHE
 # ======================
+
 if "df" not in st.session_state:
     st.session_state.df = None
     st.session_state.time = 0
 
 CACHE_TIME = 20
 
+
 def load_data():
-    if st.session_state.df is not None and time.time() - st.session_state.time < CACHE_TIME:
+
+    # ✅ cache hit
+    if (
+        st.session_state.df is not None
+        and time.time() - st.session_state.time < CACHE_TIME
+    ):
         return st.session_state.df
-
-    df = get_market_data()
-
-    st.session_state.df = df
-    st.session_state.time = time.time()
-
-    return df
-
-
-df = load_data()
 
 # ======================
 # CHECK DATA
