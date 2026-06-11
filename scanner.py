@@ -1,40 +1,58 @@
 import requests
 import pandas as pd
 
+# =========================
+# TOP COINS (CoinGecko)
+# =========================
 def get_top_coins():
 
-    url = "https://api.coingecko.com/api/v3/coins/markets"
+    try:
+        url = "https://api.coingecko.com/api/v3/coins/markets"
 
-    params = {
-        "vs_currency": "usd",
-        "order": "volume_desc",
-        "per_page": 20,
-        "page": 1,
-        "sparkline": False
-    }
+        params = {
+            "vs_currency": "usd",
+            "order": "volume_desc",
+            "per_page": 20,
+            "page": 1,
+            "sparkline": False
+        }
 
-    r = requests.get(url, params=params, timeout=10)
+        r = requests.get(url, params=params, timeout=10)
 
-    if r.status_code != 200:
-        return ["BTCUSDT"]
+        if r.status_code != 200:
+            return ["BTCUSDT"]
 
-    data = r.json()
+        data = r.json()
 
-    coins = []
+        coins = []
 
-    for c in data:
-        symbol = c.get("symbol", "").upper()
+        for c in data:
+            symbol = c.get("symbol", "").upper()
 
-        if symbol and symbol not in ["USDT", "USD"]:
+            # ❌ skip invalid base coins
+            if symbol in ["USDT", "USD", "BUSD", "USDC"]:
+                continue
+
             coins.append(symbol + "USDT")
 
-    return coins
+        # safety fallback
+        if not coins:
+            coins = ["BTCUSDT"]
+
+        return coins
+
+    except Exception as e:
+        print("TOP COINS ERROR:", e)
+        return ["BTCUSDT"]
 
 
+# =========================
+# BINANCE MARKET DATA (KLINES)
+# =========================
 def get_market_data(symbol="BTCUSDT", interval="1h", limit=200):
 
     try:
-        symbol = symbol.strip().upper()
+        symbol = str(symbol).strip().upper()
 
         url = "https://api.binance.com/api/v3/klines"
 
@@ -46,9 +64,15 @@ def get_market_data(symbol="BTCUSDT", interval="1h", limit=200):
 
         r = requests.get(url, params=params, timeout=10)
 
+        # 🔥 DEBUG (IMPORTANT)
+        print("STATUS:", r.status_code)
+        print("RESPONSE:", r.text[:200])
+
         data = r.json()
 
+        # Binance error handling
         if isinstance(data, dict):
+            print("BINANCE ERROR:", data)
             return pd.DataFrame()
 
         df = pd.DataFrame(data, columns=[
@@ -56,7 +80,10 @@ def get_market_data(symbol="BTCUSDT", interval="1h", limit=200):
             "c","q","n","t1","t2","t3"
         ])
 
-        return df[["Open","High","Low","Close","Volume"]].astype(float)
+        df = df[["Open","High","Low","Close","Volume"]].astype(float)
 
-    except:
+        return df
+
+    except Exception as e:
+        print("GET MARKET DATA ERROR:", e)
         return pd.DataFrame()
