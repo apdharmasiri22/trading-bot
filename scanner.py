@@ -1,45 +1,39 @@
 import requests
 import pandas as pd
 
-URL = "https://api.coingecko.com/api/v3/coins/markets"
+KLINE_URL = "https://api.binance.com/api/v3/klines"
 
 
 def get_market_data():
 
-    try:
+    symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"]
 
-        params = {
-            "vs_currency": "usd",
-            "order": "volume_desc",
-            "per_page": 20,
-            "page": 1,
-            "sparkline": False
-        }
+    rows = []
 
-        r = requests.get(URL, params=params, timeout=10)
+    for symbol in symbols:
 
-        print("STATUS:", r.status_code)
+        try:
+            url = f"{KLINE_URL}?symbol={symbol}&interval=1h&limit=1"
 
-        if r.status_code != 200:
-            return pd.DataFrame()
+            r = requests.get(url, timeout=10)
+            data = r.json()
 
-        data = r.json()
+            if not isinstance(data, list):
+                continue
 
-        rows = []
-
-        for c in data:
+            c = data[0]
 
             rows.append({
-                "Symbol": c["symbol"].upper(),
-                "Price": c["current_price"],
-                "Volume": c["total_volume"],
-                "Change %": c["price_change_percentage_24h"]
+                "Symbol": symbol,
+                "Open": float(c[1]),
+                "High": float(c[2]),
+                "Low": float(c[3]),
+                "Close": float(c[4]),
+                "Volume": float(c[5]),
+                "Change %": ((float(c[4]) - float(c[1])) / float(c[1])) * 100
             })
 
-        print("ROWS:", len(rows))
+        except:
+            continue
 
-        return pd.DataFrame(rows)
-
-    except Exception as e:
-        print("ERROR:", e)
-        return pd.DataFrame()
+    return pd.DataFrame(rows)
