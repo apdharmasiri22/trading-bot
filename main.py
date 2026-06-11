@@ -116,8 +116,23 @@ filtered = df[
     (df["Change %"] >= change)
 ].copy()
 
-filtered = apply_smc_god(filtered)
-filtered = filtered.sort_values("Volume", ascending=False)
+
+# ======================
+# REAL SMC ENGINE
+# ======================
+filtered = apply_smc(filtered)
+
+
+# ======================
+# PRO ANALYSIS
+# ======================
+filtered = apply_smc_pro(filtered)
+
+
+filtered = filtered.sort_values(
+    "Volume",
+    ascending=False
+)
 
 # ======================
 # TABLE
