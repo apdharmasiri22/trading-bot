@@ -90,16 +90,16 @@ def load_data():
     # fetch data
     df = get_market_data()
 
-    # validate
-    if df is None or df.empty:
-        return pd.DataFrame()
+if df is None or df.empty:
+    st.warning("⚠️ No data received from API")
+    print("DATA EMPTY - CHECK API / NETWORK")
+    return pd.DataFrame()
 
+# cache only valid data
+st.session_state.df = df
+st.session_state.time = time.time()
 
-    # save cache
-    st.session_state.df = df
-    st.session_state.time = time.time()
-
-    return df
+return df
 
 
 # ======================
