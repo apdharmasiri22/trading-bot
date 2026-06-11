@@ -13,35 +13,39 @@ def get_market_data():
     for symbol in symbols:
 
         try:
-
             url = f"{KLINE_URL}?symbol={symbol}&interval=1h&limit=1"
 
             r = requests.get(url, timeout=10)
-            data = r.json()
 
-            # ❌ skip invalid response
-            if not isinstance(data, list):
-                print("Skip:", symbol, data)
+            # ❌ check HTTP
+            if r.status_code != 200:
+                print("HTTP FAIL:", symbol, r.text)
                 continue
 
-            candle = data[0]
+            data = r.json()
+
+            # ❌ check format
+            if not isinstance(data, list) or len(data) == 0:
+                print("INVALID:", symbol, data)
+                continue
+
+            c = data[0]
 
             rows.append({
                 "Symbol": symbol,
-                "Open": float(candle[1]),
-                "High": float(candle[2]),
-                "Low": float(candle[3]),
-                "Close": float(candle[4]),
-                "Volume": float(candle[5]),
-                "Change %": ((float(candle[4]) - float(candle[1])) / float(candle[1])) * 100
+                "Open": float(c[1]),
+                "High": float(c[2]),
+                "Low": float(c[3]),
+                "Close": float(c[4]),
+                "Volume": float(c[5]),
+                "Change %": ((float(c[4]) - float(c[1])) / float(c[1])) * 100
             })
 
         except Exception as e:
-            print("Error:", symbol, e)
+            print("ERROR:", symbol, e)
 
     df = pd.DataFrame(rows)
 
-print("DEBUG ROWS:", len(rows))
-print(df.head())
+    print("FINAL ROWS:", len(df))
 
-return df
+    return df
