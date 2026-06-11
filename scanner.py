@@ -18,12 +18,18 @@ def get_top_coins():
 
     r = requests.get(url, params=params, timeout=10)
 
-    if r.status_code != 200:
-        return ["BTCUSDT"]
-
     data = r.json()
 
-    return [c["symbol"].upper() + "USDT" for c in data]
+    coins = []
+
+    for c in data:
+
+        symbol = c["symbol"].upper()
+
+        # ✅ FIX: ONLY VALID FORMAT
+        coins.append(symbol + "USDT")
+
+    return coins
 
 
 # =========================
