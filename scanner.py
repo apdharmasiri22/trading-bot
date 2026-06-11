@@ -1,51 +1,41 @@
 import requests
 import pandas as pd
 
-KLINE_URL = "https://api.binance.com/api/v3/klines"
+URL = "https://api.coingecko.com/api/v3/coins/markets"
 
 
 def get_market_data():
 
-    symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"]
+    try:
 
-    rows = []
+        params = {
+            "vs_currency": "usd",
+            "order": "volume_desc",
+            "per_page": 20,
+            "page": 1,
+            "sparkline": False
+        }
 
-    print("🚀 START FETCH")
+        r = requests.get(URL, params=params, timeout=10)
 
-    for symbol in symbols:
+        if r.status_code != 200:
+            return pd.DataFrame()
 
-        try:
-            url = f"{KLINE_URL}?symbol={symbol}&interval=1h&limit=1"
+        data = r.json()
 
-            r = requests.get(url, timeout=10)
+        rows = []
 
-            data = r.json()
-
-            # ❌ Binance error check
-            if isinstance(data, dict):
-                print("ERROR:", symbol, data)
-                continue
-
-            if not isinstance(data, list) or len(data) == 0:
-                continue
-
-            c = data[0]
+        for c in data:
 
             rows.append({
-                "Symbol": symbol,
-                "Open": float(c[1]),
-                "High": float(c[2]),
-                "Low": float(c[3]),
-                "Close": float(c[4]),
-                "Volume": float(c[5]),
-                "Change %": ((float(c[4]) - float(c[1])) / float(c[1])) * 100
+                "Symbol": c["symbol"].upper(),
+                "Price": c["current_price"],
+                "Volume": c["total_volume"],
+                "Change %": c["price_change_percentage_24h"]
             })
 
-        except Exception as e:
-            print("FAIL:", symbol, e)
+        return pd.DataFrame(rows)
 
-    df = pd.DataFrame(rows)
-
-    print("FINAL ROWS:", len(df))
-
-    return df
+    except Exception as e:
+        print("ERROR:", e)
+        return pd.DataFrame()
