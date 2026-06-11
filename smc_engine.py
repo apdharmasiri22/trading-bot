@@ -86,28 +86,15 @@ def apply_smc(df):
 
     df = df.copy()
 
+    required = ["High", "Low", "Close"]
 
-    # Structure
+    # check OHLC
+    if not all(col in df.columns for col in required):
+        df["Structure"] = "⚠️ NO CANDLE DATA"
+        df["Liquidity"] = "N/A"
+        return df
+
+    # apply real structure engine
     df = apply_structure(df)
-
-
-    # Liquidity base
-    if "Volume" in df.columns:
-
-        vol_med = df["Volume"].median()
-
-
-        df["Liquidity"] = df["Volume"].apply(
-            lambda x:
-            "🔥 HIGH LIQUIDITY"
-            if x > vol_med * 2
-
-            else "⚡ MEDIUM"
-
-            if x > vol_med
-
-            else "🧊 LOW"
-        )
-
 
     return df
