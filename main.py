@@ -6,6 +6,8 @@ from scanner import get_market_data
 from smc_engine import apply_smc
 from smc_pro import apply_smc_pro
 
+CACHE_TIME = 20
+
 # ======================
 # SMC ENGINE
 # ======================
