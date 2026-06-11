@@ -4,65 +4,48 @@ def apply_smc_pro(df):
 
     df = df.copy()
 
-    # =========================
-    # 📊 MOMENTUM SCORE (0-100)
-    # =========================
-    def score(row):
-
-        change = abs(row["Change %"])
-        volume = row["Volume"]
-
-        score = min(change * 10, 50) + min(volume / 1e7, 50)
-
-        return round(min(score, 100), 2)
-
-    df["SMC Score"] = df.apply(score, axis=1)
-
-    # =========================
-    # 🧠 MARKET STRUCTURE LOGIC
-    # =========================
-    def structure(x):
-
-        if x > 7:
-            return "🚀 BOS (Bullish Break)"
-        elif x < -7:
-            return "🔻 CHoCH (Bearish Shift)"
-        elif x > 2:
-            return "📈 Bullish Trend"
-        elif x < -2:
-            return "📉 Bearish Trend"
-        else:
-            return "⚖️ Sideways"
-
-    df["Structure"] = df["Change %"].apply(structure)
-
-    # =========================
-    # 💧 LIQUIDITY ZONES
-    # =========================
     vol_med = df["Volume"].median()
 
-    def liquidity(v):
-        if v > vol_med * 2:
-            return "🔥 High Liquidity"
-        elif v > vol_med:
-            return "⚡ Medium"
-        else:
-            return "🧊 Low"
-
-    df["Liquidity"] = df["Volume"].apply(liquidity)
+    signals = []
 
     # =========================
-    # 🎯 TRADE SIGNAL
+    # MAIN LOOP
     # =========================
-    def signal(row):
+    for i in range(len(df)):
 
-        if row["SMC Score"] > 70 and row["Change %"] > 3:
-            return "🟢 BUY SETUP"
-        elif row["SMC Score"] > 70 and row["Change %"] < -3:
-            return "🔴 SELL SETUP"
+        open_p = df["Open"].iloc[i]
+        close = df["Close"].iloc[i]
+        volume = df["Volume"].iloc[i]
+
+        change = (close - open_p) / open_p * 100
+
+        # =========================
+        # SIMPLE SIGNAL LOGIC
+        # =========================
+        if change > 2 and volume > vol_med:
+            simple_signal = "🟢 BUY"
+        elif change < -2:
+            simple_signal = "🔴 SELL"
         else:
-            return "🟡 WAIT"
+            simple_signal = "🟡 WAIT"
 
-    df["Signal"] = df.apply(signal, axis=1)
+        # =========================
+        # ADD SMC STYLE FILTER
+        # =========================
+        if change > 5:
+            smc_bias = "🚀 STRONG BULL"
+        elif change < -5:
+            smc_bias = "🔻 STRONG BEAR"
+        else:
+            smc_bias = "⚖️ SIDEWAYS"
+
+        # =========================
+        # FINAL COMBINED SIGNAL
+        # =========================
+        final_signal = f"{simple_signal} | {smc_bias}"
+
+        signals.append(final_signal)
+
+    df["Signal"] = signals
 
     return df
