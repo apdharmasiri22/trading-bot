@@ -39,4 +39,9 @@ def get_market_data():
         except Exception as e:
             print("Error:", symbol, e)
 
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+
+print("DEBUG ROWS:", len(rows))
+print(df.head())
+
+return df
