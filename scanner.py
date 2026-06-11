@@ -31,17 +31,31 @@ def get_top_coins():
 # =========================
 def get_market_data(symbol="BTCUSDT", interval="1h", limit=200):
 
-    url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}"
-    data = requests.get(url, timeout=10).json()
+    try:
+        url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}"
 
-    if isinstance(data, dict):
+        print("REQUEST URL:", url)
+
+        data = requests.get(url, timeout=10).json()
+
+        print("RAW RESPONSE:", data[:2])  # 🔥 DEBUG
+
+        if isinstance(data, dict):
+            print("ERROR RESPONSE:", data)
+            return pd.DataFrame()
+
+        df = pd.DataFrame(data)
+
+        if df.empty:
+            return df
+
+        df = df.iloc[:, 0:6]
+        df.columns = ["Time","Open","High","Low","Close","Volume"]
+
+        df = df[["Open","High","Low","Close","Volume"]].astype(float)
+
+        return df
+
+    except Exception as e:
+        print("ERROR:", e)
         return pd.DataFrame()
-
-    df = pd.DataFrame(data, columns=[
-        "time","Open","High","Low","Close","Volume",
-        "close_time","qav","trades","tbbav","tbqav","ignore"
-    ])
-
-    df = df[["Open","High","Low","Close","Volume"]].astype(float)
-
-    return df
