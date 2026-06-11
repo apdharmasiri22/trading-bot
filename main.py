@@ -77,12 +77,41 @@ CACHE_TIME = 20
 
 def load_data():
 
-    # ✅ cache hit
+    # cache hit
     if (
         st.session_state.df is not None
         and time.time() - st.session_state.time < CACHE_TIME
     ):
         return st.session_state.df
+
+
+    # fetch data
+    df = get_market_data()
+
+    # validate
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+
+    # save cache
+    st.session_state.df = df
+    st.session_state.time = time.time()
+
+    return df
+
+
+# ======================
+# LOAD DATA (IMPORTANT)
+# ======================
+df = load_data()
+
+
+# ======================
+# CHECK DATA (FIXED)
+# ======================
+if df is None or df.empty:
+    st.error("Binance/CoinGecko data loading failed")
+    st.stop()
 
 # ======================
 # CHECK DATA
