@@ -41,3 +41,12 @@ def get_market_data(symbol="BTCUSDT", interval="1h", limit=200):
     except Exception as e:
         print("ERROR:", e)
         return pd.DataFrame()
+
+def get_top_coins():
+    return [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "BNBUSDT",
+        "XRPUSDT"
+    ]
