@@ -1,8 +1,9 @@
 import sys
 import os
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import scanner
 from scanner import get_top_coins, get_market_data
 from smc_engine import apply_smc
 from smc_pro import apply_smc_pro
