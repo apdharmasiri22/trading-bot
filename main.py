@@ -1,16 +1,14 @@
 import streamlit as st
-import time
-import pandas as pd
 import sys
 import os
 
-# MUST be before any local imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# IMPORTANT: force clean module load
+import market_scanner
 from market_scanner import get_top_coins, get_market_data
 from smc_engine import apply_smc
 from smc_pro import apply_smc_pro
-
 # ======================
 # SAFE CACHE INIT
 # ======================
