@@ -1,8 +1,10 @@
-from smc_pro import apply_smc_pro
 import streamlit as st
 import time
+import pandas as pd
+
 from scanner import get_market_data
 from smc_engine import apply_smc
+from smc_pro import apply_smc_pro
 
 # ======================
 # SMC ENGINE
