@@ -1,8 +1,10 @@
-import os
 import streamlit as st
+import time
+import pandas as pd
+import sys
+import os
 
-st.write("FILES:", os.listdir("."))
-
+# MUST be before any local imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from market_scanner import get_top_coins, get_market_data
