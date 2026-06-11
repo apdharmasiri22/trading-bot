@@ -10,15 +10,23 @@ def get_market_data():
 
     rows = []
 
+    print("🚀 START FETCH")
+
     for symbol in symbols:
 
         try:
             url = f"{KLINE_URL}?symbol={symbol}&interval=1h&limit=1"
 
             r = requests.get(url, timeout=10)
+
             data = r.json()
 
-            if not isinstance(data, list):
+            # ❌ Binance error check
+            if isinstance(data, dict):
+                print("ERROR:", symbol, data)
+                continue
+
+            if not isinstance(data, list) or len(data) == 0:
                 continue
 
             c = data[0]
@@ -33,7 +41,11 @@ def get_market_data():
                 "Change %": ((float(c[4]) - float(c[1])) / float(c[1])) * 100
             })
 
-        except:
-            continue
+        except Exception as e:
+            print("FAIL:", symbol, e)
 
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+
+    print("FINAL ROWS:", len(df))
+
+    return df
