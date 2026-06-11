@@ -4,6 +4,8 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from market_scanner import get_top_coins, get_market_data
+
 import market_scanner as ms
 from smc_engine import apply_smc
 from smc_pro import apply_smc_pro
