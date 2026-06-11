@@ -2,22 +2,16 @@ import streamlit as st
 import time
 import pandas as pd
 
-try:
-    from scanner import get_top_coins, get_market_data
-except Exception as e:
-    import sys
+import sys
 import os
 
+# ✅ ALWAYS fix path first (BEFORE imports)
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# ✅ now safe imports
 from scanner import get_top_coins, get_market_data
 from smc_engine import apply_smc
 from smc_pro import apply_smc_pro
-
-st.set_page_config(page_title="SMC Dashboard", layout="wide")
-st.title("📊 SMC PRO TRADING DASHBOARD")
-
-CACHE_TIME = 20
 
 # ======================
 # SAFE CACHE INIT
