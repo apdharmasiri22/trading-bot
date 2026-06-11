@@ -66,40 +66,37 @@ coin_data = None
 st.set_page_config(page_title="SMC Dashboard", layout="wide")
 st.title("📊 SMC AI Trading Dashboard")
 
-# ======================
-# CACHE
-# ======================
-
-if "df" not in st.session_state:
-    st.session_state.df = None
-    st.session_state.time = 0
-
-CACHE_TIME = 20
-
-
 def load_data():
 
+    # ======================
     # cache hit
+    # ======================
     if (
         st.session_state.df is not None
         and time.time() - st.session_state.time < CACHE_TIME
     ):
         return st.session_state.df
 
-
+    # ======================
     # fetch data
+    # ======================
     df = get_market_data()
 
-if df is None or df.empty:
-    st.warning("⚠️ No data received from API")
-    print("DATA EMPTY - CHECK API / NETWORK")
-    return pd.DataFrame()
+    # ======================
+    # validate
+    # ======================
+    if df is None or df.empty:
+        st.warning("⚠️ No data received from API")
+        print("DATA EMPTY - CHECK API / NETWORK")
+        return pd.DataFrame()
 
-# cache only valid data
-st.session_state.df = df
-st.session_state.time = time.time()
+    # ======================
+    # cache save
+    # ======================
+    st.session_state.df = df
+    st.session_state.time = time.time()
 
-return df
+    return df
 
 
 # ======================
