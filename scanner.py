@@ -1,91 +1,42 @@
 import requests
 import pandas as pd
 
-
-MARKET_URL = "https://api.coingecko.com/api/v3/coins/markets"
 KLINE_URL = "https://api.binance.com/api/v3/klines"
 
 
 def get_market_data():
 
-    try:
+    symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"]
 
-        params = {
-            "vs_currency": "usd",
-            "order": "volume_desc",
-            "per_page": 20,
-            "page": 1,
-            "sparkline": False
-        }
+    rows = []
 
+    for symbol in symbols:
 
-        r = requests.get(
-            MARKET_URL,
-            params=params,
-            timeout=10
-        )
+        try:
 
+            url = f"{KLINE_URL}?symbol={symbol}&interval=1h&limit=1"
 
-        if r.status_code != 200:
-            return pd.DataFrame()
+            r = requests.get(url, timeout=10)
+            data = r.json()
 
-
-        coins = r.json()
-
-        rows = []
-
-
-        for c in coins:
-
-            symbol = c.get("symbol","").upper()+"USDT"
-
-
-            try:
-
-                url = (
-                    f"{KLINE_URL}"
-                    f"?symbol={symbol}"
-                    f"&interval=1h"
-                    f"&limit=1"
-                )
-
-
-                candle = requests.get(
-                    url,
-                    timeout=10
-                ).json()[0]
-
-
-                rows.append({
-
-                    "Symbol": symbol,
-
-                    "Open": float(candle[1]),
-
-                    "High": float(candle[2]),
-
-                    "Low": float(candle[3]),
-
-                    "Close": float(candle[4]),
-
-                    "Volume": float(candle[5]),
-
-                    "Change %":
-                    float(c.get(
-                        "price_change_percentage_24h",
-                        0
-                    ))
-
-                })
-
-
-            except:
+            # ❌ skip invalid response
+            if not isinstance(data, list):
+                print("Skip:", symbol, data)
                 continue
 
+            candle = data[0]
 
-        return pd.DataFrame(rows)
+            rows.append({
+                "Symbol": symbol,
+                "Open": float(candle[1]),
+                "High": float(candle[2]),
+                "Low": float(candle[3]),
+                "Close": float(candle[4]),
+                "Volume": float(candle[5]),
+                "Change %": ((float(candle[4]) - float(candle[1])) / float(candle[1])) * 100
+            })
 
+        except Exception as e:
+            print("Error:", symbol, e)
 
-    except Exception as e:
-        print(e)
-        return pd.DataFrame()
+    return pd.DataFrame(rows)
