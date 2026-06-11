@@ -10,6 +10,8 @@ def get_market_data():
 
     rows = []
 
+    print("🚀 FETCH STARTED")
+
     for symbol in symbols:
 
         try:
@@ -17,17 +19,17 @@ def get_market_data():
 
             r = requests.get(url, timeout=10)
 
-            print(symbol, r.status_code, r.text[:50])  # DEBUG 🔥
+            print(symbol, "STATUS:", r.status_code)
 
             data = r.json()
 
-            # Binance error check
-            if isinstance(data, dict) and "code" in data:
+            # ❌ Binance error check
+            if isinstance(data, dict):
                 print("BINANCE ERROR:", symbol, data)
                 continue
 
             if not isinstance(data, list) or len(data) == 0:
-                print("INVALID DATA:", symbol, data)
+                print("INVALID:", symbol, data)
                 continue
 
             c = data[0]
