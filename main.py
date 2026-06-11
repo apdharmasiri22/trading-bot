@@ -45,7 +45,10 @@ def load_data(symbol):
 # COIN LIST
 # ======================
 coins = get_top_coins()
-coin = st.selectbox("Select Coin", coins)
+coin = st.selectbox(
+    "Select Coin",
+    [c if c.endswith("USDT") else c + "USDT" for c in coins]
+)
 
 # ======================
 # LOAD DATA
