@@ -103,24 +103,20 @@ def load_data():
 
 
 # ======================
-# LOAD DATA (IMPORTANT)
+# LOAD DATA
 # ======================
 df = load_data()
 
+st.write("DEBUG ROWS:", len(df))  # 🔥 TEST
+
 
 # ======================
-# CHECK DATA (FIXED)
+# VALIDATION (ONLY ONCE)
 # ======================
 if df is None or df.empty:
     st.error("Binance/CoinGecko data loading failed")
     st.stop()
 
-# ======================
-# CHECK DATA
-# ======================
-if df.empty:
-    st.error("Binance/CoinGecko data loading failed")
-    st.stop()
 
 # ======================
 # FILTER UI
@@ -135,6 +131,7 @@ with col2:
 
 with col3:
     limit = st.slider("Show Coins", 5, 50, 20)
+
 
 # ======================
 # FILTER
