@@ -1,16 +1,17 @@
 import pandas as pd
 
 # =========================
-# SWINGS (BASIS FOR BOS/CHoCH)
+# SWINGS
 # =========================
-def find_swings(df, lookback=3):
+def find_swings(df):
 
     df = df.copy()
-    highs = df["High"]
-    lows = df["Low"]
 
-    df["SwingHigh"] = highs[(highs.shift(1) < highs) & (highs.shift(-1) < highs)]
-    df["SwingLow"] = lows[(lows.shift(1) > lows) & (lows.shift(-1) > lows)]
+    df["SwingHigh"] = df["High"][(df["High"].shift(1) < df["High"]) &
+                                 (df["High"].shift(-1) < df["High"])]
+
+    df["SwingLow"] = df["Low"][(df["Low"].shift(1) > df["Low"]) &
+                               (df["Low"].shift(-1) > df["Low"])]
 
     return df
 
@@ -30,8 +31,6 @@ def detect_structure(df):
 
     for i in range(len(df)):
 
-        high = df["High"].iloc[i]
-        low = df["Low"].iloc[i]
         close = df["Close"].iloc[i]
 
         if pd.notna(df["SwingHigh"].iloc[i]):
@@ -40,7 +39,6 @@ def detect_structure(df):
         if pd.notna(df["SwingLow"].iloc[i]):
             last_low = df["SwingLow"].iloc[i]
 
-        # BOS
         if last_high and close > last_high:
             bos.append("🚀 BOS Bullish")
         elif last_low and close < last_low:
@@ -48,7 +46,6 @@ def detect_structure(df):
         else:
             bos.append("")
 
-        # CHoCH
         if last_high and close < last_high:
             choch.append("🔄 CHoCH Bearish")
         elif last_low and close > last_low:
@@ -63,7 +60,7 @@ def detect_structure(df):
 
 
 # =========================
-# ORDER BLOCK (SIMPLE VERSION)
+# ORDER BLOCKS
 # =========================
 def order_blocks(df):
 
@@ -112,11 +109,9 @@ def liquidity_sweep(df):
 
     for i in range(1, len(df)):
 
-        # wick sweep high
         if df["High"].iloc[i] > df["High"].iloc[i-1] and df["Close"].iloc[i] < df["High"].iloc[i-1]:
             sweep[i] = "⚡ High Sweep"
 
-        # wick sweep low
         if df["Low"].iloc[i] < df["Low"].iloc[i-1] and df["Close"].iloc[i] > df["Low"].iloc[i-1]:
             sweep[i] = "⚡ Low Sweep"
 
@@ -128,6 +123,9 @@ def liquidity_sweep(df):
 # MAIN ENGINE
 # =========================
 def apply_smc(df):
+
+    if df.empty:
+        return df
 
     df = detect_structure(df)
     df = order_blocks(df)
