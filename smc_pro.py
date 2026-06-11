@@ -12,7 +12,6 @@ def apply_smc_pro(df):
         change = abs(row["Change %"])
         volume = row["Volume"]
 
-        # normalize simple scoring
         score = min(change * 10, 50) + min(volume / 1e7, 50)
 
         return round(min(score, 100), 2)
